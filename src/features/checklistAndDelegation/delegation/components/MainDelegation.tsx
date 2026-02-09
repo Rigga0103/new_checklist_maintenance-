@@ -1,0 +1,485 @@
+"use client";
+
+import {
+  FileText,
+  CheckCircle,
+  Clock,
+  Search,
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  Check,
+  X,
+  Trash2,
+} from "lucide-react";
+import { useDelegation } from "../hooks/useDelegation";
+
+export default function MainDelegation() {
+  const {
+    pendingTasks,
+    historyTasks,
+    activeTab,
+    isLoading,
+    isSubmitting,
+    selectedTasks,
+    currentPage,
+    totalCount,
+    taskRemarks,
+    taskStatuses,
+    handleSearch,
+    handleTabChange,
+    toggleTaskSelection,
+    selectAllTasks,
+    deselectAllTasks,
+    updateTaskRemark,
+    updateTaskStatus,
+    submitSelectedTasks,
+    setCurrentPage,
+    refresh,
+    formatDate,
+    getStatusColor,
+    taskImages,
+    nextTargetDates,
+    handleImageUpload,
+    updateNextTargetDate,
+  } = useDelegation();
+
+  const tasks = activeTab === "pending" ? pendingTasks : historyTasks;
+  const totalPages = Math.ceil(totalCount / 50);
+
+  // Format frequency display
+  const getFrequencyBadge = (frequency: string) => {
+    const colors: Record<string, string> = {
+      daily: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+      weekly:
+        "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+      monthly: "bg-muted text-foreground dark:bg-muted dark:text-foreground",
+      "one-time":
+        "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300",
+    };
+    return colors[frequency?.toLowerCase()] || colors["one-time"];
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Delegation
+          </h1>
+          <p className="text-sm text-muted-foreground dark:text-muted-foreground">
+            Manage one-time delegated tasks ({tasks.length} tasks)
+          </p>
+        </div>
+        <button
+          onClick={refresh}
+          disabled={isLoading}
+          className="flex items-center gap-2 px-3 py-2 text-sm text-foreground dark:text-gray-300 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors"
+        >
+          <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+          Refresh
+        </button>
+      </div>
+
+      {/* Compact Stats */}
+      <div className="grid gap-3 grid-cols-4">
+        <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700">
+          <div className="flex items-center gap-3">
+            <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <div>
+              <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+                Total
+              </p>
+              <p className="text-xl font-bold text-gray-900 dark:text-white">
+                {totalCount}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700">
+          <div className="flex items-center gap-3">
+            <Clock className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+            <div>
+              <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+                Pending
+              </p>
+              <p className="text-xl font-bold text-gray-900 dark:text-white">
+                {pendingTasks.length}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700">
+          <div className="flex items-center gap-3">
+            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+            <div>
+              <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+                Completed
+              </p>
+              <p className="text-xl font-bold text-gray-900 dark:text-white">
+                {historyTasks.length}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700">
+          <div className="flex items-center gap-3">
+            <Check className="w-5 h-5 text-primary dark:text-foreground" />
+            <div>
+              <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+                Selected
+              </p>
+              <p className="text-xl font-bold text-gray-900 dark:text-white">
+                {selectedTasks.size}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs, Search, Actions */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex gap-2">
+          <button
+            onClick={() => handleTabChange("pending")}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === "pending"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
+            }`}
+          >
+            Pending
+          </button>
+          <button
+            onClick={() => handleTabChange("history")}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === "history"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
+            }`}
+          >
+            History
+          </button>
+        </div>
+
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search tasks..."
+            onChange={(e) => handleSearch(e.target.value)}
+            className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          />
+        </div>
+
+        {activeTab === "pending" && pendingTasks.length > 0 && (
+          <div className="flex items-center gap-2 ml-auto">
+            <button
+              onClick={selectAllTasks}
+              className="text-xs text-blue-600 hover:underline"
+            >
+              Select All
+            </button>
+            <button
+              onClick={deselectAllTasks}
+              className="text-xs text-muted-foreground hover:underline"
+            >
+              Clear
+            </button>
+            {selectedTasks.size > 0 && (
+              <button
+                onClick={submitSelectedTasks}
+                disabled={isSubmitting}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Check className="w-4 h-4" />
+                )}
+                Submit ({selectedTasks.size})
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Tasks Table - All Fields */}
+      <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-sm border border-gray-100 dark:border-neutral-700 overflow-hidden">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-48">
+            <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+          </div>
+        ) : tasks.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
+            <FileText className="w-10 h-10 mb-2 opacity-50" />
+            <p>No {activeTab} tasks found</p>
+          </div>
+        ) : (
+          <div
+            className="overflow-x-auto"
+            style={{ maxHeight: "calc(100vh - 320px)" }}
+          >
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
+              <thead className="bg-gray-50 dark:bg-neutral-900/50 sticky top-0 z-10">
+                <tr>
+                  {activeTab === "pending" && (
+                    <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase w-10">
+                      Seq No
+                    </th>
+                  )}
+                  {activeTab === "pending" && (
+                    <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase w-10">
+                      <input
+                        type="checkbox"
+                        checked={
+                          selectedTasks.size === tasks.length &&
+                          tasks.length > 0
+                        }
+                        onChange={() =>
+                          selectedTasks.size === tasks.length
+                            ? deselectAllTasks()
+                            : selectAllTasks()
+                        }
+                        className="w-4 h-4 rounded border-gray-300 text-blue-600"
+                      />
+                    </th>
+                  )}
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase">
+                    Timestamp
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase">
+                    Task ID
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase">
+                    Department
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase">
+                    Given By
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase">
+                    Name
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase min-w-[200px]">
+                    Task Description
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase bg-yellow-50 dark:bg-yellow-900/20">
+                    Start Date
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase bg-yellow-50 dark:bg-yellow-900/20">
+                    {activeTab === "pending"
+                      ? "Planned Date"
+                      : "Submission Date"}
+                  </th>
+                  {activeTab === "pending" && (
+                    <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase bg-blue-50 dark:bg-blue-900/20">
+                      Status
+                    </th>
+                  )}
+                  {activeTab === "pending" && (
+                    <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase bg-indigo-50 dark:bg-indigo-900/20">
+                      Next Target
+                    </th>
+                  )}
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase">
+                    Freq
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase">
+                    Reminders
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase">
+                    {activeTab === "pending" ? "Req Attachment" : "Attachment"}
+                  </th>
+                  {activeTab === "pending" && (
+                    <>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase">
+                        Remark
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase">
+                        Upload
+                      </th>
+                    </>
+                  )}
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-neutral-800 divide-y divide-gray-100 dark:divide-neutral-700">
+                {tasks.map((task, index) => (
+                  <tr
+                    key={task.task_id || index}
+                    className={`hover:bg-gray-50 dark:hover:bg-neutral-700/50 ${
+                      selectedTasks.has(task.task_id)
+                        ? "bg-blue-50 dark:bg-blue-900/20"
+                        : ""
+                    }`}
+                  >
+                    {activeTab === "pending" && (
+                      <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
+                        {index + 1}
+                      </td>
+                    )}
+                    {activeTab === "pending" && (
+                      <td className="px-3 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedTasks.has(task.task_id)}
+                          onChange={() => toggleTaskSelection(task.task_id)}
+                          className="w-4 h-4 rounded border-gray-300 text-blue-600"
+                        />
+                      </td>
+                    )}
+                    <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
+                      {formatDate(task.created_at) || "—"}
+                    </td>
+                    <td className="px-3 py-3 text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap">
+                      {task.task_id || "—"}
+                    </td>
+                    <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
+                      {task.department || "—"}
+                    </td>
+                    <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
+                      {task.given_by || "—"}
+                    </td>
+                    <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
+                      {task.name || "—"}
+                    </td>
+                    <td className="px-3 py-3 text-sm text-foreground dark:text-gray-300 min-w-[200px] max-w-[300px]">
+                      <div className="whitespace-normal break-words line-clamp-2">
+                        {task.task_description || "—"}
+                      </div>
+                    </td>
+                    <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap bg-yellow-50 dark:bg-yellow-900/10">
+                      {formatDate(task.task_start_date) || "—"}
+                    </td>
+                    <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap bg-yellow-50 dark:bg-yellow-900/10">
+                      {activeTab === "pending"
+                        ? formatDate(task.planned_date)
+                        : formatDate(task.submission_date)}
+                    </td>
+                    {activeTab === "pending" && (
+                      <td className="px-3 py-3 bg-blue-50 dark:bg-blue-900/10">
+                        <select
+                          disabled={!selectedTasks.has(task.task_id)}
+                          value={taskStatuses[task.task_id] || ""}
+                          onChange={(e) =>
+                            updateTaskStatus(task.task_id, e.target.value)
+                          }
+                          className="border border-gray-300 dark:border-neutral-600 rounded-md px-2 py-1 w-full disabled:bg-gray-100 dark:disabled:bg-neutral-800 disabled:cursor-not-allowed text-xs sm:text-sm bg-white dark:bg-neutral-700 text-gray-900 dark:text-white"
+                        >
+                          <option value="">Select</option>
+                          <option value="Done">Done</option>
+                          <option value="Extend date">Extend</option>
+                        </select>
+                      </td>
+                    )}
+                    {activeTab === "pending" && (
+                      <td className="px-3 py-3 bg-indigo-50 dark:bg-indigo-900/10">
+                        <input
+                          type="date"
+                          disabled={
+                            !selectedTasks.has(task.task_id) ||
+                            taskStatuses[task.task_id] !== "Extend date"
+                          }
+                          value={nextTargetDates[task.task_id] || ""}
+                          onChange={(e) => {
+                            updateNextTargetDate(task.task_id, e.target.value);
+                          }}
+                          className="border border-gray-300 dark:border-neutral-600 rounded-md px-2 py-1 w-full disabled:bg-gray-100 dark:disabled:bg-neutral-800 disabled:cursor-not-allowed text-xs sm:text-sm bg-white dark:bg-neutral-700 text-gray-900 dark:text-white"
+                        />
+                      </td>
+                    )}
+                    <td className="px-3 py-3 whitespace-nowrap">
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${getFrequencyBadge(task.frequency)}`}
+                      >
+                        {task.frequency || "—"}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
+                      {task.enable_reminder || "—"}
+                    </td>
+                    <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
+                      {task.require_attachment || "—"}
+                    </td>
+                    {activeTab === "pending" && (
+                      <>
+                        <td className="px-3 py-3">
+                          <input
+                            type="text"
+                            value={taskRemarks[task.task_id] || ""}
+                            onChange={(e) =>
+                              updateTaskRemark(task.task_id, e.target.value)
+                            }
+                            placeholder="Remark..."
+                            className="w-24 px-2 py-1 text-xs rounded border border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                          />
+                        </td>
+                        <td className="px-3 py-3">
+                          {taskImages[task.task_id] ? (
+                            <div className="flex items-center gap-1 text-green-600">
+                              <Check className="w-4 h-4" />
+                              <span className="text-xs">
+                                {taskImages[task.task_id].file.name.slice(0, 8)}
+                                ...
+                              </span>
+                            </div>
+                          ) : (
+                            <label
+                              className={`cursor-pointer flex items-center gap-1 px-2 py-1 rounded border border-dashed border-gray-300 dark:border-neutral-600 hover:border-blue-500 hover:text-blue-500 transition-colors ${!selectedTasks.has(task.task_id) ? "opacity-50 pointer-events-none" : ""}`}
+                            >
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                disabled={!selectedTasks.has(task.task_id)}
+                                onChange={(e) =>
+                                  handleImageUpload(task.task_id, e)
+                                }
+                              />
+                              <div className="flex items-center gap-1 text-xs">
+                                {/* Using Check icon as placeholder since Upload icon is already imported */}
+                                <span className="text-xs">Upload</span>
+                              </div>
+                            </label>
+                          )}
+                        </td>
+                      </>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-2 border-t border-gray-100 dark:border-neutral-700">
+            <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+              Page {currentPage} of {totalPages}
+            </p>
+            <div className="flex gap-1">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="p-1.5 rounded border border-gray-200 dark:border-neutral-700 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-neutral-700"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() =>
+                  setCurrentPage((p) => Math.min(totalPages, p + 1))
+                }
+                disabled={currentPage === totalPages}
+                className="p-1.5 rounded border border-gray-200 dark:border-neutral-700 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-neutral-700"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

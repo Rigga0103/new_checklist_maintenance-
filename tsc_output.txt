@@ -1,0 +1,2 @@
+src/features/machineMaintenance/maintenance/server/api/maintenanceApi.ts(5,8): error TS2307: Cannot find module '../../types/types' or its corresponding type declarations.
+src/features/machineMaintenance/repairing/server/api/repairingApi.ts(7,8): error TS2307: Cannot find module '../../types/types' or its corresponding type declarations.

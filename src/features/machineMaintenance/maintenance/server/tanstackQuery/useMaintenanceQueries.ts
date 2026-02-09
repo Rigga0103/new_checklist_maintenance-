@@ -1,0 +1,135 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  fetchPendingMaintenance,
+  fetchMaintenanceHistory,
+  fetchAllMaintenance,
+  completeMaintenance,
+  bulkCompleteMaintenance,
+  getUniqueMachines,
+  getUniqueFrequencies,
+} from "../api/maintenanceApi";
+
+// Query Keys
+export const maintenanceKeys = {
+  all: ["maintenance"] as const,
+  pending: (
+    page: number,
+    limit: number,
+    searchTerm: string,
+    role: string | null,
+    username: string | null,
+  ) =>
+    [
+      ...maintenanceKeys.all,
+      "pending",
+      { page, limit, searchTerm, role, username },
+    ] as const,
+  history: (
+    page: number,
+    limit: number,
+    searchTerm: string,
+    role: string | null,
+    username: string | null,
+  ) =>
+    [
+      ...maintenanceKeys.all,
+      "history",
+      { page, limit, searchTerm, role, username },
+    ] as const,
+  filters: () => [...maintenanceKeys.all, "filters"] as const,
+  allTasks: () => [...maintenanceKeys.all, "allTasks"] as const,
+};
+
+// --- Queries ---
+
+export const usePendingMaintenanceQuery = (
+  page: number,
+  limit: number,
+  searchTerm: string,
+  role: string | null,
+  username: string | null,
+) => {
+  return useQuery({
+    queryKey: maintenanceKeys.pending(page, limit, searchTerm, role, username),
+    queryFn: () =>
+      fetchPendingMaintenance(page, limit, searchTerm, role, username),
+    placeholderData: (previousData) => previousData,
+  });
+};
+
+export const useMaintenanceHistoryQuery = (
+  page: number,
+  limit: number,
+  searchTerm: string,
+  role: string | null,
+  username: string | null,
+) => {
+  return useQuery({
+    queryKey: maintenanceKeys.history(page, limit, searchTerm, role, username),
+    queryFn: () =>
+      fetchMaintenanceHistory(page, limit, searchTerm, role, username),
+    placeholderData: (previousData) => previousData,
+  });
+};
+
+export const useMaintenanceFiltersQuery = () => {
+  return useQuery({
+    queryKey: maintenanceKeys.filters(),
+    queryFn: async () => {
+      const [machines, frequencies] = await Promise.all([
+        getUniqueMachines(),
+        getUniqueFrequencies(),
+      ]);
+      return { machines, frequencies };
+    },
+    staleTime: 1000 * 60 * 5, // Cache filters for 5 minutes
+  });
+};
+
+// --- Mutations ---
+
+export const useCompleteMaintenanceMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      taskId,
+      remarks,
+      imageFile,
+      maintenanceCost,
+    }: {
+      taskId: number;
+      remarks?: string;
+      imageFile?: File;
+      maintenanceCost?: number;
+    }) => completeMaintenance(taskId, remarks, imageFile, maintenanceCost),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["maintenance"] });
+    },
+  });
+};
+
+export const useBulkCompleteMaintenanceMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      taskIds,
+      remarks,
+    }: {
+      taskIds: number[];
+      remarks?: string;
+    }) => bulkCompleteMaintenance(taskIds, remarks),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["maintenance"] });
+    },
+  });
+};
+
+export const useAllMaintenanceQuery = () => {
+  return useQuery({
+    queryKey: maintenanceKeys.allTasks(),
+    queryFn: () => fetchAllMaintenance(),
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+  });
+};
