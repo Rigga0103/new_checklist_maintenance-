@@ -34,7 +34,7 @@ export function useDelegation() {
   const [taskRemarks, setTaskRemarks] = useState<Record<number, string>>({});
   const [taskStatuses, setTaskStatuses] = useState<Record<number, string>>({});
   const [taskImages, setTaskImages] = useState<
-    Record<number, { file: File; previewUrl: string }>
+    Record<number, { file: File; previewUrl: string; uploading?: boolean }>
   >({});
   const [nextTargetDates, setNextTargetDates] = useState<
     Record<number, string>
@@ -140,16 +140,76 @@ export function useDelegation() {
     }
   }, []);
 
-  // Handle image upload
+  // Handle image upload - upload immediately to Supabase
   const handleImageUpload = useCallback(
-    (taskId: number, event: React.ChangeEvent<HTMLInputElement>) => {
+    async (taskId: number, event: React.ChangeEvent<HTMLInputElement>) => {
+      console.log("Upload triggered for task:", taskId);
       const file = event.target.files?.[0];
-      if (file) {
-        const previewUrl = URL.createObjectURL(file);
-        setTaskImages((prev) => ({
+      if (!file) {
+        console.log("No file selected");
+        return;
+      }
+
+      console.log("File selected:", {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+      });
+
+      // Validate file type
+      const validTypes = ["image/jpeg", "image/png", "image/webp"];
+      if (!validTypes.includes(file.type)) {
+        toast.error("Please upload a valid image (JPEG, PNG, or WebP)");
+        return;
+      }
+
+      // Validate file size (5MB)
+      const maxSize = 5 * 1024 * 1024;
+      if (file.size > maxSize) {
+        toast.error("Image size must be less than 5MB");
+        return;
+      }
+
+      // Set uploading state
+      console.log("Setting uploading state for task:", taskId);
+      setTaskImages((prev) => {
+        const newState = {
           ...prev,
-          [taskId]: { file, previewUrl },
-        }));
+          [taskId]: { file, previewUrl: "", uploading: true },
+        };
+        console.log("TaskImages after setting uploading:", newState);
+        return newState;
+      });
+
+      try {
+        console.log("Starting upload to Supabase...");
+        // Upload to Supabase
+        const { uploadChecklistImage } =
+          await import("@/features/checklistAndDelegation/checklist/server/api/checklistUploadApi");
+        const uploadedUrl = await uploadChecklistImage(file, taskId);
+        console.log("Upload successful! URL:", uploadedUrl);
+
+        // Update state with uploaded URL
+        setTaskImages((prev) => {
+          const newState = {
+            ...prev,
+            [taskId]: { file, previewUrl: uploadedUrl, uploading: false },
+          };
+          console.log("TaskImages after upload complete:", newState);
+          return newState;
+        });
+
+        toast.success("Image uploaded successfully");
+      } catch (error) {
+        console.error("Image upload error:", error);
+        toast.error("Failed to upload image");
+        // Remove from state on error
+        setTaskImages((prev) => {
+          const newState = { ...prev };
+          delete newState[taskId];
+          console.log("TaskImages after error cleanup:", newState);
+          return newState;
+        });
       }
     },
     [],
@@ -207,6 +267,12 @@ export function useDelegation() {
         }),
       );
 
+      console.log("Delegation submission data:", {
+        selectedTasksCount: selectedTasks.size,
+        taskImages,
+        submissions,
+      });
+
       await updateDelegationData(submissions);
       toast.success(`Successfully submitted ${submissions.length} tasks`);
 
@@ -223,7 +289,14 @@ export function useDelegation() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [selectedTasks, taskStatuses, taskRemarks, loadPendingTasks]);
+  }, [
+    selectedTasks,
+    taskStatuses,
+    taskRemarks,
+    taskImages,
+    nextTargetDates,
+    loadPendingTasks,
+  ]);
 
   // Format date for display
   const formatDate = useCallback(

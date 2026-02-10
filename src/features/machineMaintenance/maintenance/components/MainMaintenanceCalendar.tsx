@@ -4,11 +4,13 @@ import { useState, useEffect, useCallback } from "react";
 import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAllMaintenanceQuery } from "../server/tanstackQuery/useMaintenanceQueries";
 import type { MachineMaintenance } from "../../types/types";
+import { useRBAC } from "@/hooks/useRBAC";
 
 export default function MainMaintenanceCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const { data: tasks = [], isLoading } = useAllMaintenanceQuery();
+  const { canRead, isLoading: isRbacLoading } = useRBAC("maintenance_calendar");
 
   // Calendar helpers
   const getDaysInMonth = (date: Date) => {
@@ -76,10 +78,19 @@ export default function MainMaintenanceCalendar() {
     calendarDays.push(day);
   }
 
-  if (isLoading) {
+  if (isLoading || isRbacLoading) {
     return (
       <div className="flex items-center justify-center min-h-100">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!canRead) {
+    return (
+      <div className="flex items-center justify-center h-96 text-muted-foreground">
+        Access Denied. You do not have permission to view the Maintenance
+        Calendar.
       </div>
     );
   }

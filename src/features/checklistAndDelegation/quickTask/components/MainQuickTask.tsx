@@ -40,7 +40,10 @@ export default function MainQuickTask() {
   const [selectedTasks, setSelectedTasks] = useState<ChecklistTask[]>([]);
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<ChecklistTask>>({});
-  const [userRole, setUserRole] = useState("");
+  const [userRole, setUserRole] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem("role") || "";
+  });
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
   // TanStack Query hooks
@@ -62,9 +65,13 @@ export default function MainQuickTask() {
   const delegationTasks = flattenDelegationPages(delegationData);
   const allNames = usersData?.map((u) => u.user_name) || [];
 
-  // Get user role
+  // Re-sync if localStorage changes
   useEffect(() => {
-    setUserRole(localStorage.getItem("role") || "");
+    const handleStorageChange = () => {
+      setUserRole(localStorage.getItem("role") || "");
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
   // Filter tasks
@@ -252,8 +259,7 @@ export default function MainQuickTask() {
       daily: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
       weekly:
         "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-      monthly:
-        "bg-muted text-foreground dark:bg-muted dark:text-foreground",
+      monthly: "bg-muted text-foreground dark:bg-muted dark:text-foreground",
     };
     return (
       colors[freq?.toLowerCase()] ||
@@ -441,7 +447,7 @@ export default function MainQuickTask() {
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
                     Name
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase min-w-[200px]">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase min-w-48">
                     Task Description
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase bg-yellow-50 dark:bg-yellow-900/20">

@@ -51,16 +51,28 @@ export function useDashboard() {
     filtered: false,
   });
 
-  // Get user info from localStorage
-  const [userRole, setUserRole] = useState<string>("");
-  const [username, setUsername] = useState<string>("");
+  // Get user info from localStorage with safe window check
+  const [userRole, setUserRole] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem("role") || "user";
+  });
+  const [username, setUsername] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem("user-name") || "";
+  });
 
+  // Re-sync if localStorage changes via storage event (safe way to handle cross-tab or external changes)
   useEffect(() => {
-    const role = localStorage.getItem("role") || "user";
-    const name = localStorage.getItem("user-name") || "";
-    setUserRole(role);
-    setUsername(name);
-  }, []);
+    const handleStorageChange = () => {
+      const role = localStorage.getItem("role") || "user";
+      const name = localStorage.getItem("user-name") || "";
+      if (role !== userRole) setUserRole(role);
+      if (name !== username) setUsername(name);
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, [userRole, username]);
 
   // ============ Real Data Queries ============
 
@@ -110,7 +122,7 @@ export function useDashboard() {
   const filteredTasks: Task[] = useMemo(() => {
     if (!tasksData) return [];
     return tasksData.map((task: Record<string, unknown>) => {
-      const taskStartDate = task.task_start_date as string;
+      const taskStartDate = (task.task_start_date as string) || "";
       const today = new Date().toISOString().split("T")[0];
 
       // Determine status
@@ -118,7 +130,11 @@ export function useDashboard() {
       if (dashboardType === "checklist") {
         if (task.status === "yes" || task.status === "Yes") {
           status = "completed";
-        } else if (taskStartDate < today && !task.submission_date) {
+        } else if (
+          taskStartDate &&
+          taskStartDate < today &&
+          !task.submission_date
+        ) {
           status = "overdue";
         }
       } else {
@@ -128,7 +144,11 @@ export function useDashboard() {
           task.submission_date
         ) {
           status = "completed";
-        } else if (taskStartDate < today && !task.submission_date) {
+        } else if (
+          taskStartDate &&
+          taskStartDate < today &&
+          !task.submission_date
+        ) {
           status = "overdue";
         }
       }

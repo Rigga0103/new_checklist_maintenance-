@@ -16,15 +16,19 @@ export function useLogin() {
   const [isSignupLoading, setIsSignupLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [theme, setTheme] = useState<ThemeMode>("system");
   const [formData, setFormData] = useState<SignupFormData>({
     username: "",
     password: "",
     email: "",
     confirmPassword: "",
   });
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    if (typeof window === "undefined") return "system";
+    return (localStorage.getItem("theme") as ThemeMode) || "system";
+  });
 
   const applyTheme = useCallback((selectedTheme: ThemeMode) => {
+    if (typeof window === "undefined") return;
     const root = document.documentElement;
     if (selectedTheme === "system") {
       const systemDark = window.matchMedia(
@@ -36,12 +40,10 @@ export function useLogin() {
     }
   }, []);
 
-  // Theme handling
+  // Theme handling effect (only apply, don't set state again if not needed)
   useEffect(() => {
-    const savedTheme = (localStorage.getItem("theme") as ThemeMode) || "system";
-    setTheme(savedTheme);
-    applyTheme(savedTheme);
-  }, []);
+    applyTheme(theme);
+  }, [theme, applyTheme]);
 
   const cycleTheme = useCallback(() => {
     const themes: ThemeMode[] = ["light", "dark", "system"];
@@ -125,6 +127,7 @@ export function useLogin() {
               "user-name",
               result.data.user_name || result.data.username || "",
             );
+            localStorage.setItem("user_id", String(result.data.id || ""));
             localStorage.setItem("role", result.data.role || "");
             localStorage.setItem(
               "email_id",
@@ -165,6 +168,7 @@ export function useLogin() {
           if (result.data) {
             toast.success("Account created successfully!");
             localStorage.setItem("user-name", result.data.user_name || "");
+            localStorage.setItem("user_id", String(result.data.id || ""));
             localStorage.setItem("role", result.data.role || "");
             localStorage.setItem("email_id", result.data.email_id || "");
             setTimeout(() => router.push("/dashboard"), 1000);

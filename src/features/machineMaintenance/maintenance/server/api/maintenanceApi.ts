@@ -150,7 +150,7 @@ export const completeMaintenance = async (
       const filePath = `maintenance-${taskId}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from("checklist-delegation")
+        .from("maintenance")
         .upload(filePath, imageFile, {
           cacheControl: "3600",
           contentType: imageFile.type,
@@ -161,7 +161,7 @@ export const completeMaintenance = async (
 
       const {
         data: { publicUrl },
-      } = supabase.storage.from("checklist-delegation").getPublicUrl(filePath);
+      } = supabase.storage.from("maintenance").getPublicUrl(filePath);
 
       imageUrl = publicUrl;
     }

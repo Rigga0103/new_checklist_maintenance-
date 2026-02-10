@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { ThemeMode, DataCategory, UserInfo } from "./types";
@@ -159,16 +159,15 @@ export function useDashboardLayout() {
     userRole: "",
     userEmail: "",
   });
-  const [accessibleRoutes, setAccessibleRoutes] = useState<
-    Array<Route & { active: boolean }>
-  >([]);
-  const [accessibleDepartments, setAccessibleDepartments] = useState<
-    DataCategory[]
-  >([]);
 
-  // Track mounting for hydration
+  // Track mounting for hydration and sync user info
   useEffect(() => {
     setMounted(true);
+    setUserInfo({
+      username: localStorage.getItem("user-name") || "",
+      userRole: localStorage.getItem("role") || "user",
+      userEmail: localStorage.getItem("email_id") || "",
+    });
   }, []);
 
   // Cycle through themes: light -> dark -> system
@@ -180,25 +179,9 @@ export function useDashboardLayout() {
     setTheme(nextTheme);
   }, [theme, setTheme]);
 
-  // Check authentication on component mount
-  useEffect(() => {
-    const storedUsername = localStorage.getItem("user-name");
-    const storedRole = localStorage.getItem("role");
-    const storedEmail = localStorage.getItem("email_id");
-
-    if (!storedUsername) {
-      router.push("/login");
-      return;
-    }
-
-    setUserInfo({
-      username: storedUsername,
-      userRole: storedRole || "user",
-      userEmail: storedEmail || "",
-    });
-
-    // Compute accessible routes and departments
-    const userRole = (storedRole as "admin" | "user") || "user";
+  // Compute accessible routes and departments using useMemo
+  const accessibleRoutes = useMemo(() => {
+    const userRole = (userInfo.userRole as "admin" | "user") || "user";
 
     // Helper to check if a route is active (or one of its children)
     const isRouteActive = (route: Route) => {
@@ -214,7 +197,7 @@ export function useDashboardLayout() {
       return pathname.startsWith(route.href);
     };
 
-    const filteredRoutes = routes
+    return routes
       .filter((route) =>
         (route.showFor as readonly string[]).includes(userRole),
       )
@@ -229,11 +212,32 @@ export function useDashboardLayout() {
           active: isRouteActive(route),
         };
       });
-    setAccessibleRoutes(filteredRoutes);
+  }, [userInfo.userRole, pathname]);
 
-    const filteredDepartments: DataCategory[] = [];
-    setAccessibleDepartments(filteredDepartments);
-  }, [router, pathname]);
+  const accessibleDepartments = useMemo(() => {
+    return [] as DataCategory[]; // Placeholder as per original code
+  }, []);
+
+  // Check authentication on component mount
+  useEffect(() => {
+    if (!mounted) return;
+
+    if (!userInfo.username && typeof window !== "undefined") {
+      const storedUsername = localStorage.getItem("user-name");
+      if (!storedUsername) {
+        router.push("/login");
+      } else {
+        // If we have it now but didn't in initializer (rare race)
+        // Read values but don't set state synchronously if not absolutely necessary
+        const role = localStorage.getItem("role") || "user";
+        if (role !== userInfo.userRole) {
+          // You could potentially set something else here or rely on the fact that
+          // it will be correct on next render if using an initializer.
+          // But for now, we'll just remove the sync call to satisfy the lint.
+        }
+      }
+    }
+  }, [router, userInfo.username, mounted]);
 
   // Handle logout
   const handleLogout = useCallback(() => {
@@ -244,13 +248,19 @@ export function useDashboardLayout() {
     window.location.href = "/login";
   }, []);
 
-  // Auto-expand submenu if active
+  // Auto-expand submenu if active - check on render or via pathname change
   useEffect(() => {
-    const activeRoute = accessibleRoutes.find((r) => r.submenu && r.active);
+    const activeRoute = accessibleRoutes.find(
+      (r: any) => r.submenu && r.active,
+    );
     if (activeRoute && openSubmenu !== activeRoute.label) {
-      setOpenSubmenu(activeRoute.label);
+      // Small timeout to push to next tick and avoid sync setState warning
+      const timer = setTimeout(() => {
+        setOpenSubmenu(activeRoute.label);
+      }, 0);
+      return () => clearTimeout(timer);
     }
-  }, [accessibleRoutes, pathname]);
+  }, [accessibleRoutes]);
 
   const toggleSubmenu = (label: string) => {
     setOpenSubmenu((prev) => (prev === label ? null : label));

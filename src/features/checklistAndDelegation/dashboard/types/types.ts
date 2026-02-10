@@ -42,7 +42,7 @@ export interface DateRange {
   filtered: boolean;
 }
 
-export type DashboardType = "checklist" | "delegation";
+export type DashboardType = "checklist" | "delegation" | "repair";
 export type TaskView = "recent" | "today" | "upcoming" | "overdue";
 export type FilterStatus = "all" | "pending" | "completed" | "overdue";
 

@@ -4,8 +4,8 @@
 
 
 C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\components\layout\useDashboardLayout.ts
-  154:28  warning  'resolvedTheme' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      @typescript-eslint/no-unused-vars
-  169:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+  154:28  warning  'resolvedTheme' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              @typescript-eslint/no-unused-vars
+  171:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
 
 Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
 * Update external systems with the latest state from React.
@@ -13,15 +13,15 @@ Effects are intended to synchronize state between React and external systems suc
 
 Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
 
-C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\components\layout\useDashboardLayout.ts:169:5
-  167 |   // Track mounting for hydration
-  168 |   useEffect(() => {
-> 169 |     setMounted(true);
+C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\components\layout\useDashboardLayout.ts:171:5
+  169 |   // Track mounting for hydration
+  170 |   useEffect(() => {
+> 171 |     setMounted(true);
       |     ^^^^^^^^^^ Avoid calling setState() directly within an effect
-  170 |   }, []);
-  171 |
-  172 |   // Cycle through themes: light -> dark -> system                                                                                                                                   react-hooks/set-state-in-effect
-  230:9   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+  172 |   }, []);
+  173 |
+  174 |   // Cycle through themes: light -> dark -> system                                                                                           react-hooks/set-state-in-effect
+  194:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
 
 Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
 * Update external systems with the latest state from React.
@@ -29,16 +29,15 @@ Effects are intended to synchronize state between React and external systems suc
 
 Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
 
-C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\components\layout\useDashboardLayout.ts:230:9
-  228 |       } else {
-  229 |         // If we have it now but didn't in initializer (rare race)
-> 230 |         setUserInfo({
-      |         ^^^^^^^^^^^ Avoid calling setState() directly within an effect
-  231 |           username: storedUsername,
-  232 |           userRole: localStorage.getItem("role") || "user",
-  233 |           userEmail: localStorage.getItem("email_id") || "",  react-hooks/set-state-in-effect
-  251:11  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-explicit-any
-  254:7   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\components\layout\useDashboardLayout.ts:194:5
+  192 |     }
+  193 |
+> 194 |     setUserInfo({
+      |     ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  195 |       username: storedUsername,
+  196 |       userRole: storedRole || "user",
+  197 |       userEmail: storedEmail || "",                                                                                                 react-hooks/set-state-in-effect
+  251:7   error    Error: Calling setState synchronously within an effect can trigger cascading renders
 
 Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
 * Update external systems with the latest state from React.
@@ -46,19 +45,37 @@ Effects are intended to synchronize state between React and external systems suc
 
 Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
 
-C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\components\layout\useDashboardLayout.ts:254:7
-  252 |     );
-  253 |     if (activeRoute && openSubmenu !== activeRoute.label) {
-> 254 |       setOpenSubmenu(activeRoute.label);
+C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\components\layout\useDashboardLayout.ts:251:7
+  249 |     const activeRoute = accessibleRoutes.find((r) => r.submenu && r.active);
+  250 |     if (activeRoute && openSubmenu !== activeRoute.label) {
+> 251 |       setOpenSubmenu(activeRoute.label);
       |       ^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
-  255 |     }
-  256 |   }, [accessibleRoutes, pathname, openSubmenu]);
-  257 |                                                                                                   react-hooks/set-state-in-effect
+  252 |     }
+  253 |   }, [accessibleRoutes, pathname]);
+  254 |  react-hooks/set-state-in-effect
+  253:6   warning  React Hook useEffect has a missing dependency: 'openSubmenu'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  react-hooks/exhaustive-deps
 
 C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\features\auth\hooks\useLogin.ts
-    7:10  warning  'LoginFormData' is defined but never used  @typescript-eslint/no-unused-vars
-  138:18  warning  'err' is defined but never used            @typescript-eslint/no-unused-vars
-  174:18  warning  'err' is defined but never used            @typescript-eslint/no-unused-vars
+    7:10  warning  'LoginFormData' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+   42:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\features\auth\hooks\useLogin.ts:42:5
+  40 |   useEffect(() => {
+  41 |     const savedTheme = (localStorage.getItem("theme") as ThemeMode) || "system";
+> 42 |     setTheme(savedTheme);
+     |     ^^^^^^^^ Avoid calling setState() directly within an effect
+  43 |     applyTheme(savedTheme);
+  44 |   }, []);
+  45 |  react-hooks/set-state-in-effect
+   44:6   warning  React Hook useEffect has a missing dependency: 'applyTheme'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    react-hooks/exhaustive-deps
+  136:18  warning  'err' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+  172:18  warning  'err' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
 
 C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\features\checklistAndDelegation\approval\components\MainApproval.tsx
   134:5  error    Error: Calling setState synchronously within an effect can trigger cascading renders
@@ -94,20 +111,37 @@ C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\features\check
   219:20  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
 C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\features\checklistAndDelegation\checklist\components\MainChecklist.tsx
-  267:14  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+    9:3   warning  'X' is defined but never used                          @typescript-eslint/no-unused-vars
+   11:3   warning  'Clock' is defined but never used                      @typescript-eslint/no-unused-vars
+   12:3   warning  'CheckCircle' is defined but never used                @typescript-eslint/no-unused-vars
+   14:3   warning  'ChevronLeft' is defined but never used                @typescript-eslint/no-unused-vars
+   15:3   warning  'ChevronRight' is defined but never used               @typescript-eslint/no-unused-vars
+   19:8   warning  'Image' is defined but never used                      @typescript-eslint/no-unused-vars
+   58:20  warning  'fetchNextActive' is assigned a value but never used   @typescript-eslint/no-unused-vars
+   59:18  warning  'hasNextActive' is assigned a value but never used     @typescript-eslint/no-unused-vars
+   66:20  warning  'fetchNextHistory' is assigned a value but never used  @typescript-eslint/no-unused-vars
+   67:18  warning  'hasNextHistory' is assigned a value but never used    @typescript-eslint/no-unused-vars
+  276:14  warning  'e' is defined but never used                          @typescript-eslint/no-unused-vars
 
 C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\features\checklistAndDelegation\dashboard\components\RepairingDashboard.tsx
-   276:13  warning  'completedTasks' is assigned a value but never used  @typescript-eslint/no-unused-vars
-   284:13  warning  'overdueTasks' is assigned a value but never used    @typescript-eslint/no-unused-vars
-  1129:38  error    Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
-  1129:50  error    Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
-  1129:62  error    Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
-  1247:38  error    Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
-  1247:50  error    Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
-  1247:62  error    Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+   166:11  warning  'totalCost' is assigned a value but never used        @typescript-eslint/no-unused-vars
+   167:11  warning  'completedCount' is assigned a value but never used   @typescript-eslint/no-unused-vars
+   168:11  warning  'pendingCount' is assigned a value but never used     @typescript-eslint/no-unused-vars
+   169:11  warning  'inProgressCount' is assigned a value but never used  @typescript-eslint/no-unused-vars
+   285:19  error    Unexpected any. Specify a different type              @typescript-eslint/no-explicit-any
+   299:13  warning  'uniqueMachines' is assigned a value but never used   @typescript-eslint/no-unused-vars
+   303:13  warning  'completedTasks' is assigned a value but never used   @typescript-eslint/no-unused-vars
+   311:13  warning  'overdueTasks' is assigned a value but never used     @typescript-eslint/no-unused-vars
+   564:11  error    Unexpected any. Specify a different type              @typescript-eslint/no-explicit-any
+  1156:38  error    Unexpected any. Specify a different type              @typescript-eslint/no-explicit-any
+  1156:50  error    Unexpected any. Specify a different type              @typescript-eslint/no-explicit-any
+  1156:62  error    Unexpected any. Specify a different type              @typescript-eslint/no-explicit-any
+  1274:38  error    Unexpected any. Specify a different type              @typescript-eslint/no-explicit-any
+  1274:50  error    Unexpected any. Specify a different type              @typescript-eslint/no-explicit-any
+  1274:62  error    Unexpected any. Specify a different type              @typescript-eslint/no-explicit-any
 
 C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\features\checklistAndDelegation\dashboard\hooks\useDashboard.ts
-  68:28  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+  61:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
 
 Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
 * Update external systems with the latest state from React.
@@ -115,14 +149,14 @@ Effects are intended to synchronize state between React and external systems suc
 
 Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
 
-C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\features\checklistAndDelegation\dashboard\hooks\useDashboard.ts:68:28
-  66 |     const role = localStorage.getItem("role") || "user";
-  67 |     const name = localStorage.getItem("user-name") || "";
-> 68 |     if (role !== userRole) setUserRole(role);
-     |                            ^^^^^^^^^^^ Avoid calling setState() directly within an effect
-  69 |     if (name !== username) setUsername(name);
-  70 |   }, [userRole, username]);
-  71 |  react-hooks/set-state-in-effect
+C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\features\checklistAndDelegation\dashboard\hooks\useDashboard.ts:61:5
+  59 |     const role = localStorage.getItem("role") || "user";
+  60 |     const name = localStorage.getItem("user-name") || "";
+> 61 |     setUserRole(role);
+     |     ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  62 |     setUsername(name);
+  63 |   }, []);
+  64 |  react-hooks/set-state-in-effect
 
 C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\features\checklistAndDelegation\dashboard\server\api\dashboardApi.ts
   451:9  warning  'today' is assigned a value but never used  @typescript-eslint/no-unused-vars
@@ -191,5 +225,5 @@ C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\features\machi
    5:3   warning  'RefreshCw' is defined but never used    @typescript-eslint/no-unused-vars
   11:3   warning  'Eye' is defined but never used          @typescript-eslint/no-unused-vars
 
-✖ 58 problems (18 errors, 40 warnings)
+✖ 77 problems (20 errors, 57 warnings)
 

@@ -16,6 +16,7 @@ import {
 import Image from "next/image";
 import { useRepairHistoryQuery } from "../server/tanstackQuery/useRepairingQueries";
 import type { MachineRepair } from "../../types/types";
+import { useRBAC } from "@/hooks/useRBAC";
 
 export default function MainRepairingHistory() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -38,6 +39,8 @@ export default function MainRepairingHistory() {
     role,
     username,
   );
+
+  const { canRead, isLoading: isRbacLoading } = useRBAC("repairing");
 
   const repairs = data?.data || [];
   const totalCount = data?.totalCount || 0;
@@ -114,6 +117,22 @@ export default function MainRepairingHistory() {
 
   // Calculate total cost
   const totalCost = repairs.reduce((sum, r) => sum + (r.bill_amount || 0), 0);
+
+  if (isLoading || isRbacLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-100">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!canRead) {
+    return (
+      <div className="flex items-center justify-center h-96 text-muted-foreground">
+        Access Denied. You do not have permission to view Repair History.
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">

@@ -20,6 +20,24 @@ import {
 } from "../server/tanstackQuery/useRepairingQueries";
 import type { MachineRepair, RepairProcessFormData } from "../../types/types";
 import { toast } from "sonner";
+import { useRBAC } from "@/hooks/useRBAC";
+
+// Predefined Work Done options (English / Hindi)
+const WORK_DONE_OPTIONS: { value: string; label: string }[] = [
+  { value: "Cleaning", label: "Cleaning / सफाई" },
+  { value: "Lubrication", label: "Lubrication / ग्रीसिंग" },
+  { value: "Motor Replacement", label: "Motor Replacement / मोटर बदली" },
+  { value: "Welding", label: "Welding / वेल्डिंग" },
+  {
+    value: "Electrical Wiring",
+    label: "Electrical Wiring / इलेक्ट्रिकल वायरिंग",
+  },
+  { value: "PCB Repair", label: "PCB Repair / पीसीबी रिपेयर" },
+  { value: "Fuse Change", label: "Fuse Change / फ्यूज बदला" },
+  { value: "Bearing Replacement", label: "Bearing Replacement / बेयरिंग बदली" },
+  { value: "Alignment", label: "Alignment / एलाइनमेंट" },
+  { value: "Inspection", label: "Inspection / निरीक्षण" },
+];
 
 export default function MainRepairingPending() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -42,6 +60,8 @@ export default function MainRepairingPending() {
     role,
     username,
   );
+
+  const { canRead, canEdit, isLoading: isRbacLoading } = useRBAC("repairing");
 
   const repairs = data?.data || [];
   const totalCount = data?.totalCount || 0;
@@ -146,6 +166,12 @@ export default function MainRepairingPending() {
             In Progress
           </span>
         );
+      case "cancelled":
+        return (
+          <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+            Cancelled
+          </span>
+        );
       default:
         return (
           <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400">
@@ -156,6 +182,22 @@ export default function MainRepairingPending() {
   };
 
   const totalPages = Math.ceil(totalCount / limit);
+
+  if (isLoading || isRbacLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-100">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!canRead) {
+    return (
+      <div className="flex items-center justify-center h-96 text-muted-foreground">
+        Access Denied. You do not have permission to view Pending Repairs.
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -252,13 +294,15 @@ export default function MainRepairingPending() {
                       {getStatusBadge(repair.status)}
                     </td>
                     <td className="px-4 py-3">
-                      <button
-                        onClick={() => openProcessModal(repair)}
-                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-                      >
-                        <Edit className="w-3.5 h-3.5" />
-                        Process
-                      </button>
+                      {canEdit && (
+                        <button
+                          onClick={() => openProcessModal(repair)}
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                          Process
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -346,7 +390,7 @@ export default function MainRepairingPending() {
                   onChange={(e) =>
                     setProcessForm((prev) => ({
                       ...prev,
-                      status: e.target.value,
+                      status: e.target.value as RepairProcessFormData["status"],
                     }))
                   }
                   className="w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground"
@@ -354,153 +398,209 @@ export default function MainRepairingPending() {
                   <option value="pending">Pending</option>
                   <option value="in_progress">In Progress</option>
                   <option value="completed">Completed</option>
+                  <option value="cancelled">Cancel</option>
                 </select>
               </div>
 
-              {/* Part Replaced */}
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">
-                  Part Replaced
-                </label>
-                <input
-                  type="text"
-                  value={processForm.partReplaced}
-                  onChange={(e) =>
-                    setProcessForm((prev) => ({
-                      ...prev,
-                      partReplaced: e.target.value,
-                    }))
-                  }
-                  placeholder="e.g., Motor, Belt, Bearing"
-                  className="w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground"
-                />
-              </div>
-
-              {/* Work Done */}
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">
-                  Work Done
-                </label>
-                <textarea
-                  value={processForm.workDone}
-                  onChange={(e) =>
-                    setProcessForm((prev) => ({
-                      ...prev,
-                      workDone: e.target.value,
-                    }))
-                  }
-                  rows={3}
-                  placeholder="Describe the work performed..."
-                  className="w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground resize-none"
-                />
-              </div>
-
-              {/* Vendor & Cost */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* In Progress: Remarks only */}
+              {processForm.status === "in_progress" && (
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1.5">
-                    Vendor Name
+                    Remarks
                   </label>
-                  <input
-                    type="text"
-                    value={processForm.vendorName}
+                  <textarea
+                    value={processForm.remarks}
                     onChange={(e) =>
                       setProcessForm((prev) => ({
                         ...prev,
-                        vendorName: e.target.value,
+                        remarks: e.target.value,
                       }))
                     }
-                    placeholder="Vendor name"
-                    className="w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground"
+                    rows={2}
+                    placeholder="Additional notes..."
+                    className="w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground resize-none"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1.5">
-                    Bill Amount (₹)
-                  </label>
-                  <input
-                    type="number"
-                    value={processForm.billAmount || ""}
-                    onChange={(e) =>
-                      setProcessForm((prev) => ({
-                        ...prev,
-                        billAmount: e.target.value
-                          ? parseFloat(e.target.value)
-                          : undefined,
-                      }))
-                    }
-                    placeholder="0"
-                    className="w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground"
-                  />
-                </div>
-              </div>
+              )}
 
-              {/* Photo Upload */}
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">
-                  Work Photo
-                </label>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center gap-2 px-4 py-2 bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 rounded-lg cursor-pointer transition-colors">
-                    <Upload className="w-4 h-4" />
-                    <span className="text-sm">Upload Photo</span>
+              {/* Completed: All fields */}
+              {processForm.status === "completed" && (
+                <>
+                  {/* Part Replaced */}
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1.5">
+                      Part Replaced
+                    </label>
                     <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handlePhotoChange}
-                      className="hidden"
+                      type="text"
+                      value={processForm.partReplaced}
+                      onChange={(e) =>
+                        setProcessForm((prev) => ({
+                          ...prev,
+                          partReplaced: e.target.value,
+                        }))
+                      }
+                      placeholder="e.g., Motor, Belt, Bearing"
+                      className="w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground"
                     />
-                  </label>
-                  {photoPreview && (
-                    <div className="relative w-16 h-16">
-                      <Image
-                        src={photoPreview}
-                        alt="Preview"
-                        fill
-                        className="object-cover rounded-lg"
+                  </div>
+
+                  {/* Work Done */}
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1.5">
+                      Work Done
+                    </label>
+                    <select
+                      value={
+                        WORK_DONE_OPTIONS.some(
+                          (opt) => opt.value === processForm.workDone,
+                        )
+                          ? processForm.workDone
+                          : "other"
+                      }
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setProcessForm((prev) => ({
+                          ...prev,
+                          workDone: val === "other" ? prev.workDone : val,
+                        }));
+                      }}
+                      className="w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground"
+                    >
+                      <option value="">Select work done...</option>
+                      {WORK_DONE_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                      <option value="other">Other</option>
+                    </select>
+                    {!WORK_DONE_OPTIONS.some(
+                      (opt) => opt.value === processForm.workDone,
+                    ) && (
+                      <input
+                        type="text"
+                        value={processForm.workDone}
+                        onChange={(e) =>
+                          setProcessForm((prev) => ({
+                            ...prev,
+                            workDone: e.target.value,
+                          }))
+                        }
+                        placeholder="Describe the work performed..."
+                        className="mt-2 w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground"
+                      />
+                    )}
+                  </div>
+
+                  {/* Vendor & Cost */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1.5">
+                        Vendor Name
+                      </label>
+                      <input
+                        type="text"
+                        value={processForm.vendorName}
+                        onChange={(e) =>
+                          setProcessForm((prev) => ({
+                            ...prev,
+                            vendorName: e.target.value,
+                          }))
+                        }
+                        placeholder="Vendor name"
+                        className="w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground"
                       />
                     </div>
-                  )}
-                </div>
-              </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1.5">
+                        Bill Amount (₹)
+                      </label>
+                      <input
+                        type="number"
+                        value={processForm.billAmount || ""}
+                        onChange={(e) =>
+                          setProcessForm((prev) => ({
+                            ...prev,
+                            billAmount: e.target.value
+                              ? parseFloat(e.target.value)
+                              : undefined,
+                          }))
+                        }
+                        placeholder="0"
+                        className="w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground"
+                      />
+                    </div>
+                  </div>
 
-              {/* Bill Upload */}
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">
-                  Bill Copy
-                </label>
-                <label className="flex items-center gap-2 px-4 py-2 bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 rounded-lg cursor-pointer transition-colors w-fit">
-                  <Upload className="w-4 h-4" />
-                  <span className="text-sm">
-                    {billFile ? billFile.name : "Upload Bill"}
-                  </span>
-                  <input
-                    type="file"
-                    accept="image/*,.pdf"
-                    onChange={handleBillChange}
-                    className="hidden"
-                  />
-                </label>
-              </div>
+                  {/* Photo Upload */}
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1.5">
+                      Work Photo
+                    </label>
+                    <div className="flex items-center gap-4">
+                      <label className="flex items-center gap-2 px-4 py-2 bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 rounded-lg cursor-pointer transition-colors">
+                        <Upload className="w-4 h-4" />
+                        <span className="text-sm">Upload Photo</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handlePhotoChange}
+                          className="hidden"
+                        />
+                      </label>
+                      {photoPreview && (
+                        <div className="relative w-16 h-16">
+                          <Image
+                            src={photoPreview}
+                            alt="Preview"
+                            fill
+                            className="object-cover rounded-lg"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
-              {/* Remarks */}
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">
-                  Remarks
-                </label>
-                <textarea
-                  value={processForm.remarks}
-                  onChange={(e) =>
-                    setProcessForm((prev) => ({
-                      ...prev,
-                      remarks: e.target.value,
-                    }))
-                  }
-                  rows={2}
-                  placeholder="Additional notes..."
-                  className="w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground resize-none"
-                />
-              </div>
+                  {/* Bill Upload */}
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1.5">
+                      Bill Copy
+                    </label>
+                    <label className="flex items-center gap-2 px-4 py-2 bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 rounded-lg cursor-pointer transition-colors w-fit">
+                      <Upload className="w-4 h-4" />
+                      <span className="text-sm">
+                        {billFile ? billFile.name : "Upload Bill"}
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={handleBillChange}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+
+                  {/* Remarks (completed) */}
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1.5">
+                      Remarks
+                    </label>
+                    <textarea
+                      value={processForm.remarks}
+                      onChange={(e) =>
+                        setProcessForm((prev) => ({
+                          ...prev,
+                          remarks: e.target.value,
+                        }))
+                      }
+                      rows={2}
+                      placeholder="Additional notes..."
+                      className="w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground resize-none"
+                    />
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-neutral-200 dark:border-neutral-700">

@@ -11,6 +11,7 @@ import {
 import { useActiveMachinesQuery } from "../../machines/server/tanstackQuery/useMachineQueries";
 import { Plus, Pencil, Trash2, X, Loader2, Play } from "lucide-react";
 import { CreateScheduleDTO } from "../server/api/maintenanceScheduleApi";
+import { useRBAC } from "@/hooks/useRBAC";
 
 export default function MainMaintenanceSchedule() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -29,6 +30,8 @@ export default function MainMaintenanceSchedule() {
   const updateMutation = useUpdateScheduleMutation();
   const deleteMutation = useDeleteScheduleMutation();
   const generateMutation = useGenerateTasksMutation();
+
+  const { canWrite, canEdit, canDelete } = useRBAC("maintenance_schedules");
 
   const handleOpenModal = (schedule?: any) => {
     if (schedule) {
@@ -100,25 +103,29 @@ export default function MainMaintenanceSchedule() {
           </p>
         </div>
         <div className="flex gap-3">
-          <button
-            onClick={() => generateMutation.mutate()}
-            disabled={generateMutation.isPending}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-          >
-            {generateMutation.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Play className="w-4 h-4" />
-            )}
-            Generate Tasks
-          </button>
-          <button
-            onClick={() => handleOpenModal()}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add Schedule
-          </button>
+          {canWrite && (
+            <button
+              onClick={() => generateMutation.mutate()}
+              disabled={generateMutation.isPending}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {generateMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Play className="w-4 h-4" />
+              )}
+              Generate Tasks
+            </button>
+          )}
+          {canWrite && (
+            <button
+              onClick={() => handleOpenModal()}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add Schedule
+            </button>
+          )}
         </div>
       </div>
 
@@ -182,18 +189,22 @@ export default function MainMaintenanceSchedule() {
                     {schedule.assigned_to || "-"}
                   </td>
                   <td className="px-6 py-4 text-right space-x-2">
-                    <button
-                      onClick={() => handleOpenModal(schedule)}
-                      className="text-neutral-500 hover:text-green-600 transition-colors"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(schedule.id)}
-                      className="text-neutral-500 hover:text-red-600 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {canEdit && (
+                      <button
+                        onClick={() => handleOpenModal(schedule)}
+                        className="text-neutral-500 hover:text-green-600 transition-colors"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button
+                        onClick={() => handleDelete(schedule.id)}
+                        className="text-neutral-500 hover:text-red-600 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))

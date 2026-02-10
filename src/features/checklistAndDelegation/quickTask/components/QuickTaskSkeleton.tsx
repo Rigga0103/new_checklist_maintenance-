@@ -30,7 +30,7 @@ export function QuickTaskSkeleton({ rows = 10 }: QuickTaskSkeletonProps) {
           <div className="w-28 h-4 bg-gray-200 dark:bg-gray-700 rounded" />
 
           {/* Task Description */}
-          <div className="flex-1 min-w-[200px]">
+          <div className="flex-1 min-w-48">
             <div className="w-full h-4 bg-gray-200 dark:bg-gray-700 rounded mb-1" />
             <div className="w-3/4 h-4 bg-gray-200 dark:bg-gray-700 rounded" />
           </div>

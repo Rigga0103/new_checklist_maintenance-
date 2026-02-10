@@ -1,5 +1,5 @@
-import MainRepairingDashboard from "@/features/machineMaintenance/repairing/components/MainRepairingDashboard";
+import RepairingDashboard from "@/features/checklistAndDelegation/dashboard/components/RepairingDashboard";
 
 export default function RepairingDashboardPage() {
-  return <MainRepairingDashboard />;
+  return <RepairingDashboard />;
 }

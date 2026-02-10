@@ -13,8 +13,11 @@ import {
   Calendar,
   RefreshCw,
   Loader2,
+  Shield,
+  Lock,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useRBAC } from "@/hooks/useRBAC";
 import {
   useUsers,
   useCreateUser,
@@ -36,6 +39,7 @@ import type {
 } from "../types/types";
 import { SettingsTableSkeleton } from "./SettingsSkeleton";
 import supabase from "@/utils/supabaseClient";
+import PermissionsModal from "./PermissionsModal";
 
 // Tab types
 type TabType = "users" | "departments" | "leave";
@@ -63,6 +67,15 @@ export default function MainSettings() {
   const [activeTab, setActiveTab] = useState<TabType>("users");
   const [activeDeptSubTab, setActiveDeptSubTab] =
     useState<DeptSubTab>("departments");
+
+  // Permission Modal state
+  const [showPermissionsModal, setShowPermissionsModal] = useState(false);
+  const [permissionUser, setPermissionUser] = useState<IUser | null>(null);
+
+  const handlePermissionsClick = (user: IUser) => {
+    setPermissionUser(user);
+    setShowPermissionsModal(true);
+  };
 
   // Modal state
   const [showUserModal, setShowUserModal] = useState(false);
@@ -103,6 +116,14 @@ export default function MainSettings() {
   const deleteUserMutation = useDeleteUser();
   const createDeptMutation = useCreateDepartment();
   const updateDeptMutation = useUpdateDepartment();
+
+  // Permissions
+  const {
+    canWrite,
+    canEdit,
+    canDelete,
+    isLoading: rbacLoading,
+  } = useRBAC("settings");
 
   // Computed values
   const filteredUsers = useMemo(() => {
@@ -496,7 +517,7 @@ export default function MainSettings() {
           </button>
 
           {/* Add Button - hide for leave tab */}
-          {activeTab !== "leave" && (
+          {activeTab !== "leave" && canWrite && (
             <button
               onClick={handleAddButtonClick}
               className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
@@ -663,18 +684,31 @@ export default function MainSettings() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleEditUser(user)}
-                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                          >
-                            <Edit size={18} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteUser(user.id)}
-                            className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                          >
-                            <Trash2 size={18} />
-                          </button>
+                          {canEdit && (
+                            <button
+                              onClick={() => handleEditUser(user)}
+                              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                            >
+                              <Edit size={18} />
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button
+                              onClick={() => handleDeleteUser(user.id)}
+                              className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          )}
+                          {canEdit && (
+                            <button
+                              onClick={() => handlePermissionsClick(user)}
+                              className="text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300"
+                              title="Manage Permissions"
+                            >
+                              <Shield size={18} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -758,12 +792,14 @@ export default function MainSettings() {
                         {dept.given_by}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <button
-                          onClick={() => handleEditDepartment(dept)}
-                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                        >
-                          <Edit size={18} />
-                        </button>
+                        {canEdit && (
+                          <button
+                            onClick={() => handleEditDepartment(dept)}
+                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                          >
+                            <Edit size={18} />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -1218,6 +1254,18 @@ export default function MainSettings() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Permissions Modal */}
+      {permissionUser && (
+        <PermissionsModal
+          user={permissionUser}
+          isOpen={showPermissionsModal}
+          onClose={() => {
+            setShowPermissionsModal(false);
+            setPermissionUser(null);
+          }}
+        />
       )}
     </div>
   );

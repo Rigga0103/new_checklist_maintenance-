@@ -9,6 +9,7 @@ import {
 } from "../server/tanstackQuery/useMachineQueries";
 import { Plus, Pencil, Trash2, X, Loader2 } from "lucide-react";
 import { CreateMachineDTO } from "../server/api/machinesApi";
+import { useRBAC } from "@/hooks/useRBAC";
 
 export default function MainMachinesMaster() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -26,6 +27,8 @@ export default function MainMachinesMaster() {
   const createMutation = useCreateMachineMutation();
   const updateMutation = useUpdateMachineMutation();
   const deleteMutation = useDeleteMachineMutation();
+
+  const { canWrite, canEdit, canDelete } = useRBAC("machines");
 
   const handleOpenModal = (machine?: any) => {
     if (machine) {
@@ -94,13 +97,15 @@ export default function MainMachinesMaster() {
             Manage your equipment and machinery registry.
           </p>
         </div>
-        <button
-          onClick={() => handleOpenModal()}
-          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Add Machine
-        </button>
+        {canWrite && (
+          <button
+            onClick={() => handleOpenModal()}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add Machine
+          </button>
+        )}
       </div>
 
       <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-700 overflow-hidden">
@@ -173,18 +178,22 @@ export default function MainMachinesMaster() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right space-x-2">
-                    <button
-                      onClick={() => handleOpenModal(machine)}
-                      className="text-neutral-500 hover:text-green-600 transition-colors"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(machine.id)}
-                      className="text-neutral-500 hover:text-red-600 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {canEdit && (
+                      <button
+                        onClick={() => handleOpenModal(machine)}
+                        className="text-neutral-500 hover:text-green-600 transition-colors"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button
+                        onClick={() => handleDelete(machine.id)}
+                        className="text-neutral-500 hover:text-red-600 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))

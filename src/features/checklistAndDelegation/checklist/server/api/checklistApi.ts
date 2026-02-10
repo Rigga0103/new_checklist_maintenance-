@@ -115,7 +115,9 @@ export const fetchChecklistDataForHistory = async (
 // ============ Submit Checklist ============
 
 /**
- * Update checklist with submission data and optional image upload
+ * Update checklist with submission data
+ * Images are already uploaded to Supabase Storage via uploadChecklistImage
+ * The previewUrl field contains the Supabase public URL
  */
 export const updateChecklistData = async (
   submissionData: ChecklistSubmissionItem[],
@@ -124,58 +126,26 @@ export const updateChecklistData = async (
     throw new Error("Invalid submission data");
   }
 
-  const updates = await Promise.all(
-    submissionData.map(async (item) => {
-      let imageUrl: string | null = null;
+  const updates = submissionData.map((item) => {
+    // Image URL is already uploaded, just use previewUrl directly
+    const imageUrl = item.image?.previewUrl || null;
 
-      // Handle image upload if exists
-      if (item.image && item.image.previewUrl) {
-        try {
-          const response = await fetch(item.image.previewUrl);
-          const blob = await response.blob();
-          const file = new File([blob], item.image.name, {
-            type: item.image.type,
-          });
+    console.log("Processing task submission:", {
+      taskId: item.taskId,
+      hasImage: !!item.image,
+      imageUrl,
+      fullImageData: item.image,
+    });
 
-          const fileExt = item.image.name.split(".").pop();
-          const fileName = `${crypto.randomUUID()}.${fileExt}`;
-          const filePath = `task-${item.taskId}/${fileName}`;
-
-          const { error: uploadError } = await supabase.storage
-            .from("checklist-delegation")
-            .upload(filePath, file, {
-              cacheControl: "3600",
-              contentType: item.image.type,
-              upsert: false,
-            });
-
-          if (uploadError) throw uploadError;
-
-          const {
-            data: { publicUrl },
-          } = supabase.storage
-            .from("checklist-delegation")
-            .getPublicUrl(filePath);
-
-          imageUrl = publicUrl;
-        } catch (uploadError) {
-          console.error("Image upload failed:", uploadError);
-          throw new Error(
-            `Image upload failed: ${(uploadError as Error).message}`,
-          );
-        }
-      }
-
-      return {
-        task_id: item.taskId,
-        status: item.status,
-        remark: item.remarks,
-        submission_date: new Date().toISOString(),
-        image: imageUrl,
-        next_extend_date: item.nextExtendDate || null,
-      };
-    }),
-  );
+    return {
+      task_id: item.taskId,
+      status: item.status,
+      remark: item.remarks,
+      submission_date: new Date().toISOString(),
+      image: imageUrl,
+      next_extend_date: item.nextExtendDate || null,
+    };
+  });
 
   // Update each task individually
   const results = await Promise.all(

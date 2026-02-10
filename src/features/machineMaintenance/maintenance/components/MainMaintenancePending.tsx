@@ -1,35 +1,33 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import {
-  RefreshCw,
   Search,
   Loader2,
   ChevronLeft,
   ChevronRight,
-  Check,
+  Edit,
   X,
   Upload,
-  Eye,
+  Save,
 } from "lucide-react";
 import Image from "next/image";
 import {
   usePendingMaintenanceQuery,
-  useBulkCompleteMaintenanceMutation,
   useCompleteMaintenanceMutation,
 } from "../server/tanstackQuery/useMaintenanceQueries";
 import type { MachineMaintenance } from "../../types/types";
+import { toast } from "sonner";
+import { useRBAC } from "@/hooks/useRBAC";
 
 export default function MainMaintenancePending() {
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
-  const [selectedTasks, setSelectedTasks] = useState<Set<number>>(new Set());
-  const [taskRemarks, setTaskRemarks] = useState<Record<number, string>>({});
-  const [taskImages, setTaskImages] = useState<
-    Record<number, { file: File; previewUrl: string }>
-  >({});
+  const [selectedTask, setSelectedTask] = useState<MachineMaintenance | null>(
+    null,
+  );
 
-  const limit = 30;
+  const limit = 20;
 
   const role =
     typeof window !== "undefined" ? localStorage.getItem("role") : null;
@@ -44,94 +42,67 @@ export default function MainMaintenancePending() {
     username,
   );
 
+  const { canRead, canEdit, isLoading: isRbacLoading } = useRBAC("maintenance");
+
   const tasks = data?.data || [];
   const totalCount = data?.totalCount || 0;
 
   const completeMutation = useCompleteMaintenanceMutation();
-  const bulkMutation = useBulkCompleteMaintenanceMutation();
-  const isSubmitting = completeMutation.isPending || bulkMutation.isPending;
+  const isProcessing = completeMutation.isPending;
+
+  // Process form state
+  const [remarks, setRemarks] = useState("");
+  const [maintenanceCost, setMaintenanceCost] = useState<number | undefined>(
+    undefined,
+  );
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
     setPage(1);
-    setSelectedTasks(new Set());
   };
 
-  const toggleTaskSelection = (taskId: number) => {
-    const newSelected = new Set(selectedTasks);
-    if (newSelected.has(taskId)) {
-      newSelected.delete(taskId);
-    } else {
-      newSelected.add(taskId);
-    }
-    setSelectedTasks(newSelected);
+  const openProcessModal = (task: MachineMaintenance) => {
+    setSelectedTask(task);
+    setRemarks(task.remarks || "");
+    setMaintenanceCost(task.maintenance_cost || undefined);
+    setImageFile(null);
+    setImagePreview(task.image_url || null);
   };
 
-  const selectAllTasks = () => {
-    const allIds = tasks.map((t) => t.task_id);
-    setSelectedTasks(new Set(allIds));
+  const closeProcessModal = () => {
+    setSelectedTask(null);
+    setRemarks("");
+    setMaintenanceCost(undefined);
+    setImageFile(null);
+    setImagePreview(null);
   };
 
-  const deselectAllTasks = () => {
-    setSelectedTasks(new Set());
-  };
-
-  const updateTaskRemark = (taskId: number, remark: string) => {
-    setTaskRemarks((prev) => ({ ...prev, [taskId]: remark }));
-    if (!selectedTasks.has(taskId)) {
-      toggleTaskSelection(taskId);
-    }
-  };
-
-  const handleImageUpload = (
-    taskId: number,
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file = event.target.files?.[0];
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (file) {
-      const previewUrl = URL.createObjectURL(file);
-      setTaskImages((prev) => ({ ...prev, [taskId]: { file, previewUrl } }));
-      if (!selectedTasks.has(taskId)) {
-        toggleTaskSelection(taskId);
-      }
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
     }
   };
 
-  const handleSubmit = async () => {
-    if (selectedTasks.size === 0) {
-      alert("Please select at least one task");
-      return;
-    }
-
-    // We can use bulk mutation even for single items if we adapt the API,
-    // but the API has completeMaintenance (single) and bulkCompleteMaintenance.
-    // However, the UI logic here iterates and calls completeMaintenance for each.
-    // We should probably adapt to use Promise.all with the single mutation OR use a bulk mutation if the API supports partial updates per item (images/remarks per item).
-    // The current API bulkCompleteMaintenance only takes one 'remarks' for all.
-    // But here we have per-task remarks and images.
-    // So we must keep the loop but use mutation.mutateAsync.
+  const handleProcessSubmit = async () => {
+    if (!selectedTask) return;
 
     try {
-      const promises = Array.from(selectedTasks).map(async (taskId) => {
-        const image = taskImages[taskId];
-        const remarks = taskRemarks[taskId];
-        return completeMutation.mutateAsync({
-          taskId,
-          remarks,
-          imageFile: image?.file,
-        });
+      await completeMutation.mutateAsync({
+        taskId: selectedTask.task_id,
+        remarks: remarks || undefined,
+        imageFile: imageFile || undefined,
+        maintenanceCost: maintenanceCost,
       });
 
-      await Promise.all(promises);
-
-      // Reset
-      setSelectedTasks(new Set());
-      setTaskRemarks({});
-      setTaskImages({});
-      // Query invalidation happens in useCompleteMaintenanceMutation
+      toast.success("Maintenance task completed successfully");
+      closeProcessModal();
     } catch (error) {
-      console.error("Error submitting tasks:", error);
-      alert("Error submitting tasks");
+      console.error("Error completing task:", error);
+      toast.error("Failed to complete task");
     }
   };
 
@@ -171,6 +142,22 @@ export default function MainMaintenancePending() {
 
   const totalPages = Math.ceil(totalCount / limit);
 
+  if (isLoading || isRbacLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-100">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!canRead) {
+    return (
+      <div className="flex items-center justify-center h-96 text-muted-foreground">
+        Access Denied. You do not have permission to view Pending Maintenance.
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -183,55 +170,18 @@ export default function MainMaintenancePending() {
             Complete maintenance tasks for today
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          {selectedTasks.size > 0 && (
-            <button
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed transition-colors"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Submitting...
-                </>
-              ) : (
-                <>
-                  <Check className="w-4 h-4" />
-                  Submit ({selectedTasks.size})
-                </>
-              )}
-            </button>
-          )}
-        </div>
       </div>
 
-      {/* Search & Selection Controls */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search by machine, task, or person..."
-            value={searchTerm}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground focus:ring-2 focus:ring-green-500 focus:border-green-500"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={selectAllTasks}
-            className="px-3 py-2 text-sm text-foreground bg-neutral-100 dark:bg-neutral-700 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors"
-          >
-            Select All
-          </button>
-          <button
-            onClick={deselectAllTasks}
-            className="px-3 py-2 text-sm text-foreground bg-neutral-100 dark:bg-neutral-700 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors"
-          >
-            Deselect All
-          </button>
-        </div>
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+        <input
+          type="text"
+          placeholder="Search by machine, task, or doer..."
+          value={searchTerm}
+          onChange={(e) => handleSearch(e.target.value)}
+          className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground focus:ring-2 focus:ring-green-500 focus:border-green-500"
+        />
       </div>
 
       {/* Table */}
@@ -242,24 +192,15 @@ export default function MainMaintenancePending() {
           </div>
         ) : tasks.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
-            No pending maintenance tasks
+            No pending maintenance tasks found
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase w-12">
-                    <input
-                      type="checkbox"
-                      checked={
-                        selectedTasks.size === tasks.length && tasks.length > 0
-                      }
-                      onChange={(e) =>
-                        e.target.checked ? selectAllTasks() : deselectAllTasks()
-                      }
-                      className="w-4 h-4 rounded border-neutral-300 text-green-600 focus:ring-green-500"
-                    />
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    ID
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                     Machine
@@ -277,10 +218,7 @@ export default function MainMaintenancePending() {
                     Planned
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                    Remarks
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                    Image
+                    Action
                   </th>
                 </tr>
               </thead>
@@ -288,24 +226,15 @@ export default function MainMaintenancePending() {
                 {tasks.map((task) => (
                   <tr
                     key={task.task_id}
-                    className={`hover:bg-neutral-50 dark:hover:bg-neutral-700/50 transition-colors ${
-                      selectedTasks.has(task.task_id)
-                        ? "bg-green-50 dark:bg-green-900/10"
-                        : ""
-                    }`}
+                    className="hover:bg-neutral-50 dark:hover:bg-neutral-700/50 transition-colors"
                   >
-                    <td className="px-4 py-3">
-                      <input
-                        type="checkbox"
-                        checked={selectedTasks.has(task.task_id)}
-                        onChange={() => toggleTaskSelection(task.task_id)}
-                        className="w-4 h-4 rounded border-neutral-300 text-green-600 focus:ring-green-500"
-                      />
-                    </td>
                     <td className="px-4 py-3 text-sm font-medium text-foreground">
+                      #{task.task_id}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-foreground">
                       {task.machine_name || "-"}
                     </td>
-                    <td className="px-4 py-3 text-sm text-foreground max-w-xs">
+                    <td className="px-4 py-3 text-sm text-foreground max-w-xs truncate">
                       {task.task_description || "-"}
                     </td>
                     <td className="px-4 py-3">
@@ -318,38 +247,15 @@ export default function MainMaintenancePending() {
                       {formatDate(task.task_start_date)}
                     </td>
                     <td className="px-4 py-3">
-                      <input
-                        type="text"
-                        value={taskRemarks[task.task_id] || ""}
-                        onChange={(e) =>
-                          updateTaskRemark(task.task_id, e.target.value)
-                        }
-                        placeholder="Add remark..."
-                        className="w-full px-2 py-1 text-sm bg-transparent border border-neutral-300 dark:border-neutral-600 rounded focus:ring-1 focus:ring-green-500"
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <label className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-foreground bg-neutral-100 dark:bg-neutral-700 rounded cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors">
-                          <Upload className="w-3 h-3" />
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleImageUpload(task.task_id, e)}
-                            className="hidden"
-                          />
-                        </label>
-                        {taskImages[task.task_id] && (
-                          <div className="relative w-8 h-8">
-                            <Image
-                              src={taskImages[task.task_id].previewUrl}
-                              alt="Preview"
-                              fill
-                              className="object-cover rounded"
-                            />
-                          </div>
-                        )}
-                      </div>
+                      {canEdit && (
+                        <button
+                          onClick={() => openProcessModal(task)}
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                          Process
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -387,6 +293,140 @@ export default function MainMaintenancePending() {
           </div>
         )}
       </div>
+
+      {/* Process Modal */}
+      {selectedTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-700">
+              <h2 className="text-lg font-semibold text-foreground">
+                Process Task #{selectedTask.task_id}
+              </h2>
+              <button
+                onClick={closeProcessModal}
+                className="p-1 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              {/* Read-only info */}
+              <div className="p-4 bg-neutral-50 dark:bg-neutral-900 rounded-lg space-y-2">
+                <p>
+                  <span className="text-muted-foreground">Machine:</span>{" "}
+                  <span className="font-medium text-foreground">
+                    {selectedTask.machine_name}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-muted-foreground">Task:</span>{" "}
+                  <span className="font-medium text-foreground">
+                    {selectedTask.task_description}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-muted-foreground">Doer:</span>{" "}
+                  <span className="font-medium text-foreground">
+                    {selectedTask.doer_name}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-muted-foreground">Frequency:</span>{" "}
+                  {getFrequencyBadge(selectedTask.frequency)}
+                </p>
+              </div>
+
+              {/* Maintenance Cost */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">
+                  Maintenance Cost (₹)
+                </label>
+                <input
+                  type="number"
+                  value={maintenanceCost || ""}
+                  onChange={(e) =>
+                    setMaintenanceCost(
+                      e.target.value ? parseFloat(e.target.value) : undefined,
+                    )
+                  }
+                  placeholder="0"
+                  className="w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground"
+                />
+              </div>
+
+              {/* Remarks */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">
+                  Remarks
+                </label>
+                <textarea
+                  value={remarks}
+                  onChange={(e) => setRemarks(e.target.value)}
+                  rows={3}
+                  placeholder="Add remarks..."
+                  className="w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground resize-none"
+                />
+              </div>
+
+              {/* Photo Upload */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">
+                  Task Photo
+                </label>
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 px-4 py-2 bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 rounded-lg cursor-pointer transition-colors">
+                    <Upload className="w-4 h-4" />
+                    <span className="text-sm">Upload Photo</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="hidden"
+                    />
+                  </label>
+                  {imagePreview && (
+                    <div className="relative w-16 h-16">
+                      <Image
+                        src={imagePreview}
+                        alt="Preview"
+                        fill
+                        className="object-cover rounded-lg"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-neutral-200 dark:border-neutral-700">
+              <button
+                onClick={closeProcessModal}
+                className="px-4 py-2 text-sm font-medium text-foreground bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleProcessSubmit}
+                disabled={isProcessing}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed rounded-lg transition-colors"
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Complete Task
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -6,17 +6,12 @@ import {
   RefreshCw,
   Search,
   Check,
-  X,
   FileText,
-  Clock,
-  CheckCircle,
   Loader2,
-  ChevronLeft,
-  ChevronRight,
   Upload,
   Eye,
 } from "lucide-react";
-import Image from "next/image";
+// import Image from "next/image";
 import {
   useActiveChecklist,
   useChecklistHistory,
@@ -55,16 +50,12 @@ export default function MainChecklist() {
 
   const {
     data: activeData,
-    fetchNextPage: fetchNextActive,
-    hasNextPage: hasNextActive,
     isFetching: isFetchingActive,
     refetch: refetchActive,
   } = useActiveChecklist(searchTerm, role, username);
 
   const {
     data: historyData,
-    fetchNextPage: fetchNextHistory,
-    hasNextPage: hasNextHistory,
     isFetching: isFetchingHistory,
     refetch: refetchHistory,
   } = useChecklistHistory(searchTerm, role, username);
@@ -208,9 +199,9 @@ export default function MainChecklist() {
   const handleSubmit = async () => {
     if (selectedTasks.size === 0) return;
 
-    // Check if any images are still uploading
+    // Check if any images are still uploading (only for tasks that have images)
     const uploadingTasks = Array.from(selectedTasks).filter(
-      (taskId) => taskImages[taskId]?.uploading,
+      (taskId) => taskImages[taskId] && taskImages[taskId].uploading === true,
     );
 
     if (uploadingTasks.length > 0) {
@@ -236,6 +227,12 @@ export default function MainChecklist() {
           }
         : undefined,
     }));
+
+    console.log("Submitting checklist data:", {
+      selectedTasksCount: selectedTasks.size,
+      taskImages,
+      submissionData,
+    });
 
     try {
       await submitMutation.mutateAsync(submissionData);

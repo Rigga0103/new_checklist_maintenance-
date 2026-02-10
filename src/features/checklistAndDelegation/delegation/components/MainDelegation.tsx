@@ -12,6 +12,7 @@ import {
   Check,
   X,
   Trash2,
+  Upload,
 } from "lucide-react";
 import { useDelegation } from "../hooks/useDelegation";
 
@@ -262,7 +263,7 @@ export default function MainDelegation() {
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase">
                     Name
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase min-w-[200px]">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase min-w-48">
                     Task Description
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase bg-yellow-50 dark:bg-yellow-900/20">
@@ -344,7 +345,7 @@ export default function MainDelegation() {
                     <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
                       {task.name || "—"}
                     </td>
-                    <td className="px-3 py-3 text-sm text-foreground dark:text-gray-300 min-w-[200px] max-w-[300px]">
+                    <td className="px-3 py-3 text-sm text-foreground dark:text-gray-300 min-w-48 max-w-[300px]">
                       <div className="whitespace-normal break-words line-clamp-2">
                         {task.task_description || "—"}
                       </div>
@@ -416,32 +417,37 @@ export default function MainDelegation() {
                           />
                         </td>
                         <td className="px-3 py-3">
-                          {taskImages[task.task_id] ? (
-                            <div className="flex items-center gap-1 text-green-600">
-                              <Check className="w-4 h-4" />
-                              <span className="text-xs">
-                                {taskImages[task.task_id].file.name.slice(0, 8)}
-                                ...
-                              </span>
-                            </div>
-                          ) : (
-                            <label
-                              className={`cursor-pointer flex items-center gap-1 px-2 py-1 rounded border border-dashed border-gray-300 dark:border-neutral-600 hover:border-blue-500 hover:text-blue-500 transition-colors ${!selectedTasks.has(task.task_id) ? "opacity-50 pointer-events-none" : ""}`}
-                            >
+                          {task.require_attachment === "yes" ? (
+                            <label className="cursor-pointer">
                               <input
                                 type="file"
-                                accept="image/*"
+                                accept="image/jpeg,image/png,image/webp"
                                 className="hidden"
-                                disabled={!selectedTasks.has(task.task_id)}
                                 onChange={(e) =>
                                   handleImageUpload(task.task_id, e)
                                 }
                               />
-                              <div className="flex items-center gap-1 text-xs">
-                                {/* Using Check icon as placeholder since Upload icon is already imported */}
-                                <span className="text-xs">Upload</span>
-                              </div>
+                              {taskImages[task.task_id]?.uploading ? (
+                                <div className="flex items-center gap-1 text-blue-600">
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  <span className="text-xs">Uploading...</span>
+                                </div>
+                              ) : taskImages[task.task_id] ? (
+                                <div className="flex items-center gap-1 text-green-600">
+                                  <Check className="w-4 h-4" />
+                                  <span className="text-xs">Uploaded</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1 text-blue-600 hover:text-blue-700">
+                                  <Upload className="w-4 h-4" />
+                                  <span className="text-xs">Upload</span>
+                                </div>
+                              )}
                             </label>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              —
+                            </span>
                           )}
                         </td>
                       </>

@@ -52,6 +52,7 @@ export function useDashboardSummary(
         role,
         username,
       ),
+    enabled: dashboardType !== "repair",
     staleTime: 60 * 1000, // 1 minute
   });
 }
@@ -89,6 +90,7 @@ export function useDashboardData(
         role,
         username,
       }),
+    enabled: dashboardType !== "repair",
     staleTime: 30 * 1000, // 30 seconds
   });
 }
@@ -143,6 +145,7 @@ export function useStaffTaskSummary(
       departmentFilter,
     ],
     queryFn: () => getStaffTaskSummaryApi(dashboardType, departmentFilter),
+    enabled: dashboardType !== "repair",
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }

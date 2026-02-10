@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { fetchAllRepairs } from "../server/api/repairingApi";
 import type { MachineRepair } from "../../types/types";
+import { useRBAC } from "@/hooks/useRBAC";
 
 export default function MainRepairingDashboard() {
   const [repairs, setRepairs] = useState<MachineRepair[]>([]);
@@ -120,10 +121,20 @@ export default function MainRepairingDashboard() {
     }
   };
 
-  if (isLoading) {
+  const { canRead, isLoading: isRbacLoading } = useRBAC("repair_dashboard");
+
+  if (isLoading || isRbacLoading) {
     return (
       <div className="flex items-center justify-center min-h-100">
         <RefreshCw className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!canRead) {
+    return (
+      <div className="flex items-center justify-center h-96 text-muted-foreground">
+        Access Denied. You do not have permission to view the Repair Dashboard.
       </div>
     );
   }

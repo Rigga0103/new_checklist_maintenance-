@@ -57,3 +57,37 @@ export interface UpdateDepartmentPayload {
   department: string;
   given_by: string;
 }
+
+export interface UserPermission {
+  id: number;
+  user_id: number;
+  resource: string;
+  can_read: boolean;
+  can_write: boolean;
+  can_edit: boolean;
+  can_delete: boolean;
+}
+
+export type PermissionResource =
+  // Checklist & Delegation
+  | "dashboard"
+  | "assign_task"
+  | "checklist"
+  | "delegation"
+  | "quick_task"
+  // Repairing
+  | "repair_dashboard"
+  | "repair_request"
+  | "repairing"
+  | "repair_history"
+  // Maintenance
+  | "maintenance"
+  | "maintenance_history"
+  | "maintenance_schedules"
+  | "maintenance_calendar"
+  // Other
+  | "machines"
+  | "approval"
+  | "settings"
+  | "license"
+  | "training_video";

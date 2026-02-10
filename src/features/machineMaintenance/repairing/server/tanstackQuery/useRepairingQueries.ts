@@ -3,10 +3,15 @@ import {
   fetchPendingRepairs,
   fetchRepairHistory,
   processRepair,
+  createRepairRequest,
+  fetchActiveUserNames,
   getUniqueMachines,
   getUniqueAssignedPersons,
 } from "../api/repairingApi";
-import type { RepairProcessFormData } from "../../../types/types";
+import type {
+  RepairProcessFormData,
+  RepairRequestFormData,
+} from "../../../types/types";
 
 // Query Keys
 export const repairingKeys = {
@@ -39,6 +44,14 @@ export const repairingKeys = {
 };
 
 // --- Queries ---
+
+export const useActiveUserNamesQuery = () => {
+  return useQuery({
+    queryKey: [...repairingKeys.all, "activeUsers"] as const,
+    queryFn: fetchActiveUserNames,
+    staleTime: 1000 * 60 * 5,
+  });
+};
 
 export const usePendingRepairsQuery = (
   page: number,
@@ -83,6 +96,19 @@ export const useRepairFiltersQuery = () => {
 };
 
 // --- Mutations ---
+
+export const useCreateRepairRequestMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: RepairRequestFormData) => createRepairRequest(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: repairingKeys.all,
+      });
+    },
+  });
+};
 
 export const useProcessRepairMutation = () => {
   const queryClient = useQueryClient();

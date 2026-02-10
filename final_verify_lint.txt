@@ -1,0 +1,145 @@
+
+> rigga_checklist_nextjs@0.1.0 lint
+> eslint
+
+
+C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\components\layout\useDashboardLayout.ts
+  154:28  warning  'resolvedTheme' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+  169:19  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\components\layout\useDashboardLayout.ts:169:19
+  167 |   // Track mounting for hydration
+  168 |   useEffect(() => {
+> 169 |     if (!mounted) setMounted(true);
+      |                   ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  170 |   }, [mounted]);
+  171 |
+  172 |   // Cycle through themes: light -> dark -> system                                                                  react-hooks/set-state-in-effect
+  230:9   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\components\layout\useDashboardLayout.ts:230:9
+  228 |       } else {
+  229 |         // If we have it now but didn't in initializer (rare race)
+> 230 |         setUserInfo((prev) => {
+      |         ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  231 |           if (prev.username === storedUsername) return prev;
+  232 |           return {
+  233 |             username: storedUsername,  react-hooks/set-state-in-effect
+  254:11  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-explicit-any
+  257:7   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\components\layout\useDashboardLayout.ts:257:7
+  255 |     );
+  256 |     if (activeRoute && openSubmenu !== activeRoute.label) {
+> 257 |       setOpenSubmenu(activeRoute.label);
+      |       ^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  258 |     }
+  259 |   }, [accessibleRoutes, openSubmenu]);
+  260 |                                                                                react-hooks/set-state-in-effect
+
+C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\features\auth\hooks\useLogin.ts
+    7:10  warning  'LoginFormData' is defined but never used  @typescript-eslint/no-unused-vars
+  138:18  warning  'err' is defined but never used            @typescript-eslint/no-unused-vars
+  174:18  warning  'err' is defined but never used            @typescript-eslint/no-unused-vars
+
+C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\features\checklistAndDelegation\approval\components\MainApproval.tsx
+  168:9  warning  The 'currentData' conditional could make the dependencies of useMemo Hook (at line 225) change on every render. To fix this, wrap the initialization of 'currentData' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  168:9  warning  The 'currentData' conditional could make the dependencies of useMemo Hook (at line 251) change on every render. To fix this, wrap the initialization of 'currentData' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\features\checklistAndDelegation\approval\server\tanstackQuery\useApproval.ts
+  8:10  warning  'ApprovalTask' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\features\checklistAndDelegation\assignTask\hooks\useAssignTask.ts
+   45:7   warning  'getCurrentTimestamp' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  320:14  warning  'targetDay' is assigned a value but never used            @typescript-eslint/no-unused-vars
+  326:16  warning  'dayDay' is assigned a value but never used               @typescript-eslint/no-unused-vars
+  340:24  warning  'dayMonth' is assigned a value but never used             @typescript-eslint/no-unused-vars
+  340:34  warning  'dayYear' is assigned a value but never used              @typescript-eslint/no-unused-vars
+
+C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\features\checklistAndDelegation\assignTask\server\api\assignTaskApi.ts
+  219:20  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\features\checklistAndDelegation\checklist\components\MainChecklist.tsx
+  267:14  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\features\checklistAndDelegation\dashboard\components\RepairingDashboard.tsx
+   276:13  warning  'completedTasks' is assigned a value but never used  @typescript-eslint/no-unused-vars
+   284:13  warning  'overdueTasks' is assigned a value but never used    @typescript-eslint/no-unused-vars
+  1129:38  error    Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+  1129:50  error    Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+  1129:62  error    Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+  1247:38  error    Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+  1247:50  error    Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+  1247:62  error    Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+
+C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\features\checklistAndDelegation\dashboard\server\api\dashboardApi.ts
+  451:9  warning  'today' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\features\checklistAndDelegation\delegation\components\MainDelegation.tsx
+  13:3  warning  'X' is defined but never used                        @typescript-eslint/no-unused-vars
+  14:3  warning  'Trash2' is defined but never used                   @typescript-eslint/no-unused-vars
+  42:5  warning  'getStatusColor' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\features\checklistAndDelegation\quickTask\components\MainQuickTask.tsx
+  12:3  warning  'RefreshCw' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\features\checklistAndDelegation\quickTask\server\tanstackQuery\useQuickTask.ts
+  19:3  warning  'DelegationTask' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\features\machineMaintenance\machines\components\MainMachinesMaster.tsx
+   30:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  144:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\features\machineMaintenance\maintenance\components\MainMaintenanceCalendar.tsx
+  3:20  warning  'useEffect' is defined but never used           @typescript-eslint/no-unused-vars
+  3:31  warning  'useCallback' is defined but never used         @typescript-eslint/no-unused-vars
+  6:15  warning  'MachineMaintenance' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\features\machineMaintenance\maintenance\components\MainMaintenanceHistory.tsx
+  3:20  warning  'useEffect' is defined but never used    @typescript-eslint/no-unused-vars
+  3:31  warning  'useCallback' is defined but never used  @typescript-eslint/no-unused-vars
+  5:3   warning  'RefreshCw' is defined but never used    @typescript-eslint/no-unused-vars
+
+C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\features\machineMaintenance\maintenance\components\MainMaintenancePending.tsx
+   3:20  warning  'useEffect' is defined but never used           @typescript-eslint/no-unused-vars
+   3:31  warning  'useCallback' is defined but never used         @typescript-eslint/no-unused-vars
+   5:3   warning  'RefreshCw' is defined but never used           @typescript-eslint/no-unused-vars
+  11:3   warning  'X' is defined but never used                   @typescript-eslint/no-unused-vars
+  13:3   warning  'Eye' is defined but never used                 @typescript-eslint/no-unused-vars
+  21:15  warning  'MachineMaintenance' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\features\machineMaintenance\maintenance\components\MainMaintenanceSchedule.tsx
+   33:39  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  157:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\features\machineMaintenance\repairing\components\MainRepairingHistory.tsx
+  3:20  warning  'useEffect' is defined but never used    @typescript-eslint/no-unused-vars
+  3:31  warning  'useCallback' is defined but never used  @typescript-eslint/no-unused-vars
+  5:3   warning  'RefreshCw' is defined but never used    @typescript-eslint/no-unused-vars
+
+C:\Users\USER\Desktop\office work code\rigga_checklist_nextjs\src\features\machineMaintenance\repairing\components\MainRepairingPending.tsx
+   3:20  warning  'useEffect' is defined but never used    @typescript-eslint/no-unused-vars
+   3:31  warning  'useCallback' is defined but never used  @typescript-eslint/no-unused-vars
+   5:3   warning  'RefreshCw' is defined but never used    @typescript-eslint/no-unused-vars
+  11:3   warning  'Eye' is defined but never used          @typescript-eslint/no-unused-vars
+
+✖ 55 problems (15 errors, 40 warnings)
+

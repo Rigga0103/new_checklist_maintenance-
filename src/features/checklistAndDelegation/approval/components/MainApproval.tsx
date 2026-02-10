@@ -124,15 +124,23 @@ export default function MainApproval() {
     Record<string, string>
   >({});
 
-  const [userRole, setUserRole] = useState("");
-  const [username, setUsername] = useState("");
+  const [userRole, setUserRole] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem("role") || "";
+  });
+  const [username, setUsername] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem("user-name") || "";
+  });
 
-  // Fetch user info
+  // Re-sync if localStorage changes
   useEffect(() => {
-    const role = localStorage.getItem("role");
-    const user = localStorage.getItem("user-name");
-    setUserRole(role || "");
-    setUsername(user || "");
+    const handleStorageChange = () => {
+      setUserRole(localStorage.getItem("role") || "");
+      setUsername(localStorage.getItem("user-name") || "");
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
   const isAdmin = userRole === "admin";

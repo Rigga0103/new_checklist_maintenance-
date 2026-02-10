@@ -11,6 +11,8 @@ import {
   fetchGivenByDataApi,
   createDepartmentApi,
   updateDepartmentDataApi,
+  fetchUserPermissionsApi,
+  updateUserPermissionsApi,
 } from "../api/settingApi";
 import type {
   CreateUserPayload,
@@ -162,6 +164,49 @@ export function useUpdateDepartment() {
       queryClient.invalidateQueries({ queryKey: settingsKeys.departments() });
       queryClient.invalidateQueries({
         queryKey: settingsKeys.departmentsOnly(),
+      });
+    },
+  });
+}
+
+// ============ Permission Queries ============
+
+/**
+ * Query for user permissions
+ */
+export function useUserPermissions(userId: number | null) {
+  return useQuery({
+    queryKey: [...settingsKeys.users(), "permissions", userId],
+    queryFn: () =>
+      userId ? fetchUserPermissionsApi(userId) : Promise.resolve([]),
+    enabled: !!userId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/**
+ * Update user permissions mutation
+ */
+export function useUpdateUserPermissions() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      userId,
+      permissions,
+    }: {
+      userId: number;
+      permissions: {
+        resource: string;
+        can_read: boolean;
+        can_write: boolean;
+        can_edit: boolean;
+        can_delete: boolean;
+      }[];
+    }) => updateUserPermissionsApi(userId, permissions),
+    onSuccess: (_, { userId }) => {
+      queryClient.invalidateQueries({
+        queryKey: [...settingsKeys.users(), "permissions", userId],
       });
     },
   });

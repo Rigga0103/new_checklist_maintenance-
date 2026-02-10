@@ -279,3 +279,56 @@ export const updateDepartmentDataApi = async (
 
   return data as Department;
 };
+
+// ============ Permission APIs ============
+
+/**
+ * Fetch permissions for a specific user
+ */
+export const fetchUserPermissionsApi = async (
+  userId: number,
+): Promise<import("../../types/types").UserPermission[]> => {
+  const { data, error } = await supabase
+    .from("user_permissions")
+    .select("*")
+    .eq("user_id", userId);
+
+  if (error) {
+    console.error("Error fetching user permissions:", error);
+    return [];
+  }
+
+  return data as import("../../types/types").UserPermission[];
+};
+
+/**
+ * Update user permissions (Upsert)
+ */
+export const updateUserPermissionsApi = async (
+  userId: number,
+  permissions: {
+    resource: string;
+    can_read: boolean;
+    can_write: boolean;
+    can_edit: boolean;
+    can_delete: boolean;
+  }[],
+): Promise<void> => {
+  const upsertData = permissions.map((p) => ({
+    user_id: userId,
+    resource: p.resource,
+    can_read: p.can_read,
+    can_write: p.can_write,
+    can_edit: p.can_edit,
+    can_delete: p.can_delete,
+  }));
+
+  const { error } = await supabase
+    .from("user_permissions")
+    .upsert(upsertData, { onConflict: "user_id, resource" });
+
+  if (error) {
+    console.error("Error updating user permissions:", error);
+    throw error;
+  }
+};

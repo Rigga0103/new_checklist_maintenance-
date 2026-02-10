@@ -126,6 +126,32 @@ export const fetchAllRepairs = async (): Promise<MachineRepair[]> => {
   }
 };
 
+// ============ Fetch Active User Names ============
+
+/**
+ * Fetch all active user names for assignment dropdown
+ */
+export const fetchActiveUserNames = async (): Promise<string[]> => {
+  try {
+    const { data, error } = await supabase
+      .from("users")
+      .select("user_name")
+      .eq("status", "active")
+      .not("user_name", "is", null)
+      .order("user_name", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching active users:", error);
+      return [];
+    }
+
+    return data.map((u) => u.user_name as string).filter(Boolean);
+  } catch (error) {
+    console.error("Error from Supabase:", error);
+    return [];
+  }
+};
+
 // ============ Create Repair Request ============
 
 /**
@@ -181,7 +207,7 @@ export const processRepair = async (
       const filePath = `repair-${taskId}/photos/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from("checklist-delegation")
+        .from("repairing")
         .upload(filePath, photoFile, {
           cacheControl: "3600",
           contentType: photoFile.type,
@@ -192,7 +218,7 @@ export const processRepair = async (
 
       const {
         data: { publicUrl },
-      } = supabase.storage.from("checklist-delegation").getPublicUrl(filePath);
+      } = supabase.storage.from("repairing").getPublicUrl(filePath);
 
       photoUrl = publicUrl;
     }
@@ -204,7 +230,7 @@ export const processRepair = async (
       const filePath = `repair-${taskId}/bills/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from("checklist-delegation")
+        .from("repairing")
         .upload(filePath, billFile, {
           cacheControl: "3600",
           contentType: billFile.type,
@@ -215,7 +241,7 @@ export const processRepair = async (
 
       const {
         data: { publicUrl },
-      } = supabase.storage.from("checklist-delegation").getPublicUrl(filePath);
+      } = supabase.storage.from("repairing").getPublicUrl(filePath);
 
       billCopyUrl = publicUrl;
     }

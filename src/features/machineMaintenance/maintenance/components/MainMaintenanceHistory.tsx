@@ -15,6 +15,7 @@ import {
 import Image from "next/image";
 import { useMaintenanceHistoryQuery } from "../server/tanstackQuery/useMaintenanceQueries";
 import type { MachineMaintenance } from "../../types/types";
+import { useRBAC } from "@/hooks/useRBAC";
 
 export default function MainMaintenanceHistory() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -37,6 +38,8 @@ export default function MainMaintenanceHistory() {
     role,
     username,
   );
+
+  const { canRead, isLoading: isRbacLoading } = useRBAC("maintenance");
 
   const tasks = data?.data || [];
   const totalCount = data?.totalCount || 0;
@@ -119,6 +122,22 @@ export default function MainMaintenanceHistory() {
   };
 
   const totalPages = Math.ceil(totalCount / limit);
+
+  if (isLoading || isRbacLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-100">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!canRead) {
+    return (
+      <div className="flex items-center justify-center h-96 text-muted-foreground">
+        Access Denied. You do not have permission to view Maintenance History.
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
