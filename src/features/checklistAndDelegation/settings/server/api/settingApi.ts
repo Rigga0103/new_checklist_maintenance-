@@ -72,6 +72,48 @@ export const createUserApi = async (
     throw error;
   }
 
+  // Assign default permissions
+  const defaultPermissions = [
+    {
+      resource: "dashboard",
+      can_read: true,
+      can_write: true,
+      can_edit: true,
+      can_delete: false,
+    },
+    {
+      resource: "checklist",
+      can_read: true,
+      can_write: true,
+      can_edit: true,
+      can_delete: false,
+    },
+    {
+      resource: "delegation",
+      can_read: true,
+      can_write: true,
+      can_edit: true,
+      can_delete: false,
+    },
+  ];
+
+  const permissionData = defaultPermissions.map((p) => ({
+    user_id: newId,
+    resource: p.resource,
+    can_read: p.can_read,
+    can_write: p.can_write,
+    can_edit: p.can_edit,
+    can_delete: p.can_delete,
+  }));
+
+  const { error: permError } = await supabase
+    .from("user_permissions")
+    .insert(permissionData);
+
+  if (permError) {
+    console.error("Error creating default permissions:", permError);
+  }
+
   return data as User;
 };
 

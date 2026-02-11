@@ -11,7 +11,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useDashboard } from "../hooks/useDashboard";
-import { DashboardPageSkeleton } from "./DashboardSkeleton";
+import { StatCardSkeleton, StaffTableSkeleton } from "./DashboardSkeleton";
 import { useState } from "react";
 import { Task } from "../types/types";
 import RepairingDashboard from "./RepairingDashboard";
@@ -64,10 +64,6 @@ export default function MainDashboard() {
     return new Date().toISOString().split("T")[0];
   };
 
-  if (isLoading) {
-    return <DashboardPageSkeleton />;
-  }
-
   // Staff Summary Table Columns
   const renderStaffSummary = () => (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700 overflow-hidden mb-6">
@@ -77,88 +73,124 @@ export default function MainDashboard() {
         </h2>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50 dark:bg-neutral-700">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground dark:text-gray-300 uppercase tracking-wider">
-                Staff Name
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground dark:text-gray-300 uppercase tracking-wider">
-                Department
-              </th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground dark:text-gray-300 uppercase tracking-wider">
-                Total Tasks
-              </th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground dark:text-gray-300 uppercase tracking-wider">
-                Completed
-              </th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground dark:text-gray-300 uppercase tracking-wider">
-                Completion Rate
-              </th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground dark:text-gray-300 uppercase tracking-wider">
-                On-Time Rate
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-neutral-700">
-            {staffTaskSummary.length === 0 ? (
+        {isLoading ? (
+          <div className="p-4">
+            <StaffTableSkeleton rows={5} />
+          </div>
+        ) : (
+          <table className="w-full">
+            <thead className="bg-gray-50 dark:bg-neutral-700">
               <tr>
-                <td
-                  colSpan={6}
-                  className="px-4 py-8 text-center text-muted-foreground dark:text-muted-foreground"
-                >
-                  No staff data available
-                </td>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground dark:text-gray-300 uppercase tracking-wider">
+                  Staff Name
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground dark:text-gray-300 uppercase tracking-wider">
+                  Department
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground dark:text-gray-300 uppercase tracking-wider">
+                  Total Tasks
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground dark:text-gray-300 uppercase tracking-wider">
+                  Completed
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground dark:text-gray-300 uppercase tracking-wider">
+                  Completion Rate
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground dark:text-gray-300 uppercase tracking-wider">
+                  On-Time Rate
+                </th>
               </tr>
-            ) : (
-              staffTaskSummary.map((staff) => (
-                <tr
-                  key={staff.id}
-                  className="hover:bg-gray-50 dark:hover:bg-neutral-700/50"
-                >
-                  <td className="px-4 py-4 font-medium text-gray-900 dark:text-white">
-                    {staff.name}
-                  </td>
-                  <td className="px-4 py-4 text-sm text-foreground-secondary dark:text-gray-300">
-                    {staff.department}
-                  </td>
-                  <td className="px-4 py-4 text-center text-sm text-gray-900 dark:text-white">
-                    {staff.total_tasks}
-                  </td>
-                  <td className="px-4 py-4 text-center text-sm text-gray-900 dark:text-white">
-                    {staff.total_completed_tasks}
-                  </td>
-                  <td className="px-4 py-4 text-center">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        staff.completion_score >= 80
-                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                          : staff.completion_score >= 50
-                            ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
-                            : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                      }`}
-                    >
-                      {staff.completion_score}%
-                    </span>
-                  </td>
-                  <td className="px-4 py-4 text-center">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        staff.ontime_score >= 80
-                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                          : staff.ontime_score >= 50
-                            ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
-                            : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                      }`}
-                    >
-                      {staff.ontime_score}%
-                    </span>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-neutral-700">
+              {staffTaskSummary.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="px-4 py-8 text-center text-muted-foreground dark:text-muted-foreground"
+                  >
+                    No staff data available
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                staffTaskSummary.map((staff) => (
+                  <tr
+                    key={staff.id}
+                    className="hover:bg-gray-50 dark:hover:bg-neutral-700/50"
+                  >
+                    <td className="px-4 py-4 font-medium text-gray-900 dark:text-white">
+                      {staff.name}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-foreground-secondary dark:text-gray-300">
+                      {staff.department}
+                    </td>
+                    <td className="px-4 py-4 text-center text-sm text-gray-900 dark:text-white">
+                      {staff.total_tasks}
+                    </td>
+                    <td className="px-4 py-4 text-center text-sm text-gray-900 dark:text-white">
+                      {staff.total_completed_tasks}
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          staff.completion_score >= 80
+                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                            : staff.completion_score >= 50
+                              ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                              : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                        }`}
+                      >
+                        {staff.completion_score}%
+                      </span>
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          staff.ontime_score >= 80
+                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                            : staff.ontime_score >= 50
+                              ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                              : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                        }`}
+                      >
+                        {staff.ontime_score}%
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+
+  // Task Table Skeleton
+  const renderTaskTableSkeleton = (title: string) => (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700 overflow-hidden mb-6">
+      <div className="p-4 border-b border-gray-100 dark:border-neutral-700">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+          {title}
+        </h2>
+      </div>
+      <div className="overflow-x-auto p-4">
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <div
+              key={index}
+              className="animate-pulse flex items-center gap-4 p-4 bg-gray-50 dark:bg-neutral-700/30 rounded-lg"
+            >
+              <div className="flex-1 space-y-2">
+                <div className="w-3/4 h-4 bg-gray-200 dark:bg-neutral-600 rounded" />
+                <div className="flex gap-3">
+                  <div className="w-24 h-3 bg-gray-200 dark:bg-neutral-600 rounded" />
+                  <div className="w-28 h-3 bg-gray-200 dark:bg-neutral-600 rounded" />
+                </div>
+              </div>
+              <div className="w-20 h-6 bg-gray-200 dark:bg-neutral-600 rounded-full" />
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -375,130 +407,138 @@ export default function MainDashboard() {
       ) : (
         <>
           {/* Statistics Cards */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-100 rounded-lg dark:bg-blue-900/30">
-                  <ListChecks className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-                    Total Tasks
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {departmentData.totalTasks}
-                  </p>
+          {isLoading ? (
+            <StatCardSkeleton count={4} />
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-blue-100 rounded-lg dark:bg-blue-900/30">
+                    <ListChecks className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground dark:text-muted-foreground">
+                      Total Tasks
+                    </p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                      {departmentData.totalTasks}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-green-100 rounded-lg dark:bg-green-900/30">
-                  <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-                    Completed
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {departmentData.completedTasks}
-                  </p>
+              <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-green-100 rounded-lg dark:bg-green-900/30">
+                    <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground dark:text-muted-foreground">
+                      Completed
+                    </p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                      {departmentData.completedTasks}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-yellow-100 rounded-lg dark:bg-yellow-900/30">
-                  <Clock className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-                    Pending
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {departmentData.pendingTasks}
-                  </p>
+              <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-yellow-100 rounded-lg dark:bg-yellow-900/30">
+                    <Clock className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground dark:text-muted-foreground">
+                      Pending
+                    </p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                      {departmentData.pendingTasks}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-red-100 rounded-lg dark:bg-red-900/30">
-                  <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-                    Overdue
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {departmentData.overdueTasks}
-                  </p>
+              <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-red-100 rounded-lg dark:bg-red-900/30">
+                    <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground dark:text-muted-foreground">
+                      Overdue
+                    </p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                      {departmentData.overdueTasks}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Completion Rate Card */}
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-muted rounded-lg dark:bg-muted">
-                  <TrendingUp className="w-6 h-6 text-primary dark:text-foreground" />
+          {isLoading ? (
+            <StatCardSkeleton count={3} />
+          ) : (
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-muted rounded-lg dark:bg-muted">
+                    <TrendingUp className="w-6 h-6 text-primary dark:text-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground dark:text-muted-foreground">
+                      Completion Rate
+                    </p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                      {departmentData.completionRate}%
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-                    Completion Rate
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {departmentData.completionRate}%
-                  </p>
+                <div className="mt-4">
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-neutral-700">
+                    <div
+                      className="bg-primary h-2.5 rounded-full transition-all duration-500"
+                      style={{ width: `${departmentData.completionRate}%` }}
+                    />
+                  </div>
                 </div>
               </div>
-              <div className="mt-4">
-                <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-neutral-700">
-                  <div
-                    className="bg-primary h-2.5 rounded-full transition-all duration-500"
-                    style={{ width: `${departmentData.completionRate}%` }}
-                  />
-                </div>
-              </div>
-            </div>
 
-            <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-muted rounded-lg dark:bg-primary/30">
-                  <Users className="w-6 h-6 text-primary dark:text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-                    Active Staff
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {availableStaff.length}
-                  </p>
+              <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-muted rounded-lg dark:bg-primary/30">
+                    <Users className="w-6 h-6 text-primary dark:text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground dark:text-muted-foreground">
+                      Active Staff
+                    </p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                      {availableStaff.length}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-cyan-100 rounded-lg dark:bg-cyan-900/30">
-                  <Calendar className="w-6 h-6 text-cyan-600 dark:text-cyan-400" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-                    Today&apos;s Date
-                  </p>
-                  <p className="text-lg font-bold text-gray-900 dark:text-white">
-                    {new Date().toLocaleDateString("en-GB")}
-                  </p>
+              <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-cyan-100 rounded-lg dark:bg-cyan-900/30">
+                    <Calendar className="w-6 h-6 text-cyan-600 dark:text-cyan-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground dark:text-muted-foreground">
+                      Today&apos;s Date
+                    </p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white">
+                      {new Date().toLocaleDateString("en-GB")}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Filters Row */}
           <div className="flex flex-wrap gap-4 p-4 bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700">
@@ -598,12 +638,25 @@ export default function MainDashboard() {
 
           {/* Conditional Rendering of Task Table */}
           <div className="mt-4">
-            {taskView === "recent" &&
-              renderTaskTable("Recent & Today's Tasks", filteredTasks)}
-            {taskView === "upcoming" &&
-              renderTaskTable("Upcoming Tasks (Next 7 Days)", filteredTasks)}
-            {taskView === "overdue" &&
-              renderTaskTable("Overdue Tasks", filteredTasks)}
+            {isLoading ? (
+              <>
+                {taskView === "recent" &&
+                  renderTaskTableSkeleton("Recent & Today's Tasks")}
+                {taskView === "upcoming" &&
+                  renderTaskTableSkeleton("Upcoming Tasks (Next 7 Days)")}
+                {taskView === "overdue" &&
+                  renderTaskTableSkeleton("Overdue Tasks")}
+              </>
+            ) : (
+              <>
+                {taskView === "recent" &&
+                  renderTaskTable("Recent & Today's Tasks", filteredTasks)}
+                {taskView === "upcoming" &&
+                  renderTaskTable("Upcoming Tasks (Next 7 Days)", filteredTasks)}
+                {taskView === "overdue" &&
+                  renderTaskTable("Overdue Tasks", filteredTasks)}
+              </>
+            )}
           </div>
         </>
       )}

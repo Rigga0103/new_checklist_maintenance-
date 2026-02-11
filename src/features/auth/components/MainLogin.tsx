@@ -105,6 +105,43 @@ export default function MainLogin() {
                 </div>
               )}
 
+              {/* Role Selection - Signup only */}
+              {!isLoginMode && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                    Role
+                  </label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="role"
+                        value="user"
+                        checked={formData.role === "user"}
+                        onChange={handleChange}
+                        className="w-4 h-4 text-primary focus:ring-primary border-gray-300"
+                      />
+                      <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                        User
+                      </span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="role"
+                        value="admin"
+                        checked={formData.role === "admin"}
+                        onChange={handleChange}
+                        className="w-4 h-4 text-primary focus:ring-primary border-gray-300"
+                      />
+                      <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                        Admin
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              )}
+
               {/* Password */}
               <div className="space-y-2">
                 <label

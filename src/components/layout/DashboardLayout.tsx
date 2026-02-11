@@ -1,26 +1,30 @@
 "use client";
 
-import Link from "next/link";
 import {
+  BookmarkCheck,
+  Calendar,
+  CalendarCheck,
   CheckSquare,
-  ClipboardList,
-  Home,
-  LogOut,
-  Menu,
-  Database,
   ChevronDown,
   ChevronRight,
-  Zap,
-  Settings,
   CirclePlus,
-  UserRound,
-  CalendarCheck,
-  BookmarkCheck,
-  Sun,
-  Moon,
-  Monitor,
+  ClipboardList,
+  Clock,
+  Database,
+  FileText,
+  Home,
+  LogOut,
   LucideIcon,
+  Menu,
+  Monitor,
+  Moon,
+  Settings,
+  Sun,
+  UserRound,
+  Wrench,
+  Zap
 } from "lucide-react";
+import Link from "next/link";
 import { useDashboardLayout } from "./useDashboardLayout";
 
 // Icon mapping
@@ -31,6 +35,10 @@ const iconMap: Record<string, LucideIcon> = {
   Zap,
   Database,
   Settings,
+  Wrench,
+  FileText,
+  Clock,
+  Calendar,
 };
 
 interface DashboardLayoutProps {
@@ -73,12 +81,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     <div className="flex h-screen overflow-hidden bg-background transition-colors">
       {/* Sidebar for desktop */}
       <aside className="flex-shrink-0 hidden w-64 transition-colors bg-white dark:bg-zinc-900 border-r border-slate-200 dark:border-zinc-800 shadow-lg dark:shadow-none md:flex md:flex-col">
-        <div className="flex items-center px-4 border-b border-slate-200 dark:border-zinc-800 h-14 bg-primary">
+        <div className="flex items-center px-4 border-b border-slate-200   h-14 bg-primary dark:bg-black">
           <Link
             href="/dashboard"
             className="flex items-center gap-2 font-semibold text-white"
           >
-            <ClipboardList className="w-5 h-5 text-white" />
+            <ClipboardList className="w-5 h-5 text-white dark:text-white " />
             <span>Checklist and Delegation</span>
           </Link>
         </div>

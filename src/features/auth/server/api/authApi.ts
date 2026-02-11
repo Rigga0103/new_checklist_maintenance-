@@ -39,6 +39,7 @@ export const signupUserApi = async (formData: {
   username: string;
   password: string;
   email: string;
+  role?: string;
 }): Promise<LoginResponse> => {
   // Check if username already exists
   const { data: existingUser } = await supabase
@@ -58,14 +59,60 @@ export const signupUserApi = async (formData: {
       user_name: formData.username,
       password: formData.password,
       email_id: formData.email,
-      role: "user",
+      role: formData.role || "user",
       status: "active",
     })
     .select()
     .single();
 
+  console.log(error, "error");
+  console.log(data, "data");
   if (error) {
     return { error: error.message || "Failed to create account" };
+  }
+
+  // Assign default permissions
+  const defaultPermissions = [
+    {
+      resource: "dashboard",
+      can_read: true,
+      can_write: true,
+      can_edit: true,
+      can_delete: false,
+    },
+    {
+      resource: "checklist",
+      can_read: true,
+      can_write: true,
+      can_edit: true,
+      can_delete: false,
+    },
+    {
+      resource: "delegation",
+      can_read: true,
+      can_write: true,
+      can_edit: true,
+      can_delete: false,
+    },
+  ];
+
+  const permissionData = defaultPermissions.map((p) => ({
+    user_id: data.id,
+    resource: p.resource,
+    can_read: p.can_read,
+    can_write: p.can_write,
+    can_edit: p.can_edit,
+    can_delete: p.can_delete,
+  }));
+
+  const { error: permError } = await supabase
+    .from("user_permissions")
+    .insert(permissionData);
+
+  if (permError) {
+    console.error("Error creating default permissions:", permError);
+    // Optional: deciding whether to fail the whole process or just log.
+    // For now, logging error but returning success for user creation as it's critical.
   }
 
   return { data };

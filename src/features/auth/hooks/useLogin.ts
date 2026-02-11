@@ -21,6 +21,7 @@ export function useLogin() {
     password: "",
     email: "",
     confirmPassword: "",
+    role: "user",
   });
   const [theme, setTheme] = useState<ThemeMode>(() => {
     if (typeof window === "undefined") return "system";
@@ -157,6 +158,7 @@ export function useLogin() {
             username: formData.username,
             password: formData.password,
             email: formData.email,
+            role: formData.role,
           });
 
           if (result.error) {

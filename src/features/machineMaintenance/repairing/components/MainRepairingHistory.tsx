@@ -40,7 +40,7 @@ export default function MainRepairingHistory() {
     username,
   );
 
-  const { canRead, isLoading: isRbacLoading } = useRBAC("repairing");
+  const { canRead, isLoading: isRbacLoading } = useRBAC("repair_history");
 
   const repairs = data?.data || [];
   const totalCount = data?.totalCount || 0;

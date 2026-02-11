@@ -39,7 +39,7 @@ export default function MainMaintenanceHistory() {
     username,
   );
 
-  const { canRead, isLoading: isRbacLoading } = useRBAC("maintenance");
+  const { canRead, isLoading: isRbacLoading } = useRBAC("maintenance_history");
 
   const tasks = data?.data || [];
   const totalCount = data?.totalCount || 0;

@@ -62,6 +62,14 @@ const initialDeptForm = {
   givenBy: "",
 };
 
+// UI Classes for consistency with other forms
+const inputClass =
+  "w-full px-3 py-2 text-sm bg-white dark:bg-neutral-900 text-foreground border border-gray-200 dark:border-neutral-700 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
+const selectClass =
+  "w-full px-3 py-2 text-sm bg-white dark:bg-neutral-900 text-foreground border border-gray-200 dark:border-neutral-700 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
+const labelClass =
+  "block text-xs font-medium text-muted-foreground dark:text-muted-foreground mb-1";
+
 export default function MainSettings() {
   // Tab state
   const [activeTab, setActiveTab] = useState<TabType>("users");
@@ -129,8 +137,7 @@ export default function MainSettings() {
   const filteredUsers = useMemo(() => {
     return (userData || []).filter(
       (user) =>
-        user.user_name !== "admin" &&
-        user.user_name !== "DSMC" &&
+        user.role !== "admin" &&
         (!usernameFilter ||
           user.user_name.toLowerCase().includes(usernameFilter.toLowerCase())),
     );
@@ -439,8 +446,6 @@ export default function MainSettings() {
     switch (role) {
       case "admin":
         return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400";
-      case "manager":
-        return "bg-muted text-foreground dark:bg-muted dark:text-foreground";
       default:
         return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300";
     }
@@ -520,7 +525,7 @@ export default function MainSettings() {
           {activeTab !== "leave" && canWrite && (
             <button
               onClick={handleAddButtonClick}
-              className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+              className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors dark:bg-black dark:border-gray-300 border"
             >
               <Plus size={16} />
               {activeTab === "users" ? "Add User" : "Add Department"}
@@ -1015,10 +1020,10 @@ export default function MainSettings() {
               className="fixed inset-0 bg-black/50"
               onClick={() => setShowUserModal(false)}
             />
-            <div className="relative bg-white dark:bg-neutral-800 rounded-xl shadow-xl max-w-md w-full p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {isEditing ? "Edit User" : "Add User"}
+            <div className="relative bg-white dark:bg-neutral-800 rounded-xl shadow-xl max-w-2xl w-full p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                  {isEditing ? "Edit User Account" : "Create New User"}
                 </h3>
                 <button
                   onClick={() => setShowUserModal(false)}
@@ -1030,111 +1035,108 @@ export default function MainSettings() {
 
               <form onSubmit={isEditing ? handleUpdateUser : handleAddUser}>
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-foreground dark:text-gray-300 mb-1">
-                      Username *
-                    </label>
-                    <input
-                      type="text"
-                      name="username"
-                      value={userForm.username}
-                      onChange={handleUserInputChange}
-                      required
-                      className="w-full border border-gray-300 dark:border-neutral-600 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-ring bg-white dark:bg-neutral-700 text-gray-900 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground dark:text-gray-300 mb-1">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={userForm.email}
-                      onChange={handleUserInputChange}
-                      className="w-full border border-gray-300 dark:border-neutral-600 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-ring bg-white dark:bg-neutral-700 text-gray-900 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground dark:text-gray-300 mb-1">
-                      Password *
-                    </label>
-                    <input
-                      type="password"
-                      name="password"
-                      value={userForm.password}
-                      onChange={handleUserInputChange}
-                      required
-                      className="w-full border border-gray-300 dark:border-neutral-600 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-ring bg-white dark:bg-neutral-700 text-gray-900 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground dark:text-gray-300 mb-1">
-                      Phone
-                    </label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={userForm.phone}
-                      onChange={handleUserInputChange}
-                      className="w-full border border-gray-300 dark:border-neutral-600 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-ring bg-white dark:bg-neutral-700 text-gray-900 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground dark:text-gray-300 mb-1">
-                      Employee ID
-                    </label>
-                    <input
-                      type="text"
-                      name="employee_id"
-                      value={userForm.employee_id}
-                      onChange={handleUserInputChange}
-                      className="w-full border border-gray-300 dark:border-neutral-600 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-ring bg-white dark:bg-neutral-700 text-gray-900 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground dark:text-gray-300 mb-1">
-                      Department
-                    </label>
-                    <select
-                      name="department"
-                      value={userForm.department}
-                      onChange={handleUserInputChange}
-                      className="w-full border border-gray-300 dark:border-neutral-600 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-ring bg-white dark:bg-neutral-700 text-gray-900 dark:text-white"
-                    >
-                      <option value="">Select Department</option>
-                      {departmentsOnly.map((dept, idx) => (
-                        <option key={idx} value={dept.department}>
-                          {dept.department}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  {/* Row 1: Username, Password, Email */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-foreground dark:text-gray-300 mb-1">
-                        Role
-                      </label>
+                      <label className={labelClass}>Username *</label>
+                      <input
+                        type="text"
+                        name="username"
+                        value={userForm.username}
+                        onChange={handleUserInputChange}
+                        required
+                        placeholder="john_doe"
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Password *</label>
+                      <input
+                        type="password"
+                        name="password"
+                        value={userForm.password}
+                        onChange={handleUserInputChange}
+                        required
+                        placeholder="••••••••"
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Email Address</label>
+                      <input
+                        type="email"
+                        name="email"
+                        value={userForm.email}
+                        onChange={handleUserInputChange}
+                        placeholder="john@example.com"
+                        className={inputClass}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Row 2: Phone, Employee ID, Department */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className={labelClass}>Phone Number</label>
+                      <input
+                        type="tel"
+                        name="phone"
+                        value={userForm.phone}
+                        onChange={handleUserInputChange}
+                        placeholder="+91 0000000000"
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Employee ID</label>
+                      <input
+                        type="text"
+                        name="employee_id"
+                        value={userForm.employee_id}
+                        onChange={handleUserInputChange}
+                        placeholder="EMP001"
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Assign Department</label>
+                      <select
+                        name="department"
+                        value={userForm.department}
+                        onChange={handleUserInputChange}
+                        className={selectClass}
+                      >
+                        <option value="">Select Department</option>
+                        {departmentsOnly.map((dept, idx) => (
+                          <option key={idx} value={dept.department}>
+                            {dept.department}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Row 3: Role, Status */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-neutral-700">
+                    <div>
+                      <label className={labelClass}>User Role</label>
                       <select
                         name="role"
                         value={userForm.role}
                         onChange={handleUserInputChange}
-                        className="w-full border border-gray-300 dark:border-neutral-600 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-ring bg-white dark:bg-neutral-700 text-gray-900 dark:text-white"
+                        className={selectClass}
                       >
                         <option value="user">User</option>
                         <option value="admin">Admin</option>
-                        <option value="manager">Manager</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-foreground dark:text-gray-300 mb-1">
-                        Status
-                      </label>
+                      <label className={labelClass}>Account Status</label>
                       <select
                         name="status"
                         value={userForm.status}
                         onChange={handleUserInputChange}
-                        className="w-full border border-gray-300 dark:border-neutral-600 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-ring bg-white dark:bg-neutral-700 text-gray-900 dark:text-white"
+                        className={selectClass}
                       >
                         <option value="active">Active</option>
                         <option value="inactive">Inactive</option>
@@ -1143,11 +1145,11 @@ export default function MainSettings() {
                   </div>
                 </div>
 
-                <div className="mt-6 flex justify-end gap-3">
+                <div className="mt-8 flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-neutral-700">
                   <button
                     type="button"
                     onClick={() => setShowUserModal(false)}
-                    className="px-4 py-2 text-foreground dark:text-gray-300 border border-gray-300 dark:border-neutral-600 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-700"
+                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-700 border border-gray-200 dark:border-neutral-700 rounded-md transition-colors"
                   >
                     Cancel
                   </button>
@@ -1157,13 +1159,13 @@ export default function MainSettings() {
                       createUserMutation.isPending ||
                       updateUserMutation.isPending
                     }
-                    className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary disabled:opacity-50 flex items-center gap-2"
+                    className="px-6 py-2 text-sm font-medium bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 transition-colors"
                   >
                     {(createUserMutation.isPending ||
                       updateUserMutation.isPending) && (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     )}
-                    {isEditing ? "Update" : "Create"}
+                    {isEditing ? "Update Account" : "Create Account"}
                   </button>
                 </div>
               </form>

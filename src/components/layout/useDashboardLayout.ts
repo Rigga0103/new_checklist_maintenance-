@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { ThemeMode, DataCategory, UserInfo } from "./types";
+import { useUserPermissions } from "@/features/checklistAndDelegation/settings/server/tanstackQuery/useSettings";
+import type { PermissionResource } from "@/features/checklistAndDelegation/settings/types/types";
 
 interface Route {
   href: string;
@@ -12,6 +14,7 @@ interface Route {
   submenu?: boolean;
   showFor: readonly ("admin" | "user")[];
   children?: Route[];
+  permissionResource?: PermissionResource;
 }
 
 const routes: Route[] = [
@@ -20,30 +23,35 @@ const routes: Route[] = [
     label: "Dashboard",
     icon: "Home",
     showFor: ["admin", "user"] as const,
+    permissionResource: "dashboard",
   },
   {
     href: "/assign-task",
     label: "Assign Task",
     icon: "CheckSquare",
     showFor: ["admin", "user"] as const,
+    permissionResource: "assign_task",
   },
   {
     href: "/delegation",
     label: "Delegation",
     icon: "ClipboardList",
     showFor: ["admin", "user"] as const,
+    permissionResource: "delegation",
   },
   {
     href: "/quick-task",
     label: "Quick Task",
     icon: "Zap",
     showFor: ["admin"] as const,
+    permissionResource: "quick_task",
   },
   {
     href: "/checklist",
     label: "Checklist",
     icon: "ClipboardList",
     showFor: ["admin", "user"] as const,
+    permissionResource: "checklist",
   },
   {
     href: "/repairing",
@@ -57,24 +65,28 @@ const routes: Route[] = [
         label: "Dashboard",
         icon: "Home",
         showFor: ["admin", "user"] as const,
+        permissionResource: "repair_dashboard",
       },
       {
         href: "/repairing/request-form",
         label: "Request Form",
         icon: "FileText",
         showFor: ["admin", "user"] as const,
+        permissionResource: "repair_request",
       },
       {
         href: "/repairing/pending",
         label: "Pending",
         icon: "Clock",
         showFor: ["admin", "user"] as const,
+        permissionResource: "repairing",
       },
       {
         href: "/repairing/history",
         label: "History",
         icon: "Clock",
         showFor: ["admin", "user"] as const,
+        permissionResource: "repair_history",
       },
     ],
   },
@@ -90,24 +102,28 @@ const routes: Route[] = [
         label: "Pending",
         icon: "Clock",
         showFor: ["admin", "user"] as const,
+        permissionResource: "maintenance",
       },
       {
         href: "/maintenance/history",
         label: "History",
         icon: "Clock",
         showFor: ["admin", "user"] as const,
+        permissionResource: "maintenance_history",
       },
       {
         href: "/maintenance/schedules",
         label: "Schedules",
         icon: "ClipboardList",
         showFor: ["admin", "user"] as const,
+        permissionResource: "maintenance_schedules",
       },
       {
         href: "/maintenance/calendar",
         label: "Calendar",
         icon: "Calendar",
         showFor: ["admin", "user"] as const,
+        permissionResource: "maintenance_calendar",
       },
     ],
   },
@@ -116,30 +132,35 @@ const routes: Route[] = [
     label: "Machines",
     icon: "Settings",
     showFor: ["admin"] as const,
+    permissionResource: "machines",
   },
   {
     href: "/approval",
     label: "Admin Approvals",
     icon: "CheckSquare",
     showFor: ["admin"] as const,
+    permissionResource: "approval",
   },
   {
     href: "/settings",
     label: "Settings",
     icon: "Settings",
     showFor: ["admin"] as const,
+    permissionResource: "settings",
   },
   {
     href: "/license",
     label: "License",
     icon: "CheckSquare",
     showFor: ["admin"] as const,
+    permissionResource: "license",
   },
   {
     href: "/training-video",
     label: "Training Video",
     icon: "CheckSquare",
     showFor: ["admin"] as const,
+    permissionResource: "training_video",
   },
 ];
 
@@ -160,6 +181,9 @@ export function useDashboardLayout() {
     userEmail: "",
   });
 
+  // Read user_id for RBAC permission fetching
+  const [userId, setUserId] = useState<number | null>(null);
+
   // Track mounting for hydration and sync user info
   useEffect(() => {
     setMounted(true);
@@ -168,7 +192,14 @@ export function useDashboardLayout() {
       userRole: localStorage.getItem("role") || "user",
       userEmail: localStorage.getItem("email_id") || "",
     });
+    const id = localStorage.getItem("user_id");
+    if (id) {
+      setUserId(parseInt(id, 10));
+    }
   }, []);
+
+  // Fetch user permissions from DB for RBAC-based sidebar filtering
+  const { data: userPermissions = [] } = useUserPermissions(userId);
 
   // Cycle through themes: light -> dark -> system
   const cycleTheme = useCallback(() => {
@@ -182,6 +213,7 @@ export function useDashboardLayout() {
   // Compute accessible routes and departments using useMemo
   const accessibleRoutes = useMemo(() => {
     const userRole = (userInfo.userRole as "admin" | "user") || "user";
+    const isAdmin = userRole === "admin";
 
     // Helper to check if a route is active (or one of its children)
     const isRouteActive = (route: Route) => {
@@ -197,14 +229,37 @@ export function useDashboardLayout() {
       return pathname.startsWith(route.href);
     };
 
+    // Check if user has can_read permission for a given resource
+    const hasPermission = (resource?: PermissionResource) => {
+      if (isAdmin) return true;
+      if (!resource) return false;
+      return userPermissions.some((p) => p.resource === resource && p.can_read);
+    };
+
+    // A route is accessible if role allows it OR user has explicit RBAC permission
+    const isRouteAccessible = (route: Route) => {
+      if (isAdmin) return true;
+
+      // If route has specific permission resource, that takes precedence
+      if (route.permissionResource) {
+        return hasPermission(route.permissionResource);
+      }
+
+      // Fallback to role-based check
+      return (route.showFor as readonly string[]).includes(userRole);
+    };
+
+    // Filter routes: only show accessible ones
     return routes
-      .filter((route) =>
-        (route.showFor as readonly string[]).includes(userRole),
-      )
+      .filter((route) => {
+        // For parent routes with children (submenu), show if at least one child is accessible
+        if (route.submenu && route.children) {
+          return route.children.some(isRouteAccessible);
+        }
+        return isRouteAccessible(route);
+      })
       .map((route) => {
-        const filteredChildren = route.children?.filter((child) =>
-          (child.showFor as readonly string[]).includes(userRole),
-        );
+        const filteredChildren = route.children?.filter(isRouteAccessible);
 
         return {
           ...route,
@@ -212,7 +267,7 @@ export function useDashboardLayout() {
           active: isRouteActive(route),
         };
       });
-  }, [userInfo.userRole, pathname]);
+  }, [userInfo.userRole, pathname, userPermissions]);
 
   const accessibleDepartments = useMemo(() => {
     return [] as DataCategory[]; // Placeholder as per original code
