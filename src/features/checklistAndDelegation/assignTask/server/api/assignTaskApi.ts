@@ -121,7 +121,7 @@ export const fetchUniqueDoerNameDataApi = async (
       .select("user_name, role, user_access")
       .or(`user_access.ilike.%${department}%,role.eq.admin`)
       .eq("status", "active")
-      .eq("role", "user")
+      // .eq("role", "user") // Allow admins too
       .order("user_name", { ascending: true });
 
     if (error) {

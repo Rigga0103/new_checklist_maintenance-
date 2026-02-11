@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import {
   RefreshCw,
@@ -43,10 +43,14 @@ export default function MainChecklist() {
     Record<number, string>
   >({});
 
-  // Fetch Data
-  // TODO: Get role and username from context/store
-  const role = "admin"; // Placeholder
-  const username = "admin"; // Placeholder
+  // Read role and username from localStorage for role-based filtering
+  const [role, setRole] = useState<string | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
+
+  useEffect(() => {
+    setRole(localStorage.getItem("role") || "user");
+    setUsername(localStorage.getItem("user-name") || null);
+  }, []);
 
   const {
     data: activeData,
