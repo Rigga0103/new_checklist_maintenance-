@@ -137,9 +137,8 @@ export default function MainSettings() {
   const filteredUsers = useMemo(() => {
     return (userData || []).filter(
       (user) =>
-        user.role !== "admin" &&
-        (!usernameFilter ||
-          user.user_name.toLowerCase().includes(usernameFilter.toLowerCase())),
+        !usernameFilter ||
+        user.user_name.toLowerCase().includes(usernameFilter.toLowerCase()),
     );
   }, [userData, usernameFilter]);
 
