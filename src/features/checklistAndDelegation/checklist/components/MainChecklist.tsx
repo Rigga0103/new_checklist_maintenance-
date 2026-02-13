@@ -10,6 +10,8 @@ import {
   Loader2,
   Upload,
   Eye,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 // import Image from "next/image";
 import {
@@ -22,10 +24,13 @@ import { useUploadChecklistImage } from "../server/tanstackQuery/useChecklistUpl
 import { ChecklistSubmissionItem } from "../types/types";
 import { toast } from "sonner";
 
+const ITEMS_PER_PAGE = 50;
+
 export default function MainChecklist() {
   const [activeTab, setActiveTab] = useState<"pending" | "history">("pending");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTasks, setSelectedTasks] = useState<Set<number>>(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
   const [taskRemarks, setTaskRemarks] = useState<Record<number, string>>({});
   const [taskStatuses, setTaskStatuses] = useState<Record<number, string>>({});
   const [taskImages, setTaskImages] = useState<
@@ -74,10 +79,21 @@ export default function MainChecklist() {
 
   const isLoading = isFetchingActive || isFetchingHistory;
 
+  // Pagination
+  const totalPages = Math.ceil(tasks.length / ITEMS_PER_PAGE);
+  const paginatedTasks = tasks.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE,
+  );
+  const showingStart =
+    tasks.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0;
+  const showingEnd = Math.min(currentPage * ITEMS_PER_PAGE, tasks.length);
+
   // Handlers
   const handleSearch = (term: string) => {
     setSearchTerm(term);
-    // Reset selection on search
+    setCurrentPage(1);
+    // Reset selections on search
     setSelectedTasks(new Set());
   };
 
@@ -99,6 +115,22 @@ export default function MainChecklist() {
   const deselectAllTasks = () => {
     setSelectedTasks(new Set());
   };
+
+  const markAllDone = () => {
+    // Select all tasks and set their status to 'yes'
+    const allIds = tasks.map((t) => t.task_id);
+    setSelectedTasks(new Set(allIds));
+    const newStatuses: Record<number, string> = { ...taskStatuses };
+    allIds.forEach((id) => {
+      newStatuses[id] = "yes";
+    });
+    setTaskStatuses(newStatuses);
+  };
+
+  // Count how many selected tasks have status set to 'yes' (Done)
+  const doneCount = Array.from(selectedTasks).filter(
+    (taskId) => taskStatuses[taskId] === "yes",
+  ).length;
 
   const updateTaskStatus = (taskId: number, status: string) => {
     setTaskStatuses((prev) => ({ ...prev, [taskId]: status }));
@@ -312,7 +344,10 @@ export default function MainChecklist() {
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex gap-2">
           <button
-            onClick={() => setActiveTab("pending")}
+            onClick={() => {
+              setActiveTab("pending");
+              setCurrentPage(1);
+            }}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
               activeTab === "pending"
                 ? "bg-blue-600 text-white"
@@ -322,7 +357,10 @@ export default function MainChecklist() {
             Pending
           </button>
           <button
-            onClick={() => setActiveTab("history")}
+            onClick={() => {
+              setActiveTab("history");
+              setCurrentPage(1);
+            }}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
               activeTab === "history"
                 ? "bg-blue-600 text-white"
@@ -352,6 +390,12 @@ export default function MainChecklist() {
               Select All
             </button>
             <button
+              onClick={markAllDone}
+              className="text-xs text-green-600 hover:underline font-medium"
+            >
+              All Done
+            </button>
+            <button
               onClick={deselectAllTasks}
               className="text-xs text-muted-foreground hover:underline"
             >
@@ -368,7 +412,7 @@ export default function MainChecklist() {
                 ) : (
                   <Check className="w-4 h-4" />
                 )}
-                Submit ({selectedTasks.size})
+                Submit ({doneCount} Done of {selectedTasks.size})
               </button>
             )}
           </div>
@@ -376,10 +420,18 @@ export default function MainChecklist() {
       </div>
 
       {/* Tasks Table */}
-      <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-sm border border-gray-100 dark:border-neutral-700 overflow-hidden">
+      <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-sm border border-gray-100 dark:border-neutral-700">
         {isLoading && tasks.length === 0 ? (
-          <div className="flex items-center justify-center h-48">
-            <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+          <div className="p-4 space-y-3">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="flex gap-4 animate-pulse">
+                <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-12" />
+                <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-24" />
+                <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded flex-1" />
+                <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-20" />
+                <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-16" />
+              </div>
+            ))}
           </div>
         ) : tasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
@@ -388,8 +440,8 @@ export default function MainChecklist() {
           </div>
         ) : (
           <div
-            className="overflow-x-auto"
-            style={{ maxHeight: "calc(100vh - 280px)" }}
+            className="overflow-x-auto overflow-y-auto"
+            style={{ maxHeight: "calc(100vh - 320px)" }}
           >
             <table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
               <thead className="bg-gray-50 dark:bg-neutral-900/50 sticky top-0 z-10">
@@ -482,7 +534,7 @@ export default function MainChecklist() {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-neutral-800 divide-y divide-gray-100 dark:divide-neutral-700">
-                {tasks.map((task, index) => (
+                {paginatedTasks.map((task, index) => (
                   <tr
                     key={task.task_id || index}
                     className={`hover:bg-gray-50 dark:hover:bg-neutral-700/50 ${
@@ -492,7 +544,7 @@ export default function MainChecklist() {
                     }`}
                   >
                     <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
-                      {index + 1}
+                      {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
                     </td>
                     {activeTab === "pending" && (
                       <td className="px-3 py-3">
@@ -519,9 +571,9 @@ export default function MainChecklist() {
                     <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
                       {task.name || "—"}
                     </td>
-                    <td className="px-3 py-3 text-sm text-foreground dark:text-gray-300 min-w-50 max-w-75">
+                    <td className="px-3 py-3 text-sm text-foreground dark:text-gray-300 min-w-50">
                       <div
-                        className="whitespace-normal text-wrap line-clamp-2"
+                        className="whitespace-normal wrap-break-word"
                         title={task.task_description || ""}
                       >
                         {task.task_description || "—"}
@@ -682,6 +734,34 @@ export default function MainChecklist() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-2 border-t border-gray-100 dark:border-neutral-700">
+            <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+              Showing {showingStart}-{showingEnd} of {tasks.length} • Page{" "}
+              {currentPage} of {totalPages}
+            </p>
+            <div className="flex gap-1">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="p-1.5 rounded border border-gray-200 dark:border-neutral-700 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-neutral-700"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() =>
+                  setCurrentPage((p) => Math.min(totalPages, p + 1))
+                }
+                disabled={currentPage === totalPages}
+                className="p-1.5 rounded border border-gray-200 dark:border-neutral-700 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-neutral-700"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         )}
       </div>

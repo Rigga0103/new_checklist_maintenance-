@@ -189,7 +189,7 @@ export function useDelegation() {
         const uploadedUrl = await uploadChecklistImage(file, taskId);
         console.log("Upload successful! URL:", uploadedUrl);
 
-        // Update state with uploaded URL
+        // Update state with uploaded URLjjjjj
         setTaskImages((prev) => {
           const newState = {
             ...prev,

@@ -5,16 +5,20 @@ import {
   Clock,
   AlertTriangle,
   ListChecks,
-  TrendingUp,
   Users,
   Calendar,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Search,
 } from "lucide-react";
 import { useDashboard } from "../hooks/useDashboard";
 import { StatCardSkeleton, StaffTableSkeleton } from "./DashboardSkeleton";
 import { useState } from "react";
 import { Task } from "../types/types";
 import RepairingDashboard from "./RepairingDashboard";
+
+const DASHBOARD_ITEMS_PER_PAGE = 20;
 
 export default function MainDashboard() {
   const {
@@ -44,6 +48,7 @@ export default function MainDashboard() {
   const [showDateRangePicker, setShowDateRangePicker] = useState(false);
   const [startDate, setStartDate] = useState(dateRange.startDate || "");
   const [endDate, setEndDate] = useState(dateRange.endDate || "");
+  const [taskPage, setTaskPage] = useState(1);
 
   const applyDateRange = () => {
     if (startDate && endDate) {
@@ -195,84 +200,127 @@ export default function MainDashboard() {
     </div>
   );
 
-  const renderTaskTable = (title: string, tasks: Task[]) => (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700 overflow-hidden mb-6">
-      <div className="p-4 border-b border-gray-100 dark:border-neutral-700">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-          {title}
-        </h2>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50 dark:bg-neutral-700">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground dark:text-gray-300 uppercase tracking-wider">
-                Task
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground dark:text-gray-300 uppercase tracking-wider">
-                Assigned To
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground dark:text-gray-300 uppercase tracking-wider">
-                Due Date
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground dark:text-gray-300 uppercase tracking-wider">
-                Status
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-neutral-700">
-            {tasks.length === 0 ? (
+  const renderTaskTable = (title: string, tasks: Task[]) => {
+    const totalPages = Math.ceil(tasks.length / DASHBOARD_ITEMS_PER_PAGE);
+    const paginatedTasks = tasks.slice(
+      (taskPage - 1) * DASHBOARD_ITEMS_PER_PAGE,
+      taskPage * DASHBOARD_ITEMS_PER_PAGE,
+    );
+    const showingStart =
+      tasks.length > 0 ? (taskPage - 1) * DASHBOARD_ITEMS_PER_PAGE + 1 : 0;
+    const showingEnd = Math.min(
+      taskPage * DASHBOARD_ITEMS_PER_PAGE,
+      tasks.length,
+    );
+
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700 overflow-hidden mb-6">
+        <div className="p-4 border-b border-gray-100 dark:border-neutral-700 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            {title}
+          </h2>
+          <span className="text-xs text-muted-foreground">
+            {tasks.length} task{tasks.length !== 1 ? "s" : ""}
+          </span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 dark:bg-neutral-700">
               <tr>
-                <td
-                  colSpan={4}
-                  className="px-4 py-8 text-center text-muted-foreground dark:text-muted-foreground"
-                >
-                  No tasks found
-                </td>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground dark:text-gray-300 uppercase tracking-wider min-w-62.5">
+                  Task
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground dark:text-gray-300 uppercase tracking-wider">
+                  Assigned To
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground dark:text-gray-300 uppercase tracking-wider">
+                  Due Date
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground dark:text-gray-300 uppercase tracking-wider">
+                  Status
+                </th>
               </tr>
-            ) : (
-              tasks.map((task) => (
-                <tr
-                  key={task.id}
-                  className="hover:bg-gray-50 dark:hover:bg-neutral-700/50"
-                >
-                  <td className="px-4 py-4">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {task.title}
-                    </p>
-                  </td>
-                  <td className="px-4 py-4">
-                    <p className="text-sm text-foreground-secondary dark:text-gray-300">
-                      {task.assignedTo}
-                    </p>
-                  </td>
-                  <td className="px-4 py-4">
-                    <p className="text-sm text-foreground-secondary dark:text-gray-300">
-                      {task.taskStartDate}
-                    </p>
-                  </td>
-                  <td className="px-4 py-4">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        task.status === "completed"
-                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                          : task.status === "overdue"
-                            ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                            : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
-                      }`}
-                    >
-                      {task.status.charAt(0).toUpperCase() +
-                        task.status.slice(1)}
-                    </span>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-neutral-700">
+              {paginatedTasks.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={4}
+                    className="px-4 py-8 text-center text-muted-foreground dark:text-muted-foreground"
+                  >
+                    No tasks found
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                paginatedTasks.map((task) => (
+                  <tr
+                    key={task.id}
+                    className="hover:bg-gray-50 dark:hover:bg-neutral-700/50"
+                  >
+                    <td className="px-4 py-4">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white whitespace-normal wrap-break-word">
+                        {task.title}
+                      </p>
+                    </td>
+                    <td className="px-4 py-4">
+                      <p className="text-sm text-foreground-secondary dark:text-gray-300">
+                        {task.assignedTo}
+                      </p>
+                    </td>
+                    <td className="px-4 py-4">
+                      <p className="text-sm text-foreground-secondary dark:text-gray-300">
+                        {task.taskStartDate}
+                      </p>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          task.status === "completed"
+                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                            : task.status === "overdue"
+                              ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                              : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                        }`}
+                      >
+                        {task.status.charAt(0).toUpperCase() +
+                          task.status.slice(1)}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-2 border-t border-neutral-200 dark:border-neutral-700">
+            <p className="text-xs text-muted-foreground">
+              Showing {showingStart}-{showingEnd} of {tasks.length} • Page{" "}
+              {taskPage} of {totalPages}
+            </p>
+            <div className="flex gap-1">
+              <button
+                onClick={() => setTaskPage((p) => Math.max(1, p - 1))}
+                disabled={taskPage === 1}
+                className="p-1.5 rounded border border-neutral-200 dark:border-neutral-700 disabled:opacity-50 hover:bg-neutral-50 dark:hover:bg-neutral-700"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setTaskPage((p) => Math.min(totalPages, p + 1))}
+                disabled={taskPage === totalPages}
+                className="p-1.5 rounded border border-neutral-200 dark:border-neutral-700 disabled:opacity-50 hover:bg-neutral-50 dark:hover:bg-neutral-700"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-    </div>
-  );
+    );
+  };
 
   // Consolidate task tables with tabs
   return (
@@ -406,134 +454,203 @@ export default function MainDashboard() {
         <RepairingDashboard />
       ) : (
         <>
-          {/* Statistics Cards */}
+          {/* Dashboard Stats & Completion Rate */}
           {isLoading ? (
             <StatCardSkeleton count={4} />
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-blue-100 rounded-lg dark:bg-blue-900/30">
-                    <ListChecks className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            <div className="grid gap-6 lg:grid-cols-3">
+              {/* Left: Stat Cards 2x2 */}
+              <div className="lg:col-span-2 grid gap-4 grid-cols-2">
+                {/* Total Tasks */}
+                <div className="relative overflow-hidden p-5 bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700 group hover:shadow-md transition-shadow">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-blue-500 rounded-l-xl" />
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-blue-50 rounded-lg dark:bg-blue-900/20">
+                      <ListChecks className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Total Tasks
+                      </p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                        {departmentData.totalTasks}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-                      Total Tasks
-                    </p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {departmentData.totalTasks}
-                    </p>
+                </div>
+
+                {/* Completed */}
+                <div className="relative overflow-hidden p-5 bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700 group hover:shadow-md transition-shadow">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 rounded-l-xl" />
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-emerald-50 rounded-lg dark:bg-emerald-900/20">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Completed
+                      </p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                        {departmentData.completedTasks}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pending */}
+                <div className="relative overflow-hidden p-5 bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700 group hover:shadow-md transition-shadow">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-amber-500 rounded-l-xl" />
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-amber-50 rounded-lg dark:bg-amber-900/20">
+                      <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Pending
+                      </p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                        {departmentData.pendingTasks}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Overdue */}
+                <div className="relative overflow-hidden p-5 bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700 group hover:shadow-md transition-shadow">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-rose-500 rounded-l-xl" />
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-rose-50 rounded-lg dark:bg-rose-900/20">
+                      <AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Overdue
+                      </p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                        {departmentData.overdueTasks}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-green-100 rounded-lg dark:bg-green-900/30">
-                    <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-                      Completed
-                    </p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {departmentData.completedTasks}
-                    </p>
-                  </div>
-                </div>
-              </div>
+              {/* Right: Completion Rate Donut Chart */}
+              <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700 flex flex-col items-center justify-center">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+                  Completion Rate
+                </h3>
 
-              <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-yellow-100 rounded-lg dark:bg-yellow-900/30">
-                    <Clock className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-                      Pending
-                    </p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {departmentData.pendingTasks}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-red-100 rounded-lg dark:bg-red-900/30">
-                    <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-                      Overdue
-                    </p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {departmentData.overdueTasks}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Completion Rate Card */}
-          {isLoading ? (
-            <StatCardSkeleton count={3} />
-          ) : (
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-muted rounded-lg dark:bg-muted">
-                    <TrendingUp className="w-6 h-6 text-primary dark:text-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-                      Completion Rate
-                    </p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {departmentData.completionRate}%
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-neutral-700">
-                    <div
-                      className="bg-primary h-2.5 rounded-full transition-all duration-500"
-                      style={{ width: `${departmentData.completionRate}%` }}
+                {/* SVG Donut Chart */}
+                <div className="relative w-40 h-40 mb-4">
+                  <svg
+                    viewBox="0 0 120 120"
+                    className="w-full h-full -rotate-90"
+                  >
+                    {/* Background circle */}
+                    <circle
+                      cx="60"
+                      cy="60"
+                      r="50"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="12"
+                      className="text-gray-100 dark:text-neutral-700"
                     />
+                    {/* Completed segment (green) */}
+                    {departmentData.totalTasks > 0 && (
+                      <circle
+                        cx="60"
+                        cy="60"
+                        r="50"
+                        fill="none"
+                        stroke="#10b981"
+                        strokeWidth="12"
+                        strokeLinecap="round"
+                        strokeDasharray={`${(departmentData.completedTasks / departmentData.totalTasks) * 314.16} 314.16`}
+                        className="transition-all duration-1000 ease-out"
+                      />
+                    )}
+                    {/* Pending segment (amber) */}
+                    {departmentData.totalTasks > 0 &&
+                      departmentData.pendingTasks > 0 && (
+                        <circle
+                          cx="60"
+                          cy="60"
+                          r="50"
+                          fill="none"
+                          stroke="#f59e0b"
+                          strokeWidth="12"
+                          strokeLinecap="round"
+                          strokeDasharray={`${(departmentData.pendingTasks / departmentData.totalTasks) * 314.16} 314.16`}
+                          strokeDashoffset={`${-((departmentData.completedTasks / departmentData.totalTasks) * 314.16)}`}
+                          className="transition-all duration-1000 ease-out"
+                        />
+                      )}
+                    {/* Overdue segment (rose) */}
+                    {departmentData.totalTasks > 0 &&
+                      departmentData.overdueTasks > 0 && (
+                        <circle
+                          cx="60"
+                          cy="60"
+                          r="50"
+                          fill="none"
+                          stroke="#f43f5e"
+                          strokeWidth="12"
+                          strokeLinecap="round"
+                          strokeDasharray={`${(departmentData.overdueTasks / departmentData.totalTasks) * 314.16} 314.16`}
+                          strokeDashoffset={`${-(((departmentData.completedTasks + departmentData.pendingTasks) / departmentData.totalTasks) * 314.16)}`}
+                          className="transition-all duration-1000 ease-out"
+                        />
+                      )}
+                  </svg>
+                  {/* Center text */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-3xl font-bold text-gray-900 dark:text-white">
+                      {departmentData.completionRate}%
+                    </span>
+                    <span className="text-[10px] text-muted-foreground font-medium">
+                      COMPLETED
+                    </span>
                   </div>
                 </div>
-              </div>
 
-              <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-muted rounded-lg dark:bg-primary/30">
-                    <Users className="w-6 h-6 text-primary dark:text-muted-foreground" />
+                {/* Legend */}
+                <div className="flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                    <span className="text-muted-foreground">
+                      Completed ({departmentData.completedTasks})
+                    </span>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-                      Active Staff
-                    </p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {availableStaff.length}
-                    </p>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                    <span className="text-muted-foreground">
+                      Pending ({departmentData.pendingTasks})
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                    <span className="text-muted-foreground">
+                      Overdue ({departmentData.overdueTasks})
+                    </span>
                   </div>
                 </div>
-              </div>
 
-              <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-cyan-100 rounded-lg dark:bg-cyan-900/30">
-                    <Calendar className="w-6 h-6 text-cyan-600 dark:text-cyan-400" />
+                {/* Quick info row */}
+                <div className="w-full mt-4 pt-4 border-t border-gray-100 dark:border-neutral-700 flex justify-between text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <Users className="w-3.5 h-3.5" />
+                    <span>{availableStaff.length} Staff</span>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-                      Today&apos;s Date
-                    </p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-white">
-                      {new Date().toLocaleDateString("en-GB")}
-                    </p>
+                  <div className="flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>
+                      {new Date().toLocaleDateString("en-IN", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -541,25 +658,30 @@ export default function MainDashboard() {
           )}
 
           {/* Filters Row */}
-          <div className="flex flex-wrap gap-4 p-4 bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700">
-            <div className="flex-1 min-w-48">
+          <div className="flex flex-wrap items-center gap-3 p-4 bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700">
+            <div className="relative flex-1 min-w-52">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
               <input
                 type="text"
                 placeholder="Search tasks..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setTaskPage(1);
+                }}
+                className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-200 dark:border-neutral-600 bg-gray-50 dark:bg-neutral-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition-all"
               />
             </div>
 
             <select
               value={filterStatus}
-              onChange={(e) =>
+              onChange={(e) => {
                 setFilterStatus(
                   e.target.value as "all" | "pending" | "completed" | "overdue",
-                )
-              }
-              className="px-4 py-2 rounded-lg border border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                );
+                setTaskPage(1);
+              }}
+              className="px-3 py-2 rounded-lg border border-gray-200 dark:border-neutral-600 bg-gray-50 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition-all cursor-pointer"
             >
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
@@ -570,8 +692,11 @@ export default function MainDashboard() {
             {userRole === "admin" && availableStaff.length > 0 && (
               <select
                 value={dashboardStaffFilter}
-                onChange={(e) => setDashboardStaffFilter(e.target.value)}
-                className="px-4 py-2 rounded-lg border border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onChange={(e) => {
+                  setDashboardStaffFilter(e.target.value);
+                  setTaskPage(1);
+                }}
+                className="px-3 py-2 rounded-lg border border-gray-200 dark:border-neutral-600 bg-gray-50 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition-all cursor-pointer"
               >
                 <option value="all">All Staff</option>
                 {availableStaff.map((staff) => (
@@ -586,8 +711,11 @@ export default function MainDashboard() {
               availableDepartments.length > 0 && (
                 <select
                   value={departmentFilter}
-                  onChange={(e) => setDepartmentFilter(e.target.value)}
-                  className="px-4 py-2 rounded-lg border border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={(e) => {
+                    setDepartmentFilter(e.target.value);
+                    setTaskPage(1);
+                  }}
+                  className="px-3 py-2 rounded-lg border border-gray-200 dark:border-neutral-600 bg-gray-50 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition-all cursor-pointer"
                 >
                   <option value="all">All Departments</option>
                   {availableDepartments.map((dept) => (
@@ -603,35 +731,47 @@ export default function MainDashboard() {
           {userRole === "admin" && renderStaffSummary()}
 
           {/* Task Sections Tabs */}
-          <div className="flex border-b border-gray-200 dark:border-neutral-700">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700 p-1.5 flex gap-1">
             <button
-              className={`flex items-center gap-2 px-4 py-2 -mb-px text-sm font-medium border-b-2 transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
                 taskView === "recent"
-                  ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300 dark:hover:border-neutral-600"
+                  ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 shadow-sm"
+                  : "text-muted-foreground hover:bg-gray-50 dark:hover:bg-neutral-700 hover:text-foreground"
               }`}
-              onClick={() => setTaskView("recent")}
+              onClick={() => {
+                setTaskView("recent");
+                setTaskPage(1);
+              }}
             >
+              <Clock className="w-4 h-4" />
               Recent & Today
             </button>
             <button
-              className={`flex items-center gap-2 px-4 py-2 -mb-px text-sm font-medium border-b-2 transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
                 taskView === "upcoming"
-                  ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300 dark:hover:border-neutral-600"
+                  ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 shadow-sm"
+                  : "text-muted-foreground hover:bg-gray-50 dark:hover:bg-neutral-700 hover:text-foreground"
               }`}
-              onClick={() => setTaskView("upcoming")}
+              onClick={() => {
+                setTaskView("upcoming");
+                setTaskPage(1);
+              }}
             >
+              <Calendar className="w-4 h-4" />
               Upcoming
             </button>
             <button
-              className={`flex items-center gap-2 px-4 py-2 -mb-px text-sm font-medium border-b-2 transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
                 taskView === "overdue"
-                  ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300 dark:hover:border-neutral-600"
+                  ? "bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 shadow-sm"
+                  : "text-muted-foreground hover:bg-gray-50 dark:hover:bg-neutral-700 hover:text-foreground"
               }`}
-              onClick={() => setTaskView("overdue")}
+              onClick={() => {
+                setTaskView("overdue");
+                setTaskPage(1);
+              }}
             >
+              <AlertTriangle className="w-4 h-4" />
               Overdue
             </button>
           </div>
@@ -652,7 +792,10 @@ export default function MainDashboard() {
                 {taskView === "recent" &&
                   renderTaskTable("Recent & Today's Tasks", filteredTasks)}
                 {taskView === "upcoming" &&
-                  renderTaskTable("Upcoming Tasks (Next 7 Days)", filteredTasks)}
+                  renderTaskTable(
+                    "Upcoming Tasks (Next 7 Days)",
+                    filteredTasks,
+                  )}
                 {taskView === "overdue" &&
                   renderTaskTable("Overdue Tasks", filteredTasks)}
               </>

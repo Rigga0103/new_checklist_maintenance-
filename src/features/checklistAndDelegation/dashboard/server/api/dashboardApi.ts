@@ -134,7 +134,7 @@ export const fetchDashboardDataApi = async ({
 // ============ Count APIs ============
 
 /**
- * Count total tasks for current month
+ * Count total tasks for today only
  */
 export const countTotalTasksApi = async (
   dashboardType: DashboardType,
@@ -148,6 +148,7 @@ export const countTotalTasksApi = async (
   let query = supabase
     .from(dashboardType)
     .select("*", { count: "exact", head: true })
+    .gte("task_start_date", `${today}T00:00:00`)
     .lte("task_start_date", `${today}T23:59:59`);
 
   if (role === "user" && username) {
@@ -170,7 +171,7 @@ export const countTotalTasksApi = async (
 };
 
 /**
- * Count completed tasks
+ * Count completed tasks for today only
  */
 export const countCompletedTasksApi = async (
   dashboardType: DashboardType,
@@ -187,11 +188,13 @@ export const countCompletedTasksApi = async (
           .from("delegation")
           .select("*", { count: "exact", head: true })
           .not("submission_date", "is", null)
+          .gte("task_start_date", `${today}T00:00:00`)
           .lte("task_start_date", `${today}T23:59:59`)
       : supabase
           .from("checklist")
           .select("*", { count: "exact", head: true })
           .eq("status", "yes")
+          .gte("task_start_date", `${today}T00:00:00`)
           .lte("task_start_date", `${today}T23:59:59`);
 
   if (role === "user" && username) {

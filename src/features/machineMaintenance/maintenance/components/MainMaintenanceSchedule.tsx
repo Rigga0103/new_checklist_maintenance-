@@ -9,12 +9,24 @@ import {
   useGenerateTasksMutation,
 } from "../server/tanstackQuery/useMaintenanceSchedules";
 import { useActiveMachinesQuery } from "../../machines/server/tanstackQuery/useMachineQueries";
-import { Plus, Pencil, Trash2, X, Loader2, Play } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  X,
+  Loader2,
+  Play,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { CreateScheduleDTO } from "../server/api/maintenanceScheduleApi";
 import { useRBAC } from "@/hooks/useRBAC";
 
+const ITEMS_PER_PAGE = 20;
+
 export default function MainMaintenanceSchedule() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState<CreateScheduleDTO>({
     machine_name: "",
@@ -32,6 +44,16 @@ export default function MainMaintenanceSchedule() {
   const generateMutation = useGenerateTasksMutation();
 
   const { canWrite, canEdit, canDelete } = useRBAC("maintenance_schedules");
+
+  // Pagination
+  const totalPages = Math.ceil(schedules.length / ITEMS_PER_PAGE);
+  const paginatedSchedules = schedules.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE,
+  );
+  const showingStart =
+    schedules.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0;
+  const showingEnd = Math.min(currentPage * ITEMS_PER_PAGE, schedules.length);
 
   const handleOpenModal = (schedule?: any) => {
     if (schedule) {
@@ -85,8 +107,23 @@ export default function MainMaintenanceSchedule() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+      <div className="p-6 space-y-4">
+        <div className="flex justify-between items-center">
+          <div>
+            <div className="h-7 bg-gray-200 dark:bg-neutral-700 rounded w-56 animate-pulse" />
+            <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-80 mt-2 animate-pulse" />
+          </div>
+        </div>
+        <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-700 p-4 space-y-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex gap-4 animate-pulse">
+              <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-28" />
+              <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded flex-1" />
+              <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-20" />
+              <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-24" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -161,7 +198,7 @@ export default function MainMaintenanceSchedule() {
                 </td>
               </tr>
             ) : (
-              schedules.map((schedule: any) => (
+              paginatedSchedules.map((schedule: any) => (
                 <tr
                   key={schedule.id}
                   className="hover:bg-neutral-50 dark:hover:bg-neutral-700/50"
@@ -211,6 +248,34 @@ export default function MainMaintenanceSchedule() {
             )}
           </tbody>
         </table>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-2 border-t border-neutral-200 dark:border-neutral-700">
+            <p className="text-xs text-muted-foreground">
+              Showing {showingStart}-{showingEnd} of {schedules.length} • Page{" "}
+              {currentPage} of {totalPages}
+            </p>
+            <div className="flex gap-1">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="p-1.5 rounded border border-neutral-200 dark:border-neutral-700 disabled:opacity-50 hover:bg-neutral-50 dark:hover:bg-neutral-700"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() =>
+                  setCurrentPage((p) => Math.min(totalPages, p + 1))
+                }
+                disabled={currentPage === totalPages}
+                className="p-1.5 rounded border border-neutral-200 dark:border-neutral-700 disabled:opacity-50 hover:bg-neutral-50 dark:hover:bg-neutral-700"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {isModalOpen && (

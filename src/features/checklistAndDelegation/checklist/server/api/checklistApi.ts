@@ -19,20 +19,21 @@ export const fetchChecklistDataSortByDate = async (
   username: string | null = null,
 ): Promise<ChecklistFetchResponse> => {
   try {
-    const endOfToday = new Date();
-    endOfToday.setHours(23, 59, 59, 999);
-    const endOfTodayISO = endOfToday.toISOString();
-
     const from = (page - 1) * limit;
     const to = from + limit - 1;
+
+    // Only show today's tasks (matching dashboard "Recent & Today" logic)
+    const today = new Date().toISOString().split("T")[0];
+    const startOfToday = `${today}T00:00:00`;
+    const endOfToday = `${today}T23:59:59`;
 
     let query = supabase
       .from("checklist")
       .select("*", { count: "exact" })
-      .lte("task_start_date", endOfTodayISO)
+      .gte("task_start_date", startOfToday)
+      .lte("task_start_date", endOfToday)
+      .is("submission_date", null)
       .order("task_start_date", { ascending: true })
-      .is("submission_date", null)
-      .is("submission_date", null)
       .range(from, to);
 
     // Apply search filter

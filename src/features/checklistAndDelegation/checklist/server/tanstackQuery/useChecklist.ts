@@ -39,7 +39,7 @@ export function useActiveChecklist(
     queryFn: async ({ pageParam = 1 }) => {
       return fetchChecklistDataSortByDate(
         pageParam,
-        50,
+        1000,
         searchTerm,
         role,
         username,

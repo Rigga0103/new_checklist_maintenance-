@@ -70,7 +70,7 @@ export function useDashboardData(
   role?: string | null,
   username?: string | null,
   page = 1,
-  limit = 50,
+  limit = 1000,
 ) {
   return useQuery({
     queryKey: dashboardKeys.data(

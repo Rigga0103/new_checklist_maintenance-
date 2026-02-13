@@ -15,6 +15,9 @@ import {
   Loader2,
   Shield,
   Lock,
+  Upload,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useRBAC } from "@/hooks/useRBAC";
@@ -40,9 +43,12 @@ import type {
 import { SettingsTableSkeleton } from "./SettingsSkeleton";
 import supabase from "@/utils/supabaseClient";
 import PermissionsModal from "./PermissionsModal";
+import CsvImportHub from "./CsvImportHub";
+
+const SETTINGS_ITEMS_PER_PAGE = 20;
 
 // Tab types
-type TabType = "users" | "departments" | "leave";
+type TabType = "users" | "departments" | "leave" | "import";
 type DeptSubTab = "departments" | "givenBy";
 
 // Initial form states
@@ -91,6 +97,10 @@ export default function MainSettings() {
   const [isEditing, setIsEditing] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [currentDeptId, setCurrentDeptId] = useState<number | null>(null);
+
+  // Pagination state
+  const [userPage, setUserPage] = useState(1);
+  const [deptPage, setDeptPage] = useState(1);
 
   // Filter state
   const [usernameFilter, setUsernameFilter] = useState("");
@@ -142,6 +152,24 @@ export default function MainSettings() {
     );
   }, [userData, usernameFilter]);
 
+  // Paginated users
+  const userTotalPages = Math.ceil(
+    filteredUsers.length / SETTINGS_ITEMS_PER_PAGE,
+  );
+  const paginatedUsers = filteredUsers.slice(
+    (userPage - 1) * SETTINGS_ITEMS_PER_PAGE,
+    userPage * SETTINGS_ITEMS_PER_PAGE,
+  );
+
+  // Paginated departments
+  const deptTotalPages = Math.ceil(
+    departmentData.length / SETTINGS_ITEMS_PER_PAGE,
+  );
+  const paginatedDepts = departmentData.slice(
+    (deptPage - 1) * SETTINGS_ITEMS_PER_PAGE,
+    deptPage * SETTINGS_ITEMS_PER_PAGE,
+  );
+
   const filteredLeaveUsers = useMemo(() => {
     return (userData || []).filter(
       (user) =>
@@ -155,6 +183,8 @@ export default function MainSettings() {
   // Handlers
   const handleTabChange = useCallback((tab: TabType) => {
     setActiveTab(tab);
+    setUserPage(1);
+    setDeptPage(1);
   }, []);
 
   const handleAddButtonClick = useCallback(() => {
@@ -453,11 +483,13 @@ export default function MainSettings() {
   const clearUsernameFilter = () => {
     setUsernameFilter("");
     setUsernameDropdownOpen(false);
+    setUserPage(1);
   };
 
   const handleUsernameFilterSelect = (username: string) => {
     setUsernameFilter(username);
     setUsernameDropdownOpen(false);
+    setUserPage(1);
   };
 
   return (
@@ -509,6 +541,17 @@ export default function MainSettings() {
               <Calendar size={16} />
               Leave
             </button>
+            <button
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors ${
+                activeTab === "import"
+                  ? "bg-green-600 text-white"
+                  : "bg-white dark:bg-neutral-800 text-foreground hover:bg-gray-100 dark:hover:bg-neutral-700"
+              }`}
+              onClick={() => handleTabChange("import")}
+            >
+              <Upload size={16} />
+              Import
+            </button>
           </div>
 
           {/* Refresh Button */}
@@ -520,8 +563,8 @@ export default function MainSettings() {
             Refresh
           </button>
 
-          {/* Add Button - hide for leave tab */}
-          {activeTab !== "leave" && canWrite && (
+          {/* Add Button - hide for leave and import tabs */}
+          {activeTab !== "leave" && activeTab !== "import" && canWrite && (
             <button
               onClick={handleAddButtonClick}
               className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors dark:bg-black dark:border-gray-300 border"
@@ -617,108 +660,142 @@ export default function MainSettings() {
                 <SettingsTableSkeleton rows={8} columns={7} />
               </div>
             ) : (
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
-                <thead className="bg-gray-50 dark:bg-neutral-900 sticky top-0">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wider">
-                      Username
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wider">
-                      Email
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wider">
-                      Phone
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wider">
-                      Employee ID
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wider">
-                      Department
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wider">
-                      Role
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-neutral-800 divide-y divide-gray-200 dark:divide-neutral-700">
-                  {filteredUsers.map((user) => (
-                    <tr
-                      key={user.id}
-                      className="hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors"
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                        {user.user_name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground dark:text-gray-300">
-                        {user.email_id || "N/A"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground dark:text-gray-300">
-                        {user.number || "N/A"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground dark:text-gray-300">
-                        {user.employee_id || "N/A"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground dark:text-gray-300">
-                        {user.user_access || "N/A"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(user.status)}`}
-                          >
-                            {user.status}
-                          </span>
-                          {user.status === "active" && (
-                            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleColor(user.role)}`}
-                        >
-                          {user.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          {canEdit && (
-                            <button
-                              onClick={() => handleEditUser(user)}
-                              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                            >
-                              <Edit size={18} />
-                            </button>
-                          )}
-                          {canDelete && (
-                            <button
-                              onClick={() => handleDeleteUser(user.id)}
-                              className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                            >
-                              <Trash2 size={18} />
-                            </button>
-                          )}
-                          {canEdit && (
-                            <button
-                              onClick={() => handlePermissionsClick(user)}
-                              className="text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300"
-                              title="Manage Permissions"
-                            >
-                              <Shield size={18} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
+              <>
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
+                  <thead className="bg-gray-50 dark:bg-neutral-900 sticky top-0">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wider">
+                        Username
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wider">
+                        Email
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wider">
+                        Phone
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wider">
+                        Employee ID
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wider">
+                        Department
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wider">
+                        Role
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="bg-white dark:bg-neutral-800 divide-y divide-gray-200 dark:divide-neutral-700">
+                    {paginatedUsers.map((user) => (
+                      <tr
+                        key={user.id}
+                        className="hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors"
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                          {user.user_name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground dark:text-gray-300">
+                          {user.email_id || "N/A"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground dark:text-gray-300">
+                          {user.number || "N/A"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground dark:text-gray-300">
+                          {user.employee_id || "N/A"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground dark:text-gray-300">
+                          {user.user_access || "N/A"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(user.status)}`}
+                            >
+                              {user.status}
+                            </span>
+                            {user.status === "active" && (
+                              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleColor(user.role)}`}
+                          >
+                            {user.role}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            {canEdit && (
+                              <button
+                                onClick={() => handleEditUser(user)}
+                                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                              >
+                                <Edit size={18} />
+                              </button>
+                            )}
+                            {canDelete && (
+                              <button
+                                onClick={() => handleDeleteUser(user.id)}
+                                className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            )}
+                            {canEdit && (
+                              <button
+                                onClick={() => handlePermissionsClick(user)}
+                                className="text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300"
+                                title="Manage Permissions"
+                              >
+                                <Shield size={18} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {/* Users Pagination */}
+                {userTotalPages > 1 && (
+                  <div className="flex items-center justify-between px-4 py-2 border-t border-neutral-200 dark:border-neutral-700">
+                    <p className="text-xs text-muted-foreground">
+                      Showing {(userPage - 1) * SETTINGS_ITEMS_PER_PAGE + 1}-
+                      {Math.min(
+                        userPage * SETTINGS_ITEMS_PER_PAGE,
+                        filteredUsers.length,
+                      )}{" "}
+                      of {filteredUsers.length} • Page {userPage} of{" "}
+                      {userTotalPages}
+                    </p>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => setUserPage((p) => Math.max(1, p - 1))}
+                        disabled={userPage === 1}
+                        className="p-1.5 rounded border border-neutral-200 dark:border-neutral-700 disabled:opacity-50 hover:bg-neutral-50 dark:hover:bg-neutral-700"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() =>
+                          setUserPage((p) => Math.min(userTotalPages, p + 1))
+                        }
+                        disabled={userPage === userTotalPages}
+                        className="p-1.5 rounded border border-neutral-200 dark:border-neutral-700 disabled:opacity-50 hover:bg-neutral-50 dark:hover:bg-neutral-700"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
             {!usersLoading && filteredUsers.length === 0 && (
@@ -769,46 +846,80 @@ export default function MainSettings() {
                 <SettingsTableSkeleton rows={8} columns={3} />
               </div>
             ) : activeDeptSubTab === "departments" ? (
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
-                <thead className="bg-gray-50 dark:bg-neutral-900 sticky top-0">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wider">
-                      Department
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wider">
-                      Given By
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-neutral-800 divide-y divide-gray-200 dark:divide-neutral-700">
-                  {departmentData.map((dept) => (
-                    <tr
-                      key={dept.id}
-                      className="hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors"
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                        {dept.department}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground dark:text-gray-300">
-                        {dept.given_by}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {canEdit && (
-                          <button
-                            onClick={() => handleEditDepartment(dept)}
-                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                          >
-                            <Edit size={18} />
-                          </button>
-                        )}
-                      </td>
+              <>
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
+                  <thead className="bg-gray-50 dark:bg-neutral-900 sticky top-0">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wider">
+                        Department
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wider">
+                        Given By
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="bg-white dark:bg-neutral-800 divide-y divide-gray-200 dark:divide-neutral-700">
+                    {paginatedDepts.map((dept) => (
+                      <tr
+                        key={dept.id}
+                        className="hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors"
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                          {dept.department}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground dark:text-gray-300">
+                          {dept.given_by}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {canEdit && (
+                            <button
+                              onClick={() => handleEditDepartment(dept)}
+                              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                            >
+                              <Edit size={18} />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {/* Departments Pagination */}
+                {deptTotalPages > 1 && (
+                  <div className="flex items-center justify-between px-4 py-2 border-t border-neutral-200 dark:border-neutral-700">
+                    <p className="text-xs text-muted-foreground">
+                      Showing {(deptPage - 1) * SETTINGS_ITEMS_PER_PAGE + 1}-
+                      {Math.min(
+                        deptPage * SETTINGS_ITEMS_PER_PAGE,
+                        departmentData.length,
+                      )}{" "}
+                      of {departmentData.length} • Page {deptPage} of{" "}
+                      {deptTotalPages}
+                    </p>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => setDeptPage((p) => Math.max(1, p - 1))}
+                        disabled={deptPage === 1}
+                        className="p-1.5 rounded border border-neutral-200 dark:border-neutral-700 disabled:opacity-50 hover:bg-neutral-50 dark:hover:bg-neutral-700"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() =>
+                          setDeptPage((p) => Math.min(deptTotalPages, p + 1))
+                        }
+                        disabled={deptPage === deptTotalPages}
+                        className="p-1.5 rounded border border-neutral-200 dark:border-neutral-700 disabled:opacity-50 hover:bg-neutral-50 dark:hover:bg-neutral-700"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             ) : (
               <table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
                 <thead className="bg-gray-50 dark:bg-neutral-900 sticky top-0">
@@ -1256,6 +1367,9 @@ export default function MainSettings() {
           </div>
         </div>
       )}
+
+      {/* Import Tab */}
+      {activeTab === "import" && <CsvImportHub />}
 
       {/* Permissions Modal */}
       {permissionUser && (

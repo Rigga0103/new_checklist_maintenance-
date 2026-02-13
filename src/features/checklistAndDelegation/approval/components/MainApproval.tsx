@@ -11,6 +11,8 @@ import {
   Loader2,
   RefreshCw,
   FileText,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   useChecklistApproval,
@@ -100,6 +102,8 @@ const parseDateFromDDMMYYYY = (dateStr: string | null): Date | null => {
   );
 };
 
+const ITEMS_PER_PAGE = 50;
+
 export default function MainApproval() {
   const [activeTab, setActiveTab] = useState<"checklist" | "delegation">(
     "checklist",
@@ -118,6 +122,8 @@ export default function MainApproval() {
     isOpen: false,
     itemCount: 0,
   });
+
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [editingRows, setEditingRows] = useState<Set<string>>(new Set());
   const [editedAdminStatus, setEditedAdminStatus] = useState<
@@ -224,6 +230,19 @@ export default function MainApproval() {
       });
   }, [currentData, searchTerm, selectedMembers, startDate, endDate]);
 
+  // Pagination
+  const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
+  const paginatedData = filteredData.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE,
+  );
+  const showingStart =
+    filteredData.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0;
+  const showingEnd = Math.min(
+    currentPage * ITEMS_PER_PAGE,
+    filteredData.length,
+  );
+
   // Get unprocessed items (items that can be selected)
   const unprocessedItems = useMemo(() => {
     return filteredData.filter((item) => {
@@ -250,12 +269,12 @@ export default function MainApproval() {
     };
   }, [currentData, filteredData, selectedMembers]);
 
-  // Handlers
   const resetFilters = () => {
     setSearchTerm("");
     setSelectedMembers([]);
     setStartDate("");
     setEndDate("");
+    setCurrentPage(1);
   };
 
   const handleMemberSelection = (member: string) => {
@@ -393,6 +412,7 @@ export default function MainApproval() {
           onClick={() => {
             setActiveTab("checklist");
             setSelectedHistoryItems([]);
+            setCurrentPage(1);
           }}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
             activeTab === "checklist"
@@ -406,6 +426,7 @@ export default function MainApproval() {
           onClick={() => {
             setActiveTab("delegation");
             setSelectedHistoryItems([]);
+            setCurrentPage(1);
           }}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
             activeTab === "delegation"
@@ -584,8 +605,16 @@ export default function MainApproval() {
       {/* Table */}
       <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-sm border border-gray-100 dark:border-neutral-700 overflow-hidden">
         {isLoading ? (
-          <div className="flex items-center justify-center h-48">
-            <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+          <div className="p-4 space-y-3">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="flex gap-4 animate-pulse">
+                <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-20" />
+                <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-32" />
+                <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded flex-1" />
+                <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-24" />
+                <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-16" />
+              </div>
+            ))}
           </div>
         ) : filteredData.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
@@ -653,7 +682,7 @@ export default function MainApproval() {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-neutral-800 divide-y divide-gray-100 dark:divide-neutral-700">
-                {filteredData.map((item) => {
+                {paginatedData.map((item) => {
                   const isInEditMode = editingRows.has(item._id);
                   const isSaving = updateStatusMutation.isPending;
                   const isProcessed =
@@ -870,6 +899,34 @@ export default function MainApproval() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-2 border-t border-gray-100 dark:border-neutral-700">
+            <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+              Showing {showingStart}-{showingEnd} of {filteredData.length} •
+              Page {currentPage} of {totalPages}
+            </p>
+            <div className="flex gap-1">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="p-1.5 rounded border border-gray-200 dark:border-neutral-700 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-neutral-700"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() =>
+                  setCurrentPage((p) => Math.min(totalPages, p + 1))
+                }
+                disabled={currentPage === totalPages}
+                className="p-1.5 rounded border border-gray-200 dark:border-neutral-700 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-neutral-700"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         )}
       </div>

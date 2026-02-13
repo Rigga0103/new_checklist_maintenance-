@@ -46,6 +46,10 @@ export default function MainDelegation() {
     updateNextTargetDate,
   } = useDelegation();
 
+  console.log(activeTab, "active tab");
+
+  console.log(pendingTasks, "pending taks ");
+
   const tasks = activeTab === "pending" ? pendingTasks : historyTasks;
   const totalPages = Math.ceil(totalCount / 50);
 
@@ -345,8 +349,8 @@ export default function MainDelegation() {
                     <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
                       {task.name || "—"}
                     </td>
-                    <td className="px-3 py-3 text-sm text-foreground dark:text-gray-300 min-w-48 max-w-[300px]">
-                      <div className="whitespace-normal break-words line-clamp-2">
+                    <td className="px-3 py-3 text-sm text-foreground dark:text-gray-300 min-w-48">
+                      <div className="whitespace-normal wrap-break-word">
                         {task.task_description || "—"}
                       </div>
                     </td>
