@@ -113,8 +113,8 @@ export function useLogin() {
         setIsLoginLoading(true);
         try {
           const result = await loginCredentialsApi({
-            username: formData.username,
-            password: formData.password,
+            username: formData.username.trim(),
+            password: formData.password.trim(),
           });
 
           if (result.error) {
@@ -143,11 +143,11 @@ export function useLogin() {
         }
       } else {
         // Signup
-        if (formData.password !== formData.confirmPassword) {
+        if (formData.password.trim() !== formData.confirmPassword.trim()) {
           toast.error("Passwords do not match");
           return;
         }
-        if (formData.password.length < 6) {
+        if (formData.password.trim().length < 6) {
           toast.error("Password must be at least 6 characters");
           return;
         }
@@ -155,9 +155,9 @@ export function useLogin() {
         setIsSignupLoading(true);
         try {
           const result = await signupUserApi({
-            username: formData.username,
-            password: formData.password,
-            email: formData.email,
+            username: formData.username.trim(),
+            password: formData.password.trim(),
+            email: formData.email.trim(),
             role: formData.role,
           });
 

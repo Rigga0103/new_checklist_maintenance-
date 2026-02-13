@@ -11,9 +11,11 @@ export const fetchDelegationDataSortByDate = async (
   page = 1,
   limit = 50,
   searchTerm = "",
+  roleOverride?: string | null,
 ): Promise<FetchResult> => {
   const role =
-    typeof window !== "undefined" ? localStorage.getItem("role") : null;
+    roleOverride ??
+    (typeof window !== "undefined" ? localStorage.getItem("role") : null);
   const username =
     typeof window !== "undefined" ? localStorage.getItem("user-name") : null;
 
@@ -62,12 +64,14 @@ export const fetchDelegationDataSortByDate = async (
 export const fetchDelegationDataForHistory = async (
   page = 1,
   searchTerm = "",
+  roleOverride?: string | null,
 ): Promise<DelegationTask[]> => {
   const itemsPerPage = 50;
   const start = (page - 1) * itemsPerPage;
 
   const role =
-    typeof window !== "undefined" ? localStorage.getItem("role") : null;
+    roleOverride ??
+    (typeof window !== "undefined" ? localStorage.getItem("role") : null);
   const username =
     typeof window !== "undefined" ? localStorage.getItem("user-name") : null;
 

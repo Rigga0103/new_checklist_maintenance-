@@ -320,37 +320,50 @@ export const getDashboardSummaryApi = async (
   role: string | null = null,
   username: string | null = null,
 ): Promise<DashboardSummary> => {
-  const [totalTasks, completedTasks, pendingTasks, overdueTasks] =
-    await Promise.all([
-      countTotalTasksApi(
-        dashboardType,
-        staffFilter,
-        departmentFilter,
-        role,
-        username,
-      ),
-      countCompletedTasksApi(
-        dashboardType,
-        staffFilter,
-        departmentFilter,
-        role,
-        username,
-      ),
-      countPendingTasksApi(
-        dashboardType,
-        staffFilter,
-        departmentFilter,
-        role,
-        username,
-      ),
-      countOverdueTasksApi(
-        dashboardType,
-        staffFilter,
-        departmentFilter,
-        role,
-        username,
-      ),
-    ]);
+  const today = new Date().toISOString().split("T")[0];
+
+  // Determine filter name based on role
+  // If user, use their username. If admin, use selected staff filter.
+  // If admin selects 'all', pass null or rely on RPC to handle 'all'.
+  const filterName =
+    role === "user" && username
+      ? username
+      : staffFilter && staffFilter !== "all"
+        ? staffFilter
+        : null;
+
+  const { data, error } = await supabase.rpc("get_dashboard_counts", {
+    p_dashboard_type: dashboardType,
+    p_date: today,
+    p_filter_name: filterName,
+    p_dept_filter:
+      dashboardType === "checklist" &&
+      departmentFilter &&
+      departmentFilter !== "all"
+        ? departmentFilter
+        : null,
+  });
+
+  if (error) {
+    console.error("Error fetching dashboard summary via RPC:", error);
+    throw error;
+  }
+
+  // RPC returns an array with one object
+  const result =
+    data && data.length > 0
+      ? data[0]
+      : {
+          total_tasks: 0,
+          completed_tasks: 0,
+          pending_tasks: 0,
+          overdue_tasks: 0,
+        };
+
+  const totalTasks = Number(result.total_tasks || 0);
+  const completedTasks = Number(result.completed_tasks || 0);
+  const pendingTasks = Number(result.pending_tasks || 0);
+  const overdueTasks = Number(result.overdue_tasks || 0);
 
   const completionRate =
     totalTasks > 0
@@ -451,98 +464,45 @@ export const getStaffTaskSummaryApi = async (
   dashboardType: DashboardType,
   departmentFilter: string | null = null,
 ): Promise<StaffTaskData[]> => {
-  const today = new Date().toISOString().split("T")[0];
-  const staffQuery = supabase
-    .from("users")
-    .select("user_name, department, user_id")
-    .not("user_name", "is", null)
-    .not("user_name", "eq", "")
-    .not("user_access", "eq", "admin");
-
-  if (departmentFilter && departmentFilter !== "all") {
-    staffQuery.eq("department", departmentFilter);
-  }
-
-  const { data: staffData, error: staffError } = await staffQuery;
-
-  if (staffError) throw staffError;
-
-  if (!staffData || staffData.length === 0) return [];
-
-  // Fetch all tasks for the relevant period (e.g., this month or all time depending on req)
-  // For simplicity and performance, let's look at current month's tasks
+  // Use current month start date
   const startOfMonth = new Date();
   startOfMonth.setDate(1);
   const startOfMonthStr = startOfMonth.toISOString().split("T")[0];
 
-  let tasksQuery = supabase
-    .from(dashboardType)
-    .select("name, status, submission_date, task_start_date")
-    .gte("task_start_date", startOfMonthStr);
+  const { data, error } = await supabase.rpc("get_staff_stats", {
+    p_dashboard_type: dashboardType,
+    p_start_date: startOfMonthStr,
+    p_dept_filter:
+      departmentFilter && departmentFilter !== "all" ? departmentFilter : null,
+  });
 
-  if (dashboardType === "checklist") {
-    tasksQuery = tasksQuery.or("status.is.null,status.neq.yes");
+  if (error) {
+    console.error("Error fetching staff stats via RPC:", error);
+    throw error;
   }
 
-  const { data: tasksData, error: tasksError } = await tasksQuery;
+  if (!data || data.length === 0) return [];
 
-  if (tasksError) throw tasksError;
+  return data
+    .map((stat: any) => {
+      const total = Number(stat.total_tasks || 0);
+      const completed = Number(stat.completed_tasks || 0);
+      const ontime = Number(stat.ontime_tasks || 0);
 
-  // Aggregate data
-  const staffStats: Record<string, StaffTaskData> = {};
-
-  staffData.forEach((staff) => {
-    staffStats[staff.user_name] = {
-      id: staff.user_id || staff.user_name,
-      name: staff.user_name,
-      department: staff.department || "Unassigned",
-      total_tasks: 0,
-      total_completed_tasks: 0,
-      total_done_on_time: 0,
-      completion_score: 0,
-      ontime_score: 0,
-    };
-  });
-
-  tasksData?.forEach((task) => {
-    const staffName = task.name;
-    if (staffStats[staffName]) {
-      staffStats[staffName].total_tasks++;
-
-      const isCompleted =
-        dashboardType === "checklist"
-          ? task.status === "yes" || task.status === "Yes"
-          : !!task.submission_date ||
-            task.status === "done" ||
-            task.status === "Done";
-
-      if (isCompleted) {
-        staffStats[staffName].total_completed_tasks++;
-
-        // Check if done on time
-        const deadline = task.task_start_date; // Assuming start date is deadline for checklist/daily tasks
-        const submission = task.submission_date || task.task_start_date; // Fallback
-        if (submission <= deadline) {
-          staffStats[staffName].total_done_on_time++;
-        }
-      }
-    }
-  });
-
-  // Calculate scores
-  return Object.values(staffStats)
-    .map((stat) => ({
-      ...stat,
-      completion_score:
-        stat.total_tasks > 0
-          ? Math.round((stat.total_completed_tasks / stat.total_tasks) * 100)
-          : 0,
-      ontime_score:
-        stat.total_completed_tasks > 0
-          ? Math.round(
-              (stat.total_done_on_time / stat.total_completed_tasks) * 100,
-            )
-          : 0,
-    }))
-    .sort((a, b) => b.completion_score - a.completion_score);
+      return {
+        id: stat.worker_id || stat.worker_name,
+        name: stat.worker_name,
+        department: stat.worker_department || "Unassigned",
+        total_tasks: total,
+        total_completed_tasks: completed,
+        total_done_on_time: ontime,
+        completion_score: total > 0 ? Math.round((completed / total) * 100) : 0,
+        ontime_score:
+          completed > 0 ? Math.round((ontime / completed) * 100) : 0,
+      };
+    })
+    .sort(
+      (a: StaffTaskData, b: StaffTaskData) =>
+        b.completion_score - a.completion_score,
+    );
 };

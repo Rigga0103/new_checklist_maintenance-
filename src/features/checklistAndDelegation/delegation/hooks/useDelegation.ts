@@ -19,7 +19,7 @@ const initialFilters: DelegationFilters = {
   dateRange: "all",
 };
 
-export function useDelegation() {
+export function useDelegation(roleOverride?: string | null) {
   const [pendingTasks, setPendingTasks] = useState<DelegationTask[]>([]);
   const [historyTasks, setHistoryTasks] = useState<DelegationTask[]>([]);
   const [filters, setFilters] = useState<DelegationFilters>(initialFilters);
@@ -48,6 +48,7 @@ export function useDelegation() {
         currentPage,
         50,
         filters.search,
+        roleOverride,
       );
       setPendingTasks(result.data);
       setTotalCount(result.totalCount);
@@ -57,7 +58,7 @@ export function useDelegation() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, filters.search]);
+  }, [currentPage, filters.search, roleOverride]);
 
   // Load history tasks
   const loadHistoryTasks = useCallback(async () => {
@@ -66,6 +67,7 @@ export function useDelegation() {
       const data = await fetchDelegationDataForHistory(
         currentPage,
         filters.search,
+        roleOverride,
       );
       setHistoryTasks(data);
     } catch (error) {
@@ -74,7 +76,7 @@ export function useDelegation() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, filters.search]);
+  }, [currentPage, filters.search, roleOverride]);
 
   // Load data based on active tab
   useEffect(() => {

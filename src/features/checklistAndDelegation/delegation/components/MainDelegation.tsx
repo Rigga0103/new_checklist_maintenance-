@@ -1,5 +1,7 @@
 "use client";
 
+import { useState, useEffect } from "react";
+
 import {
   FileText,
   CheckCircle,
@@ -13,10 +15,25 @@ import {
   X,
   Trash2,
   Upload,
+  Users,
+  User,
 } from "lucide-react";
 import { useDelegation } from "../hooks/useDelegation";
 
 export default function MainDelegation() {
+  const [role, setRole] = useState<string | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
+  const [viewMyTasksOnly, setViewMyTasksOnly] = useState(false);
+
+  useEffect(() => {
+    setRole(localStorage.getItem("role") || "user");
+    setUsername(localStorage.getItem("user-name") || null);
+  }, []);
+
+  const effectiveRole =
+    role === "admin" && viewMyTasksOnly ? "user" : undefined;
+  const isAdmin = role === "admin";
+
   const {
     pendingTasks,
     historyTasks,
@@ -44,7 +61,7 @@ export default function MainDelegation() {
     nextTargetDates,
     handleImageUpload,
     updateNextTargetDate,
-  } = useDelegation();
+  } = useDelegation(effectiveRole);
 
   console.log(activeTab, "active tab");
 
@@ -75,17 +92,50 @@ export default function MainDelegation() {
             Delegation
           </h1>
           <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-            Manage one-time delegated tasks ({tasks.length} tasks)
+            {viewMyTasksOnly
+              ? `Showing your delegated tasks only (${username})`
+              : `Manage one-time delegated tasks (${tasks.length} tasks)`}
           </p>
         </div>
-        <button
-          onClick={refresh}
-          disabled={isLoading}
-          className="flex items-center gap-2 px-3 py-2 text-sm text-foreground dark:text-gray-300 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors"
-        >
-          <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          {/* My Tasks / All Tasks Toggle - only for admin */}
+          {isAdmin && (
+            <div className="flex p-1 bg-gray-100 dark:bg-neutral-700 rounded-lg">
+              <button
+                onClick={() => setViewMyTasksOnly(false)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                  !viewMyTasksOnly
+                    ? "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 shadow-sm"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                All Tasks
+              </button>
+              <button
+                onClick={() => setViewMyTasksOnly(true)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                  viewMyTasksOnly
+                    ? "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 shadow-sm"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                }`}
+              >
+                <User className="w-3.5 h-3.5" />
+                My Tasks
+              </button>
+            </div>
+          )}
+          <button
+            onClick={refresh}
+            disabled={isLoading}
+            className="flex items-center gap-2 px-3 py-2 text-sm text-foreground dark:text-gray-300 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors"
+          >
+            <RefreshCw
+              className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
+            />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Compact Stats */}

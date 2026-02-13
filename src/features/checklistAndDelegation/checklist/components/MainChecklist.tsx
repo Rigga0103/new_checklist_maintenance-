@@ -12,6 +12,8 @@ import {
   Eye,
   ChevronLeft,
   ChevronRight,
+  Users,
+  User,
 } from "lucide-react";
 // import Image from "next/image";
 import {
@@ -51,23 +53,28 @@ export default function MainChecklist() {
   // Read role and username from localStorage for role-based filtering
   const [role, setRole] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
+  const [viewMyTasksOnly, setViewMyTasksOnly] = useState(false);
 
   useEffect(() => {
     setRole(localStorage.getItem("role") || "user");
     setUsername(localStorage.getItem("user-name") || null);
   }, []);
 
+  // When admin toggles "My Tasks", override role to "user" so API filters by their username
+  const effectiveRole = role === "admin" && viewMyTasksOnly ? "user" : role;
+  const isAdmin = role === "admin";
+
   const {
     data: activeData,
     isFetching: isFetchingActive,
     refetch: refetchActive,
-  } = useActiveChecklist(searchTerm, role, username);
+  } = useActiveChecklist(searchTerm, effectiveRole, username);
 
   const {
     data: historyData,
     isFetching: isFetchingHistory,
     refetch: refetchHistory,
-  } = useChecklistHistory(searchTerm, role, username);
+  } = useChecklistHistory(searchTerm, effectiveRole, username);
 
   const submitMutation = useSubmitChecklist();
   const uploadImageMutation = useUploadChecklistImage();
@@ -327,17 +334,56 @@ export default function MainChecklist() {
             Checklist
           </h1>
           <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-            Manage daily operational checklist tasks
+            {viewMyTasksOnly
+              ? `Showing your tasks only (${username})`
+              : "Manage daily operational checklist tasks"}
           </p>
         </div>
-        <button
-          onClick={refresh}
-          disabled={isLoading}
-          className="flex items-center gap-2 px-3 py-2 text-sm text-foreground dark:text-gray-300 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors"
-        >
-          <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          {/* My Tasks / All Tasks Toggle - only for admin */}
+          {isAdmin && (
+            <div className="flex p-1 bg-gray-100 dark:bg-neutral-700 rounded-lg">
+              <button
+                onClick={() => {
+                  setViewMyTasksOnly(false);
+                  setCurrentPage(1);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                  !viewMyTasksOnly
+                    ? "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 shadow-sm"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                All Tasks
+              </button>
+              <button
+                onClick={() => {
+                  setViewMyTasksOnly(true);
+                  setCurrentPage(1);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                  viewMyTasksOnly
+                    ? "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 shadow-sm"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                }`}
+              >
+                <User className="w-3.5 h-3.5" />
+                My Tasks
+              </button>
+            </div>
+          )}
+          <button
+            onClick={refresh}
+            disabled={isLoading}
+            className="flex items-center gap-2 px-3 py-2 text-sm text-foreground dark:text-gray-300 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors"
+          >
+            <RefreshCw
+              className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
+            />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Tabs, Search, Actions */}
