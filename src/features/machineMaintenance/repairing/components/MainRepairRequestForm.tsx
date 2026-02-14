@@ -65,14 +65,21 @@ export default function MainRepairRequestForm() {
             {/* Row 1: Request By, Assign To, Machine Name */}
             <div className="grid gap-3 sm:grid-cols-3 mb-3">
               <div>
-                <label className={labelClass}>Request By</label>
-                <input
-                  type="text"
+                <label className={labelClass}>Request By *</label>
+                <select
                   name="formFilledBy"
                   value={formData.formFilledBy}
-                  readOnly
-                  className={`${inputClass} bg-gray-50 dark:bg-neutral-800 cursor-not-allowed`}
-                />
+                  onChange={handleChange}
+                  required
+                  className={selectClass}
+                >
+                  <option value="">Select Person</option>
+                  {users.map((user) => (
+                    <option key={user} value={user}>
+                      {user}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className={labelClass}>Assign To *</label>

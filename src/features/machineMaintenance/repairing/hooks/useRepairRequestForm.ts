@@ -24,15 +24,8 @@ const initialFormData: RepairRequestFormState = {
 };
 
 export function useRepairRequestForm() {
-  const [formData, setFormData] = useState<RepairRequestFormState>(initialFormData);
-
-  // Load current user from localStorage
-  useEffect(() => {
-    const username = localStorage.getItem("user-name");
-    if (username) {
-      setFormData((prev) => ({ ...prev, formFilledBy: username }));
-    }
-  }, []);
+  const [formData, setFormData] =
+    useState<RepairRequestFormState>(initialFormData);
 
   // ── Data queries ──────────────────────────────────────────────
   const { data: usersData = [], isLoading: isLoadingUsers } =
@@ -72,10 +65,7 @@ export function useRepairRequestForm() {
   );
 
   const handleReset = useCallback(() => {
-    setFormData((prev) => ({
-      ...initialFormData,
-      formFilledBy: prev.formFilledBy,
-    }));
+    setFormData(initialFormData);
   }, []);
 
   const handleSubmit = useCallback(
@@ -83,7 +73,11 @@ export function useRepairRequestForm() {
       e.preventDefault();
 
       // Validation
-      if (!formData.assignedTo || !formData.issueDetail) {
+      if (
+        !formData.formFilledBy ||
+        !formData.assignedTo ||
+        !formData.issueDetail
+      ) {
         toast.error("Please fill in all required fields");
         return;
       }
