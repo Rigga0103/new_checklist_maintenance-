@@ -366,7 +366,9 @@ export default function MainDelegation() {
                     className={`hover:bg-gray-50 dark:hover:bg-neutral-700/50 ${
                       selectedTasks.has(task.task_id)
                         ? "bg-blue-50 dark:bg-blue-900/20"
-                        : ""
+                        : task.status === "extend"
+                          ? "bg-red-50 dark:bg-red-900/20"
+                          : ""
                     }`}
                   >
                     {activeTab === "pending" && (
@@ -455,7 +457,22 @@ export default function MainDelegation() {
                       {task.enable_reminder || "—"}
                     </td>
                     <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
-                      {task.require_attachment || "—"}
+                      {task.image ? (
+                        <a
+                          href={task.image}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <img
+                            src={task.image}
+                            alt="attachment"
+                            className="w-10 h-10 object-cover rounded border border-gray-300 dark:border-neutral-600 hover:border-blue-500 hover:opacity-80 transition-all"
+                            title="Click to view full image"
+                          />
+                        </a>
+                      ) : (
+                        <span>{task.require_attachment || "—"}</span>
+                      )}
                     </td>
                     {activeTab === "pending" && (
                       <>
@@ -471,8 +488,14 @@ export default function MainDelegation() {
                           />
                         </td>
                         <td className="px-3 py-3">
-                          {task.require_attachment === "yes" ? (
-                            <label className="cursor-pointer">
+                          {taskImages[task.task_id]?.uploading ? (
+                            <div className="flex items-center gap-1 text-blue-600">
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <span className="text-xs">Uploading...</span>
+                            </div>
+                          ) : taskImages[task.task_id]?.previewUrl ||
+                            task.image ? (
+                            <label className="cursor-pointer inline-block">
                               <input
                                 type="file"
                                 accept="image/jpeg,image/png,image/webp"
@@ -481,22 +504,35 @@ export default function MainDelegation() {
                                   handleImageUpload(task.task_id, e)
                                 }
                               />
-                              {taskImages[task.task_id]?.uploading ? (
-                                <div className="flex items-center gap-1 text-blue-600">
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                  <span className="text-xs">Uploading...</span>
-                                </div>
-                              ) : taskImages[task.task_id] ? (
-                                <div className="flex items-center gap-1 text-green-600">
-                                  <Check className="w-4 h-4" />
-                                  <span className="text-xs">Uploaded</span>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-1 text-blue-600 hover:text-blue-700">
-                                  <Upload className="w-4 h-4" />
-                                  <span className="text-xs">Upload</span>
-                                </div>
-                              )}
+                              <img
+                                src={
+                                  taskImages[task.task_id]?.previewUrl ||
+                                  task.image!
+                                }
+                                alt="attachment"
+                                className={`w-10 h-10 object-cover rounded border ${
+                                  taskImages[task.task_id]?.previewUrl
+                                    ? "border-green-300"
+                                    : "border-gray-300 dark:border-neutral-600"
+                                } hover:border-blue-500 hover:opacity-80 transition-all`}
+                                title="Click to replace image"
+                              />
+                            </label>
+                          ) : task.require_attachment?.toLowerCase() ===
+                            "yes" ? (
+                            <label className="cursor-pointer inline-block">
+                              <input
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                className="hidden"
+                                onChange={(e) =>
+                                  handleImageUpload(task.task_id, e)
+                                }
+                              />
+                              <div className="flex items-center gap-1 text-blue-600 hover:text-blue-700">
+                                <Upload className="w-4 h-4" />
+                                <span className="text-xs">Upload</span>
+                              </div>
                             </label>
                           ) : (
                             <span className="text-xs text-muted-foreground">

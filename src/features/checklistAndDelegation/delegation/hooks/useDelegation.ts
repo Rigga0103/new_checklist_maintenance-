@@ -29,6 +29,7 @@ export function useDelegation(roleOverride?: string | null) {
   const [selectedTasks, setSelectedTasks] = useState<Set<number>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [historyTotalCount, setHistoryTotalCount] = useState(0);
 
   // Task actions state
   const [taskRemarks, setTaskRemarks] = useState<Record<number, string>>({});
@@ -64,12 +65,13 @@ export function useDelegation(roleOverride?: string | null) {
   const loadHistoryTasks = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await fetchDelegationDataForHistory(
+      const result = await fetchDelegationDataForHistory(
         currentPage,
         filters.search,
         roleOverride,
       );
-      setHistoryTasks(data);
+      setHistoryTasks(result.data);
+      setHistoryTotalCount(result.totalCount);
     } catch (error) {
       console.error("Error loading history:", error);
       toast.error("Failed to load history");
@@ -248,6 +250,21 @@ export function useDelegation(roleOverride?: string | null) {
       return;
     }
 
+    // Check if tasks requiring attachment have an image uploaded
+    const missingImage = Array.from(selectedTasks).some((id) => {
+      const task = pendingTasks.find((t) => t.task_id === id);
+      if (task?.require_attachment?.toLowerCase() === "yes") {
+        // Check if image was uploaded in this session OR already exists in DB
+        return !taskImages[id]?.previewUrl && !task.image;
+      }
+      return false;
+    });
+
+    if (missingImage) {
+      toast.error("Please upload an image for tasks that require attachment");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const submissions: DelegationSubmission[] = Array.from(selectedTasks).map(
@@ -297,6 +314,7 @@ export function useDelegation(roleOverride?: string | null) {
     taskRemarks,
     taskImages,
     nextTargetDates,
+    pendingTasks,
     loadPendingTasks,
   ]);
 
@@ -344,7 +362,7 @@ export function useDelegation(roleOverride?: string | null) {
     isSubmitting,
     selectedTasks,
     currentPage,
-    totalCount,
+    totalCount: activeTab === "pending" ? totalCount : historyTotalCount,
     taskRemarks,
     taskStatuses,
 

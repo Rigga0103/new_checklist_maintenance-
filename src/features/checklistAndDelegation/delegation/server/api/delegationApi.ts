@@ -32,7 +32,7 @@ export const fetchDelegationDataSortByDate = async (
       .select("*", { count: "exact" })
       .lte("task_start_date", endOfTodayISO)
       .order("task_start_date", { ascending: true })
-      .is("submission_date", null) // Only get unsubmitted tasks
+      .neq("status", "done") // Show pending + extend tasks (until status becomes 'done')
       .range(from, to);
 
     if (searchTerm && searchTerm.trim() !== "") {
@@ -65,7 +65,7 @@ export const fetchDelegationDataForHistory = async (
   page = 1,
   searchTerm = "",
   roleOverride?: string | null,
-): Promise<DelegationTask[]> => {
+): Promise<FetchResult> => {
   const itemsPerPage = 50;
   const start = (page - 1) * itemsPerPage;
 
@@ -79,9 +79,8 @@ export const fetchDelegationDataForHistory = async (
     let query = supabase
       .from("delegation")
       .select("*", { count: "exact" })
-      .order("task_start_date", { ascending: false })
-      .not("submission_date", "is", null)
-      .not("status", "is", null)
+      .order("submission_date", { ascending: false })
+      .eq("status", "done") // Only show completed tasks in history
       .range(start, start + itemsPerPage - 1);
 
     if (searchTerm && searchTerm.trim() !== "") {
@@ -95,17 +94,17 @@ export const fetchDelegationDataForHistory = async (
       query = query.eq("name", username);
     }
 
-    const { data, error } = await query;
+    const { data, error, count } = await query;
 
     if (error) {
       console.error("Error fetching delegation history:", error);
-      return [];
+      return { data: [], totalCount: 0 };
     }
 
-    return data || [];
+    return { data: data || [], totalCount: count || 0 };
   } catch (error) {
     console.error("Error from Supabase:", error);
-    return [];
+    return { data: [], totalCount: 0 };
   }
 };
 
@@ -120,42 +119,51 @@ export const updateDelegationData = async (
 
     // Images are already uploaded via uploadChecklistImage hook
     // Just use the previewUrl directly
-    const updates = submissionData.map((item) => {
-      const imageUrl = item.image?.previewUrl || null;
-
-      console.log("Processing delegation submission:", {
-        taskId: item.taskId,
-        hasImage: !!item.image,
-        imageUrl,
-        fullImageData: item.image,
-      });
-
-      return {
-        task_id: item.taskId,
-        status: item.status,
-        remarks: item.remarks,
-        submission_date: new Date().toISOString(),
-        image: imageUrl,
-      };
-    });
-
     const results = await Promise.all(
-      updates.map(async (updateObj) => {
-        const cleanUpdate = {
-          status: updateObj.status,
-          remarks: updateObj.remarks,
-          submission_date: updateObj.submission_date,
-          image: updateObj.image,
-        };
+      submissionData.map(async (item) => {
+        const imageUrl = item.image?.previewUrl || null;
+        const now = new Date().toISOString();
+
+        console.log("Processing delegation submission:", {
+          taskId: item.taskId,
+          status: item.status,
+          hasImage: !!item.image,
+          imageUrl,
+          nextExtendDate: item.nextExtendDate,
+        });
+
+        let cleanUpdate: Record<string, unknown>;
+
+        if (item.status === "Extend date") {
+          // For extend: update planned_date, set status to 'extend', do NOT set submission_date
+          cleanUpdate = {
+            status: "extend",
+            planned_date: item.nextExtendDate
+              ? new Date(item.nextExtendDate).toISOString()
+              : now,
+            updated_at: now,
+            remarks: item.remarks || null,
+            image: imageUrl,
+          };
+        } else {
+          // For Done: set submission_date and status to 'done'
+          cleanUpdate = {
+            status: "done",
+            submission_date: now,
+            updated_at: now,
+            remarks: item.remarks || null,
+            image: imageUrl,
+          };
+        }
 
         const { data, error } = await supabase
           .from("delegation")
           .update(cleanUpdate)
-          .eq("task_id", updateObj.task_id)
+          .eq("task_id", item.taskId)
           .select();
 
         if (error) {
-          console.error(`Error updating task ${updateObj.task_id}:`, error);
+          console.error(`Error updating task ${item.taskId}:`, error);
           throw error;
         }
         return data[0];
