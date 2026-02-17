@@ -1,5 +1,5 @@
-import MainMaintenanceHistory from "@/features/machineMaintenance/maintenance/components/MainMaintenanceHistory";
+import MaintenanceList from "@/features/checklistAndDelegation/dashboard/components/MaintenanceList";
 
 export default function MaintenanceHistoryPage() {
-  return <MainMaintenanceHistory />;
+  return <MaintenanceList initialTab="history" showTabs={false} />;
 }

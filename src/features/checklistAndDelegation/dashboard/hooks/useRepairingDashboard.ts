@@ -1,14 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import {
-  useRepairDataQuery,
-  useMaintenanceDataQuery,
-} from "../server/tanstackQuery/useRepairDashboardQuery";
-import type {
-  MachineRepairTask,
-  MachineMaintenanceTask,
-} from "../server/api/repairDashboardApi";
+import { useRepairDataQuery } from "../server/tanstackQuery/useRepairDashboardQuery";
 
 const COLORS = [
   "#22c55e",
@@ -49,7 +42,8 @@ export function formatCurrency(amount: number | undefined | null): string {
 }
 
 export function getStatusColor(status: string | undefined): string {
-  if (!status) return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300";
+  if (!status)
+    return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300";
   const s = status.toLowerCase();
   if (s.includes("completed") || s.includes("done") || s.includes("पूर्ण"))
     return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
@@ -91,11 +85,6 @@ export interface AssignedToChartItem {
   tasks: number;
 }
 
-export interface FrequencyChartItem {
-  name: string;
-  count: number;
-}
-
 export interface MonthOption {
   value: string;
   label: string;
@@ -110,14 +99,6 @@ export interface RepairStats {
   avgCostPerRepair: number;
 }
 
-export interface MaintenanceStats {
-  totalMachines: number;
-  totalTasks: number;
-  completedTasks: number;
-  pendingTasks: number;
-  overdueTasks: number;
-}
-
 // ============ Main Hook ============
 
 export function useRepairingDashboard() {
@@ -130,7 +111,6 @@ export function useRepairingDashboard() {
   const [selectedAssignedTo, setSelectedAssignedTo] = useState("all");
   const [selectedMonth, setSelectedMonth] = useState("all");
   const [showMachineDropdown, setShowMachineDropdown] = useState(false);
-  const [showAdminDoneOnly, setShowAdminDoneOnly] = useState(false);
   const machineDropdownRef = useRef<HTMLDivElement>(null);
 
   // ---- Data Queries (TanStack Query) ----
@@ -140,11 +120,6 @@ export function useRepairingDashboard() {
     error: repairError,
     refetch: refetchRepairs,
   } = useRepairDataQuery();
-
-  const {
-    data: maintenanceTasks = [],
-    isLoading: maintenanceLoading,
-  } = useMaintenanceDataQuery();
 
   // ---- Click-away handler for machine dropdown ----
   useEffect(() => {
@@ -313,7 +288,8 @@ export function useRepairingDashboard() {
   const machineChartData = useMemo<MachineChartItem[]>(() => {
     const counts: Record<string, number> = {};
     repairData.forEach((r) => {
-      if (r.machine_name) counts[r.machine_name] = (counts[r.machine_name] || 0) + 1;
+      if (r.machine_name)
+        counts[r.machine_name] = (counts[r.machine_name] || 0) + 1;
     });
     return Object.entries(counts)
       .map(([name, repairs]) => ({
@@ -366,7 +342,8 @@ export function useRepairingDashboard() {
   const assignedToChartData = useMemo<AssignedToChartItem[]>(() => {
     const counts: Record<string, number> = {};
     repairData.forEach((r) => {
-      if (r.assigned_to) counts[r.assigned_to] = (counts[r.assigned_to] || 0) + 1;
+      if (r.assigned_to)
+        counts[r.assigned_to] = (counts[r.assigned_to] || 0) + 1;
     });
     return Object.entries(counts)
       .map(([name, tasks]) => ({
@@ -377,74 +354,6 @@ export function useRepairingDashboard() {
       .sort((a, b) => b.tasks - a.tasks)
       .slice(0, 8);
   }, [repairData]);
-
-  const frequencyChartData = useMemo<FrequencyChartItem[]>(() => {
-    const counts: Record<string, number> = {};
-    maintenanceTasks.forEach((task) => {
-      const freq = task.frequency;
-      if (freq && freq.trim() !== "") {
-        const key = freq.trim();
-        counts[key] = (counts[key] || 0) + 1;
-      }
-    });
-    return Object.entries(counts).map(([name, count]) => ({ name, count }));
-  }, [maintenanceTasks]);
-
-  // ---- Maintenance filtering ----
-  const filteredMaintenanceData = useMemo(() => {
-    if (selectedMachines.length === 0) return maintenanceTasks;
-    return maintenanceTasks.filter((task) => {
-      const name = task.machine_name || "";
-      return selectedMachines.some(
-        (machine) =>
-          name.toLowerCase().includes(machine.toLowerCase()) ||
-          machine.toLowerCase().includes(name.toLowerCase()),
-      );
-    });
-  }, [maintenanceTasks, selectedMachines]);
-
-  const filteredMaintenanceStats = useMemo<MaintenanceStats>(() => {
-    const data = filteredMaintenanceData;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const uniqueMachines = new Set(data.map((t) => t.machine_name).filter(Boolean));
-
-    const completedTasks = data.filter((task) => {
-      const hasStart = task.task_start_date && task.task_start_date.trim() !== "";
-      const hasActual = task.actual_date && task.actual_date.trim() !== "";
-      return hasStart && hasActual;
-    });
-
-    const overdueTasks = data.filter((task) => {
-      const taskDate = task.task_start_date ? new Date(task.task_start_date) : null;
-      const hasNoActual = !task.actual_date || task.actual_date.trim() === "";
-      return taskDate && hasNoActual && taskDate < today;
-    });
-
-    return {
-      totalMachines: uniqueMachines.size,
-      totalTasks: data.length,
-      completedTasks: completedTasks.length,
-      pendingTasks: data.length - completedTasks.length,
-      overdueTasks: overdueTasks.length,
-    };
-  }, [filteredMaintenanceData]);
-
-  const displayedMaintenanceRecords = useMemo(() => {
-    if (showAdminDoneOnly) {
-      return filteredMaintenanceData.filter(
-        (task) => task.actual_date && task.actual_date.trim() !== "",
-      );
-    }
-    return filteredMaintenanceData;
-  }, [filteredMaintenanceData, showAdminDoneOnly]);
-
-  const adminDoneCount = useMemo(() => {
-    return filteredMaintenanceData.filter(
-      (task) => task.actual_date && task.actual_date.trim() !== "",
-    ).length;
-  }, [filteredMaintenanceData]);
 
   // ---- Active filters check ----
   const hasActiveFilters = useMemo(() => {
@@ -457,7 +366,15 @@ export function useRepairingDashboard() {
       startDate !== "" ||
       endDate !== ""
     );
-  }, [selectedMachines, selectedStatus, selectedAssignedTo, selectedMonth, searchTerm, startDate, endDate]);
+  }, [
+    selectedMachines,
+    selectedStatus,
+    selectedAssignedTo,
+    selectedMonth,
+    searchTerm,
+    startDate,
+    endDate,
+  ]);
 
   // ---- Handlers ----
   const handleMachineSelection = useCallback((machine: string) => {
@@ -482,7 +399,6 @@ export function useRepairingDashboard() {
   return {
     // Loading & Error
     repairLoading,
-    maintenanceLoading,
     repairError: repairError
       ? repairError instanceof Error
         ? repairError.message
@@ -493,7 +409,6 @@ export function useRepairingDashboard() {
     // Raw data
     repairData,
     filteredData,
-    maintenanceTasks,
 
     // Filter state
     searchTerm,
@@ -511,8 +426,6 @@ export function useRepairingDashboard() {
     setSelectedMonth,
     showMachineDropdown,
     setShowMachineDropdown,
-    showAdminDoneOnly,
-    setShowAdminDoneOnly,
     machineDropdownRef,
 
     // Filter options
@@ -524,19 +437,12 @@ export function useRepairingDashboard() {
 
     // Stats
     filteredRepairStats,
-    filteredMaintenanceStats,
 
     // Chart data
     machineChartData,
     statusChartData,
     monthlyTrendData,
     assignedToChartData,
-    frequencyChartData,
-
-    // Maintenance records
-    filteredMaintenanceData,
-    displayedMaintenanceRecords,
-    adminDoneCount,
 
     // Actions
     handleMachineSelection,

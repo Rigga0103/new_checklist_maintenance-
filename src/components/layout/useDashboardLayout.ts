@@ -98,6 +98,13 @@ const routes: Route[] = [
     showFor: ["admin", "user"] as const,
     children: [
       {
+        href: "/maintenance/dashboard",
+        label: "Dashboard",
+        icon: "Home",
+        showFor: ["admin", "user"] as const,
+        permissionResource: "maintenance",
+      },
+      {
         href: "/maintenance/pending",
         label: "Pending",
         icon: "Clock",

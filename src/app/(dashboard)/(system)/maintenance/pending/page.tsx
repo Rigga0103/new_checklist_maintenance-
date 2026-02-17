@@ -1,5 +1,5 @@
-import MainMaintenancePending from "@/features/machineMaintenance/maintenance/components/MainMaintenancePending";
+import MaintenanceList from "@/features/checklistAndDelegation/dashboard/components/MaintenanceList";
 
 export default function MaintenancePendingPage() {
-  return <MainMaintenancePending />;
+  return <MaintenanceList initialTab="pending" showTabs={false} />;
 }

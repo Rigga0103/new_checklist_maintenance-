@@ -86,3 +86,27 @@ export const fetchMaintenanceData = async (): Promise<
     return [];
   }
 };
+
+export const updateMaintenanceTask = async (
+  id: number,
+  updates: Partial<MachineMaintenanceTask>,
+): Promise<MachineMaintenanceTask | null> => {
+  try {
+    const { data, error } = await supabase
+      .from("machine_maintenance")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error updating machine_maintenance:", error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Unexpected error in updateMaintenanceTask:", error);
+    throw error;
+  }
+};
