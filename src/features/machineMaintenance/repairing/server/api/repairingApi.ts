@@ -168,6 +168,7 @@ export const createRepairRequest = async (
         assigned_to: formData.assignedTo,
         machine_name: formData.machineName,
         issue_detail: formData.issueDetail,
+        motor_name: formData.motorName || null,
         status: "pending",
       })
       .select()

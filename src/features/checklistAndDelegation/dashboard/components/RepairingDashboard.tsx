@@ -111,12 +111,18 @@ export default function RepairingDashboard() {
     setSelectedAssignedTo,
     selectedMonth,
     setSelectedMonth,
+    selectedVendor,
+    setSelectedVendor,
+    selectedPart,
+    setSelectedPart,
     showMachineDropdown,
     setShowMachineDropdown,
     machineDropdownRef,
     machinesList,
     statusList,
     assignedToList,
+    vendorsList,
+    partsList,
     monthsList,
     hasActiveFilters,
     filteredRepairStats,
@@ -299,6 +305,44 @@ export default function RepairingDashboard() {
               {assignedToList.map((person) => (
                 <option key={person} value={person}>
                   {person}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Vendor */}
+          <div className="flex flex-col min-w-37.5">
+            <label className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+              Vendor
+            </label>
+            <select
+              value={selectedVendor}
+              onChange={(e) => setSelectedVendor(e.target.value)}
+              className="px-3 py-2 border border-gray-200 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+            >
+              <option value="all">All Vendors</option>
+              {vendorsList.map((vendor) => (
+                <option key={vendor} value={vendor}>
+                  {vendor}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Part Replaced */}
+          <div className="flex flex-col min-w-37.5">
+            <label className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+              Part Replaced
+            </label>
+            <select
+              value={selectedPart}
+              onChange={(e) => setSelectedPart(e.target.value)}
+              className="px-3 py-2 border border-gray-200 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+            >
+              <option value="all">All Parts</option>
+              {partsList.map((part) => (
+                <option key={part} value={part}>
+                  {part}
                 </option>
               ))}
             </select>

@@ -110,6 +110,8 @@ export function useRepairingDashboard() {
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [selectedAssignedTo, setSelectedAssignedTo] = useState("all");
   const [selectedMonth, setSelectedMonth] = useState("all");
+  const [selectedVendor, setSelectedVendor] = useState("all");
+  const [selectedPart, setSelectedPart] = useState("all");
   const [showMachineDropdown, setShowMachineDropdown] = useState(false);
   const machineDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -160,6 +162,22 @@ export function useRepairingDashboard() {
     return Array.from(set).sort();
   }, [repairData]);
 
+  const vendorsList = useMemo(() => {
+    const set = new Set<string>();
+    repairData.forEach((r) => {
+      if (r.vendor_name) set.add(r.vendor_name);
+    });
+    return Array.from(set).sort();
+  }, [repairData]);
+
+  const partsList = useMemo(() => {
+    const set = new Set<string>();
+    repairData.forEach((r) => {
+      if (r.part_replaced) set.add(r.part_replaced);
+    });
+    return Array.from(set).sort();
+  }, [repairData]);
+
   const monthsList = useMemo<MonthOption[]>(() => {
     const monthlyMap: Record<string, boolean> = {};
     repairData.forEach((row) => {
@@ -190,6 +208,7 @@ export function useRepairingDashboard() {
         item.issue_detail,
         item.assigned_to,
         item.vendor_name,
+        item.part_replaced,
       ]
         .join(" ")
         .toLowerCase();
@@ -210,6 +229,12 @@ export function useRepairingDashboard() {
         selectedAssignedTo !== "all"
           ? item.assigned_to === selectedAssignedTo
           : true;
+
+      const matchesVendor =
+        selectedVendor !== "all" ? item.vendor_name === selectedVendor : true;
+
+      const matchesPart =
+        selectedPart !== "all" ? item.part_replaced === selectedPart : true;
 
       let matchesMonth = true;
       if (selectedMonth !== "all") {
@@ -244,6 +269,8 @@ export function useRepairingDashboard() {
         matchesMonth &&
         matchesStatus &&
         matchesAssignedTo &&
+        matchesVendor &&
+        matchesPart &&
         matchesDateRange
       );
     });
@@ -254,6 +281,8 @@ export function useRepairingDashboard() {
     selectedStatus,
     selectedAssignedTo,
     selectedMonth,
+    selectedVendor,
+    selectedPart,
     startDate,
     endDate,
   ]);
@@ -362,6 +391,8 @@ export function useRepairingDashboard() {
       selectedStatus !== "all" ||
       selectedAssignedTo !== "all" ||
       selectedMonth !== "all" ||
+      selectedVendor !== "all" ||
+      selectedPart !== "all" ||
       searchTerm !== "" ||
       startDate !== "" ||
       endDate !== ""
@@ -371,6 +402,8 @@ export function useRepairingDashboard() {
     selectedStatus,
     selectedAssignedTo,
     selectedMonth,
+    selectedVendor,
+    selectedPart,
     searchTerm,
     startDate,
     endDate,
@@ -391,6 +424,8 @@ export function useRepairingDashboard() {
     setSelectedStatus("all");
     setSelectedAssignedTo("all");
     setSelectedMonth("all");
+    setSelectedVendor("all");
+    setSelectedPart("all");
     setStartDate("");
     setEndDate("");
     setShowMachineDropdown(false);
@@ -424,6 +459,10 @@ export function useRepairingDashboard() {
     setSelectedAssignedTo,
     selectedMonth,
     setSelectedMonth,
+    selectedVendor,
+    setSelectedVendor,
+    selectedPart,
+    setSelectedPart,
     showMachineDropdown,
     setShowMachineDropdown,
     machineDropdownRef,
@@ -433,6 +472,8 @@ export function useRepairingDashboard() {
     statusList,
     assignedToList,
     monthsList,
+    vendorsList,
+    partsList,
     hasActiveFilters,
 
     // Stats
