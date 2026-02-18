@@ -221,6 +221,9 @@ export default function MainRepairingHistory() {
                     Part Replaced
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Assigned To
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                     Vendor
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
@@ -251,6 +254,9 @@ export default function MainRepairingHistory() {
                     </td>
                     <td className="px-4 py-3 text-sm text-foreground">
                       {repair.part_replaced || "-"}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-foreground">
+                      {repair.assigned_to || "-"}
                     </td>
                     <td className="px-4 py-3 text-sm text-foreground">
                       {repair.vendor_name || "-"}

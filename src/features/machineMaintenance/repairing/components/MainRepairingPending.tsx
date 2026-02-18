@@ -256,6 +256,9 @@ export default function MainRepairingPending() {
                     Assigned To
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Vendor
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                     Date
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
@@ -286,6 +289,9 @@ export default function MainRepairingPending() {
                     </td>
                     <td className="px-4 py-3 text-sm text-foreground">
                       {repair.assigned_to || "-"}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-foreground">
+                      {repair.vendor_name || "-"}
                     </td>
                     <td className="px-4 py-3 text-sm text-muted-foreground">
                       {formatDate(repair.created_at)}

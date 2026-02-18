@@ -17,13 +17,16 @@ import {
   Upload,
   Users,
   User,
+  ChevronDown,
 } from "lucide-react";
+import { useUsers } from "../../quickTask/server/tanstackQuery/useQuickTask";
 import { useDelegation } from "../hooks/useDelegation";
 
 export default function MainDelegation() {
   const [role, setRole] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
   const [viewMyTasksOnly, setViewMyTasksOnly] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   useEffect(() => {
     setRole(localStorage.getItem("role") || "user");
@@ -61,7 +64,12 @@ export default function MainDelegation() {
     nextTargetDates,
     handleImageUpload,
     updateNextTargetDate,
+    filters,
+    handleNameFilter,
   } = useDelegation(effectiveRole);
+
+  const { data: usersData } = useUsers();
+  const allNames = usersData?.map((u) => u.user_name) || [];
 
   console.log(activeTab, "active tab");
 
@@ -227,6 +235,44 @@ export default function MainDelegation() {
             onChange={(e) => handleSearch(e.target.value)}
             className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
+        </div>
+
+        {/* Name Filter Dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+            className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800"
+          >
+            {filters.name || "Filter by Name"}
+            <ChevronDown
+              className={`w-4 h-4 transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+          {dropdownOpen && (
+            <div className="absolute z-50 mt-1 w-48 max-h-60 overflow-auto rounded-lg bg-white dark:bg-neutral-800 shadow-lg border border-gray-200 dark:border-neutral-700">
+              <button
+                onClick={() => {
+                  handleNameFilter("");
+                  setDropdownOpen(false);
+                }}
+                className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700"
+              >
+                All Names
+              </button>
+              {allNames.map((name) => (
+                <button
+                  key={name}
+                  onClick={() => {
+                    handleNameFilter(name);
+                    setDropdownOpen(false);
+                  }}
+                  className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700"
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {activeTab === "pending" && pendingTasks.length > 0 && (

@@ -487,6 +487,7 @@ export default function RepairingDashboard() {
                   "Issue",
                   "Part Replaced",
                   "Assigned To",
+                  "Vendor",
                   "Bill Amount",
                   "Bill Copy",
                   "Photo",
@@ -533,6 +534,9 @@ export default function RepairingDashboard() {
                     </td>
                     <td className="px-5 py-4 text-sm text-gray-700 dark:text-gray-300 align-middle">
                       {row.assigned_to || "—"}
+                    </td>
+                    <td className="px-5 py-4 text-sm text-gray-700 dark:text-gray-300 align-middle">
+                      {row.vendor_name || "—"}
                     </td>
                     <td className="px-5 py-4 text-sm font-bold text-gray-900 dark:text-white align-middle">
                       {row.bill_amount ? formatCurrency(row.bill_amount) : "—"}
@@ -583,7 +587,7 @@ export default function RepairingDashboard() {
               ) : (
                 <tr>
                   <td
-                    colSpan={10}
+                    colSpan={11}
                     className="px-5 py-16 text-center text-muted-foreground"
                   >
                     No repair records found

@@ -12,7 +12,7 @@ import type {
 
 /**
  * Fetch paginated checklist data with optional name filter
- * Uses deduplication by task_description
+ * Uses server-side deduplication via RPC
  */
 export const fetchChecklistData = async (
   page = 0,
@@ -20,81 +20,34 @@ export const fetchChecklistData = async (
   nameFilter = "",
 ): Promise<PaginatedResponse<ChecklistTask>> => {
   try {
-    const start = page * pageSize;
-    const end = start + pageSize - 1;
-
-    // Step 1: Get unique task_descriptions with conditions applied at database level
-    let uniqueQuery = supabase
-      .from("checklist")
-      .select("task_description")
-      .is("submission_date", null)
-      .not("task_description", "is", null);
-
-    if (nameFilter) {
-      uniqueQuery = uniqueQuery.eq("name", nameFilter);
-    }
-
-    const { data: allUniqueDescriptions, error: uniqueError } =
-      await uniqueQuery;
-
-    if (uniqueError) {
-      console.error("Error when fetching unique descriptions", uniqueError);
-      return { data: [], total: 0 };
-    }
-
-    // Get truly unique descriptions (client-side dedupe for descriptions only)
-    const seenDescriptions = new Set<string>();
-    const uniqueDescriptions = (allUniqueDescriptions || [])
-      .map((row) => row.task_description as string)
-      .filter((desc) => {
-        if (!desc || seenDescriptions.has(desc)) return false;
-        seenDescriptions.add(desc);
-        return true;
-      });
-
-    if (uniqueDescriptions.length === 0) {
-      return { data: [], total: 0 };
-    }
-
-    // Step 2: Get paginated slice of unique descriptions for current page
-    const paginatedDescriptions = uniqueDescriptions.slice(start, end + 1);
-
-    if (paginatedDescriptions.length === 0) {
-      return { data: [], total: uniqueDescriptions.length };
-    }
-
-    // Step 3: Fetch actual data only for the paginated unique descriptions
-    let dataQuery = supabase
-      .from("checklist")
-      .select("*")
-      .in("task_description", paginatedDescriptions)
-      .is("submission_date", null)
-      .order("task_start_date", { ascending: true });
-
-    if (nameFilter) {
-      dataQuery = dataQuery.eq("name", nameFilter);
-    }
-
-    const { data, error } = await dataQuery;
+    // Call RPC for data
+    const { data, error } = await supabase.rpc("get_unique_checklist_tasks", {
+      page_number: page,
+      page_size: pageSize,
+      name_filter: nameFilter || "",
+    });
 
     if (error) {
-      console.error("Error when fetching data", error);
+      console.error("Error fetching checklist rpc", error);
       return { data: [], total: 0 };
     }
 
-    // Final client-side deduplication (should be minimal now)
-    const finalSeen = new Set<string>();
-    const finalData = (data || []).filter((row) => {
-      if (finalSeen.has(row.task_description)) {
-        return false;
-      }
-      finalSeen.add(row.task_description);
-      return true;
-    }) as ChecklistTask[];
+    // Call RPC for count (or separate query)
+    // We do this in parallel effectively
+    const { data: countData, error: countError } = await supabase.rpc(
+      "get_unique_checklist_tasks_count",
+      {
+        name_filter: nameFilter || "",
+      },
+    );
+
+    if (countError) {
+      console.error("Error fetching checklist count", countError);
+    }
 
     return {
-      data: finalData,
-      total: uniqueDescriptions.length,
+      data: (data as ChecklistTask[]) || [],
+      total: typeof countData === "number" ? countData : 0,
     };
   } catch (error) {
     console.error("Error from Supabase", error);
@@ -106,7 +59,7 @@ export const fetchChecklistData = async (
 
 /**
  * Fetch paginated delegation data with optional name filter
- * Uses deduplication by task_description
+ * Uses server-side deduplication via RPC
  */
 export const fetchDelegationData = async (
   page = 0,
@@ -114,81 +67,31 @@ export const fetchDelegationData = async (
   nameFilter = "",
 ): Promise<PaginatedResponse<DelegationTask>> => {
   try {
-    const start = page * pageSize;
-    const end = start + pageSize - 1;
-
-    // Step 1: Get unique task_descriptions
-    let uniqueQuery = supabase
-      .from("delegation")
-      .select("task_description")
-      .is("submission_date", null)
-      .not("task_description", "is", null);
-
-    if (nameFilter) {
-      uniqueQuery = uniqueQuery.eq("name", nameFilter);
-    }
-
-    const { data: allUniqueDescriptions, error: uniqueError } =
-      await uniqueQuery;
-
-    if (uniqueError) {
-      console.error("Error when fetching unique descriptions", uniqueError);
-      return { data: [], total: 0 };
-    }
-
-    // Get truly unique descriptions
-    const seenDescriptions = new Set<string>();
-    const uniqueDescriptions = (allUniqueDescriptions || [])
-      .map((row) => row.task_description as string)
-      .filter((desc) => {
-        if (!desc || seenDescriptions.has(desc)) return false;
-        seenDescriptions.add(desc);
-        return true;
-      });
-
-    if (uniqueDescriptions.length === 0) {
-      return { data: [], total: 0 };
-    }
-
-    // Step 2: Get paginated slice
-    const paginatedDescriptions = uniqueDescriptions.slice(start, end + 1);
-
-    if (paginatedDescriptions.length === 0) {
-      return { data: [], total: uniqueDescriptions.length };
-    }
-
-    // Step 3: Fetch actual data
-    let dataQuery = supabase
-      .from("delegation")
-      .select("*")
-      .in("task_description", paginatedDescriptions)
-      .is("submission_date", null)
-      .order("task_id", { ascending: true });
-
-    if (nameFilter) {
-      dataQuery = dataQuery.eq("name", nameFilter);
-    }
-
-    const { data, error } = await dataQuery;
+    const { data, error } = await supabase.rpc("get_unique_delegation_tasks", {
+      page_number: page,
+      page_size: pageSize,
+      name_filter: nameFilter || "",
+    });
 
     if (error) {
-      console.error("Error when fetching delegation data", error);
+      console.error("Error fetching delegation rpc", error);
       return { data: [], total: 0 };
     }
 
-    // Final client-side deduplication
-    const finalSeen = new Set<string>();
-    const finalData = (data || []).filter((row) => {
-      if (finalSeen.has(row.task_description)) {
-        return false;
-      }
-      finalSeen.add(row.task_description);
-      return true;
-    }) as DelegationTask[];
+    const { data: countData, error: countError } = await supabase.rpc(
+      "get_unique_delegation_tasks_count",
+      {
+        name_filter: nameFilter || "",
+      },
+    );
+
+    if (countError) {
+      console.error("Error fetching delegation count", countError);
+    }
 
     return {
-      data: finalData,
-      total: uniqueDescriptions.length,
+      data: (data as DelegationTask[]) || [],
+      total: typeof countData === "number" ? countData : 0,
     };
   } catch (error) {
     console.error("Error from Supabase delegation", error);

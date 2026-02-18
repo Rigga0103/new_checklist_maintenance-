@@ -35,9 +35,36 @@ export const quickTaskKeys = {
 // ============ Checklist Query ============
 
 /**
- * Infinite query for checklist tasks with pagination
- * Shows skeleton loading during initial fetch
+ * Paginated query for checklist tasks
  */
+export function useChecklistTasksQuery(
+  page = 0,
+  pageSize = 50,
+  nameFilter = "",
+) {
+  return useQuery({
+    queryKey: [...quickTaskKeys.checklist(nameFilter), "paginated", page],
+    queryFn: () => fetchChecklistData(page, pageSize, nameFilter),
+    placeholderData: (previousData) => previousData, // Keep previous data while fetching next page
+  });
+}
+
+/**
+ * Paginated query for delegation tasks
+ */
+export function useDelegationTasksQuery(
+  page = 0,
+  pageSize = 50,
+  nameFilter = "",
+) {
+  return useQuery({
+    queryKey: [...quickTaskKeys.delegation(nameFilter), "paginated", page],
+    queryFn: () => fetchDelegationData(page, pageSize, nameFilter),
+    placeholderData: (previousData) => previousData,
+  });
+}
+
+// Keep infinite queries for backward compatibility if needed, but we will use the above in the UI
 export function useChecklistTasks(nameFilter = "") {
   return useInfiniteQuery({
     queryKey: quickTaskKeys.checklist(nameFilter),
@@ -56,9 +83,6 @@ export function useChecklistTasks(nameFilter = "") {
   });
 }
 
-/**
- * Helper to flatten infinite query pages into single array
- */
 export function flattenChecklistPages(
   data: ReturnType<typeof useChecklistTasks>["data"],
 ) {
@@ -66,11 +90,6 @@ export function flattenChecklistPages(
   return data.pages.flatMap((page) => page.data);
 }
 
-// ============ Delegation Query ============
-
-/**
- * Infinite query for delegation tasks with pagination
- */
 export function useDelegationTasks(nameFilter = "") {
   return useInfiniteQuery({
     queryKey: quickTaskKeys.delegation(nameFilter),
@@ -89,9 +108,6 @@ export function useDelegationTasks(nameFilter = "") {
   });
 }
 
-/**
- * Helper to flatten infinite query pages into single array
- */
 export function flattenDelegationPages(
   data: ReturnType<typeof useDelegationTasks>["data"],
 ) {

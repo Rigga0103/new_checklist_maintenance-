@@ -17,6 +17,7 @@ const initialFilters: DelegationFilters = {
   search: "",
   status: "all",
   dateRange: "all",
+  name: "",
 };
 
 export function useDelegation(roleOverride?: string | null) {
@@ -50,6 +51,7 @@ export function useDelegation(roleOverride?: string | null) {
         50,
         filters.search,
         roleOverride,
+        filters.name,
       );
       setPendingTasks(result.data);
       setTotalCount(result.totalCount);
@@ -59,7 +61,7 @@ export function useDelegation(roleOverride?: string | null) {
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, filters.search, roleOverride]);
+  }, [currentPage, filters.search, filters.name, roleOverride]);
 
   // Load history tasks
   const loadHistoryTasks = useCallback(async () => {
@@ -69,6 +71,7 @@ export function useDelegation(roleOverride?: string | null) {
         currentPage,
         filters.search,
         roleOverride,
+        filters.name,
       );
       setHistoryTasks(result.data);
       setHistoryTotalCount(result.totalCount);
@@ -78,7 +81,7 @@ export function useDelegation(roleOverride?: string | null) {
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, filters.search, roleOverride]);
+  }, [currentPage, filters.search, filters.name, roleOverride]);
 
   // Load data based on active tab
   useEffect(() => {
@@ -92,6 +95,12 @@ export function useDelegation(roleOverride?: string | null) {
   // Handle search
   const handleSearch = useCallback((value: string) => {
     setFilters((prev) => ({ ...prev, search: value }));
+    setCurrentPage(1);
+  }, []);
+
+  // Handle name filter
+  const handleNameFilter = useCallback((value: string) => {
+    setFilters((prev) => ({ ...prev, name: value }));
     setCurrentPage(1);
   }, []);
 
@@ -368,6 +377,7 @@ export function useDelegation(roleOverride?: string | null) {
 
     // Actions
     handleSearch,
+    handleNameFilter,
     handleTabChange,
     toggleTaskSelection,
     selectAllTasks,

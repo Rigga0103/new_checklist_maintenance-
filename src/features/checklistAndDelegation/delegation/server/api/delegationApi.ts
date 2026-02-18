@@ -12,6 +12,7 @@ export const fetchDelegationDataSortByDate = async (
   limit = 50,
   searchTerm = "",
   roleOverride?: string | null,
+  nameFilter?: string,
 ): Promise<FetchResult> => {
   const role =
     roleOverride ??
@@ -32,7 +33,7 @@ export const fetchDelegationDataSortByDate = async (
       .select("*", { count: "exact" })
       .lte("task_start_date", endOfTodayISO)
       .order("task_start_date", { ascending: true })
-      .neq("status", "done") // Show pending + extend tasks (until status becomes 'done')
+      .or("status.neq.done,status.is.null") // Show pending + extend tasks (until status becomes 'done')
       .range(from, to);
 
     if (searchTerm && searchTerm.trim() !== "") {
@@ -44,6 +45,10 @@ export const fetchDelegationDataSortByDate = async (
 
     if (role === "user" && username) {
       query = query.eq("name", username);
+    }
+
+    if (nameFilter) {
+      query = query.eq("name", nameFilter);
     }
 
     const { data, error, count } = await query;
@@ -65,6 +70,7 @@ export const fetchDelegationDataForHistory = async (
   page = 1,
   searchTerm = "",
   roleOverride?: string | null,
+  nameFilter?: string,
 ): Promise<FetchResult> => {
   const itemsPerPage = 50;
   const start = (page - 1) * itemsPerPage;
@@ -92,6 +98,10 @@ export const fetchDelegationDataForHistory = async (
 
     if (role === "user" && username) {
       query = query.eq("name", username);
+    }
+
+    if (nameFilter) {
+      query = query.eq("name", nameFilter);
     }
 
     const { data, error, count } = await query;

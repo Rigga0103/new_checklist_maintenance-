@@ -280,6 +280,11 @@ export default function MainRepairingDashboard() {
                     <p className="text-xs text-muted-foreground">
                       {formatDate(repair.created_at)}
                     </p>
+                    {repair.vendor_name && (
+                      <p className="text-xs text-muted-foreground">
+                        Vendor: {repair.vendor_name}
+                      </p>
+                    )}
                   </div>
                   <div className="ml-4">{getStatusBadge(repair.status)}</div>
                 </div>

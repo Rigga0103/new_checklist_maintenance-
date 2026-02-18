@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Users,
   User,
+  ChevronDown,
 } from "lucide-react";
 // import Image from "next/image";
 import {
@@ -22,6 +23,7 @@ import {
   useSubmitChecklist,
   flattenChecklistPages,
 } from "../server/tanstackQuery/useChecklist";
+import { useUsers } from "../../quickTask/server/tanstackQuery/useQuickTask";
 import { useUploadChecklistImage } from "../server/tanstackQuery/useChecklistUpload";
 import { ChecklistSubmissionItem } from "../types/types";
 import { toast } from "sonner";
@@ -31,6 +33,8 @@ const ITEMS_PER_PAGE = 50;
 export default function MainChecklist() {
   const [activeTab, setActiveTab] = useState<"pending" | "history">("pending");
   const [searchTerm, setSearchTerm] = useState("");
+  const [nameFilter, setNameFilter] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [selectedTasks, setSelectedTasks] = useState<Set<number>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [taskRemarks, setTaskRemarks] = useState<Record<number, string>>({});
@@ -76,13 +80,19 @@ export default function MainChecklist() {
     refetch: refetchHistory,
   } = useChecklistHistory(searchTerm, effectiveRole, username);
 
+  const { data: usersData } = useUsers();
+  const allNames = usersData?.map((u) => u.user_name) || [];
+
   const submitMutation = useSubmitChecklist();
   const uploadImageMutation = useUploadChecklistImage();
 
   const activeTasks = flattenChecklistPages(activeData);
   const historyTasks = historyData?.pages.flatMap((page) => page.data) || [];
 
-  const tasks = activeTab === "pending" ? activeTasks : historyTasks;
+  const rawTasks = activeTab === "pending" ? activeTasks : historyTasks;
+  const tasks = nameFilter
+    ? rawTasks.filter((t) => t.name === nameFilter)
+    : rawTasks;
 
   const isLoading = isFetchingActive || isFetchingHistory;
 
@@ -425,6 +435,46 @@ export default function MainChecklist() {
             onChange={(e) => handleSearch(e.target.value)}
             className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
+        </div>
+
+        {/* Name Filter Dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+            className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800"
+          >
+            {nameFilter || "Filter by Name"}
+            <ChevronDown
+              className={`w-4 h-4 transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+          {dropdownOpen && (
+            <div className="absolute z-50 mt-1 w-48 max-h-60 overflow-auto rounded-lg bg-white dark:bg-neutral-800 shadow-lg border border-gray-200 dark:border-neutral-700">
+              <button
+                onClick={() => {
+                  setNameFilter("");
+                  setDropdownOpen(false);
+                  setCurrentPage(1);
+                }}
+                className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700"
+              >
+                All Names
+              </button>
+              {allNames.map((name) => (
+                <button
+                  key={name}
+                  onClick={() => {
+                    setNameFilter(name);
+                    setDropdownOpen(false);
+                    setCurrentPage(1);
+                  }}
+                  className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700"
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {activeTab === "pending" && tasks.length > 0 && (
