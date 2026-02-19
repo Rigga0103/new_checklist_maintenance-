@@ -25,6 +25,7 @@ import {
 } from "../server/tanstackQuery/useQuickTask";
 import { QuickTaskSkeleton } from "./QuickTaskSkeleton";
 import type { ChecklistTask } from "../types/types";
+import { editDelegationTaskApi } from "../../delegation/server/api/delegationApi";
 
 export default function MainQuickTask() {
   const [activeTab, setActiveTab] = useState<"checklist" | "delegation">(
@@ -40,6 +41,16 @@ export default function MainQuickTask() {
   const [selectedTasks, setSelectedTasks] = useState<ChecklistTask[]>([]);
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<ChecklistTask>>({});
+
+  // Delegation edit state
+  const [delegationEditingId, setDelegationEditingId] = useState<number | null>(
+    null,
+  );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [delegationEditFormData, setDelegationEditFormData] = useState<
+    Record<string, any>
+  >({});
+  const [isSavingDelegationEdit, setIsSavingDelegationEdit] = useState(false);
   const [userRole, setUserRole] = useState<string>(() => {
     if (typeof window === "undefined") return "";
     return localStorage.getItem("role") || "";
@@ -255,6 +266,52 @@ export default function MainQuickTask() {
     setEditFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  // Delegation edit handlers
+  const handleDelegationEditClick = (task: Record<string, unknown>) => {
+    setDelegationEditingId(task.task_id as number);
+    setDelegationEditFormData({ ...task });
+  };
+
+  const handleDelegationCancelEdit = () => {
+    setDelegationEditingId(null);
+    setDelegationEditFormData({});
+  };
+
+  const handleDelegationFieldChange = (field: string, value: string) => {
+    setDelegationEditFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleDelegationSaveEdit = async () => {
+    if (!delegationEditingId) return;
+    setIsSavingDelegationEdit(true);
+    try {
+      const result = await editDelegationTaskApi(delegationEditingId, {
+        department: delegationEditFormData.department || undefined,
+        given_by: delegationEditFormData.given_by || undefined,
+        name: delegationEditFormData.name || undefined,
+        task_description: delegationEditFormData.task_description || undefined,
+        frequency: delegationEditFormData.frequency || undefined,
+        enable_reminder: delegationEditFormData.enable_reminder || undefined,
+        require_attachment:
+          delegationEditFormData.require_attachment || undefined,
+        task_start_date: delegationEditFormData.task_start_date || undefined,
+        planned_date: delegationEditFormData.planned_date || undefined,
+      });
+      if (result.success) {
+        toast.success("Delegation task updated");
+        setDelegationEditingId(null);
+        setDelegationEditFormData({});
+        window.location.reload();
+      } else {
+        toast.error(result.message || "Failed to update");
+      }
+    } catch {
+      toast.error("Failed to update delegation task");
+    } finally {
+      setIsSavingDelegationEdit(false);
+    }
+  };
+
   // Filter handlers
   const handleNameFilterSelect = (name: string) => {
     setNameFilter(name);
@@ -319,7 +376,7 @@ export default function MainQuickTask() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Quick Tasks
+            Edit Tasks
           </h1>
           <p className="text-sm text-muted-foreground">
             Manage your daily checklist and delegated tasks
@@ -513,7 +570,7 @@ export default function MainQuickTask() {
                       />
                     </th>
                   )}
-                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
+                  <th className="px-3  py-2 text-left text-xs font-medium text-muted-foreground uppercase">
                     Task ID
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
@@ -548,180 +605,386 @@ export default function MainQuickTask() {
                       Actions
                     </th>
                   )}
+                  {activeTab === "delegation" && (
+                    <th className="px-3 py-2 text-left text-xs font-medium text-blue-600 dark:text-blue-400 uppercase">
+                      Edit
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-neutral-800 divide-y divide-gray-100 dark:divide-neutral-700">
-                {tasks.map((task, index) => (
-                  <tr
-                    key={task.task_id || index}
-                    className={getRowClassName(task)}
-                  >
-                    {userRole === "admin" && activeTab === "checklist" && (
-                      <td className="px-3 py-3">
-                        <input
-                          type="checkbox"
-                          checked={
-                            !!selectedTasks.find(
-                              (t) => t.task_id === task.task_id,
-                            )
-                          }
-                          onChange={() =>
-                            handleCheckboxChange(task as ChecklistTask)
-                          }
-                          className="w-4 h-4 rounded border-gray-300 text-blue-600"
-                        />
+                {tasks.map((task, index) => {
+                  const isDelegationEditing =
+                    activeTab === "delegation" &&
+                    delegationEditingId === task.task_id;
+                  const isChecklistEditing =
+                    activeTab === "checklist" && editingTaskId === task.task_id;
+
+                  return (
+                    <tr
+                      key={task.task_id || index}
+                      className={getRowClassName(task)}
+                    >
+                      {userRole === "admin" && activeTab === "checklist" && (
+                        <td className="px-3 py-3">
+                          <input
+                            type="checkbox"
+                            checked={
+                              !!selectedTasks.find(
+                                (t) => t.task_id === task.task_id,
+                              )
+                            }
+                            onChange={() =>
+                              handleCheckboxChange(task as ChecklistTask)
+                            }
+                            className="w-4 h-4 rounded border-gray-300 text-blue-600"
+                          />
+                        </td>
+                      )}
+                      {/* TASK ID */}
+                      <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap font-mono">
+                        #{task.task_id}
                       </td>
-                    )}
-                    <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap font-mono">
-                      #{task.task_id}
-                    </td>
-                    <td className="px-3 py-3 text-sm text-gray-900 dark:text-white whitespace-nowrap">
-                      {editingTaskId === task.task_id ? (
-                        <input
-                          type="text"
-                          value={editFormData.department || ""}
-                          onChange={(e) =>
-                            handleInputChange("department", e.target.value)
-                          }
-                          className="w-full px-2 py-1 text-xs border rounded"
-                        />
-                      ) : (
-                        task.department || "—"
-                      )}
-                    </td>
-                    <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
-                      {editingTaskId === task.task_id ? (
-                        <input
-                          type="text"
-                          value={editFormData.given_by || ""}
-                          onChange={(e) =>
-                            handleInputChange("given_by", e.target.value)
-                          }
-                          className="w-full px-2 py-1 text-xs border rounded"
-                        />
-                      ) : (
-                        task.given_by || "—"
-                      )}
-                    </td>
-                    <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
-                      {editingTaskId === task.task_id ? (
-                        <input
-                          type="text"
-                          value={editFormData.name || ""}
-                          onChange={(e) =>
-                            handleInputChange("name", e.target.value)
-                          }
-                          className="w-full px-2 py-1 text-xs border rounded"
-                        />
-                      ) : (
-                        task.name || "—"
-                      )}
-                    </td>
-                    <td className="px-3 py-3 text-sm text-foreground dark:text-gray-300 min-w-50 max-w-75">
-                      {editingTaskId === task.task_id ? (
-                        <textarea
-                          value={editFormData.task_description || ""}
-                          onChange={(e) =>
-                            handleInputChange(
-                              "task_description",
-                              e.target.value,
-                            )
-                          }
-                          className="w-full px-2 py-1 text-xs border rounded"
-                          rows={2}
-                        />
-                      ) : (
-                        <div className="whitespace-normal wrap-break-word line-clamp-2">
-                          {task.task_description || "—"}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap bg-yellow-50 dark:bg-yellow-900/10">
-                      {formatDate(task.task_start_date)}
-                    </td>
-                    <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap bg-yellow-50 dark:bg-yellow-900/10">
-                      {formatDate(task.submission_date)}
-                    </td>
-                    <td className="px-3 py-3 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${getFrequencyBadge(task.frequency || "")}`}
-                      >
-                        {task.frequency || "—"}
-                      </span>
-                    </td>
-                    <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
-                      {task.enable_reminder || "—"}
-                    </td>
-                    <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
-                      {editingTaskId === task.task_id ? (
-                        <select
-                          value={editFormData.require_attachment || "no"}
-                          onChange={(e) =>
-                            handleInputChange(
-                              "require_attachment",
-                              e.target.value,
-                            )
-                          }
-                          className="w-full px-2 py-1 text-xs border rounded bg-white dark:bg-neutral-700 text-gray-900 dark:text-white border-gray-200 dark:border-neutral-600 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                        >
-                          <option value="no">No</option>
-                          <option value="yes">Yes</option>
-                        </select>
-                      ) : (
-                        task.require_attachment || "—"
-                      )}
-                    </td>
-                    {activeTab === "checklist" && (
-                      <td className="px-3 py-3">
-                        <div className="flex gap-1">
-                          {editingTaskId === task.task_id ? (
-                            <>
-                              <button
-                                onClick={handleSaveEdit}
-                                disabled={updateChecklistMutation.isPending}
-                                className="p-1 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
-                              >
-                                {updateChecklistMutation.isPending ? (
-                                  <Loader2 className="w-3 h-3 animate-spin" />
-                                ) : (
-                                  <Save className="w-3 h-3" />
+                      {/* DEPARTMENT */}
+                      <td className="px-3 py-3 text-sm text-gray-900 dark:text-white whitespace-nowrap">
+                        {isChecklistEditing ? (
+                          <input
+                            type="text"
+                            value={editFormData.department || ""}
+                            onChange={(e) =>
+                              handleInputChange("department", e.target.value)
+                            }
+                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
+                          />
+                        ) : isDelegationEditing ? (
+                          <input
+                            type="text"
+                            value={delegationEditFormData.department || ""}
+                            onChange={(e) =>
+                              handleDelegationFieldChange(
+                                "department",
+                                e.target.value,
+                              )
+                            }
+                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
+                          />
+                        ) : (
+                          task.department || "—"
+                        )}
+                      </td>
+                      {/* GIVEN BY */}
+                      <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
+                        {isChecklistEditing ? (
+                          <input
+                            type="text"
+                            value={editFormData.given_by || ""}
+                            onChange={(e) =>
+                              handleInputChange("given_by", e.target.value)
+                            }
+                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
+                          />
+                        ) : isDelegationEditing ? (
+                          <input
+                            type="text"
+                            value={delegationEditFormData.given_by || ""}
+                            onChange={(e) =>
+                              handleDelegationFieldChange(
+                                "given_by",
+                                e.target.value,
+                              )
+                            }
+                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
+                          />
+                        ) : (
+                          task.given_by || "—"
+                        )}
+                      </td>
+                      {/* NAME (Assign To) */}
+                      <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
+                        {isChecklistEditing ? (
+                          <input
+                            type="text"
+                            value={editFormData.name || ""}
+                            onChange={(e) =>
+                              handleInputChange("name", e.target.value)
+                            }
+                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
+                          />
+                        ) : isDelegationEditing ? (
+                          <input
+                            type="text"
+                            value={delegationEditFormData.name || ""}
+                            onChange={(e) =>
+                              handleDelegationFieldChange(
+                                "name",
+                                e.target.value,
+                              )
+                            }
+                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
+                          />
+                        ) : (
+                          task.name || "—"
+                        )}
+                      </td>
+                      {/* TASK DESCRIPTION */}
+                      <td className="px-3 py-3 text-sm text-foreground dark:text-gray-300 min-w-50 max-w-75">
+                        {isChecklistEditing ? (
+                          <textarea
+                            value={editFormData.task_description || ""}
+                            onChange={(e) =>
+                              handleInputChange(
+                                "task_description",
+                                e.target.value,
+                              )
+                            }
+                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
+                            rows={2}
+                          />
+                        ) : isDelegationEditing ? (
+                          <textarea
+                            value={
+                              delegationEditFormData.task_description || ""
+                            }
+                            onChange={(e) =>
+                              handleDelegationFieldChange(
+                                "task_description",
+                                e.target.value,
+                              )
+                            }
+                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
+                            rows={2}
+                          />
+                        ) : (
+                          <div className="whitespace-normal wrap-break-word line-clamp-2">
+                            {task.task_description || "—"}
+                          </div>
+                        )}
+                      </td>
+                      {/* START DATE */}
+                      <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap bg-yellow-50 dark:bg-yellow-900/10">
+                        {isDelegationEditing ? (
+                          <input
+                            type="date"
+                            value={
+                              delegationEditFormData.task_start_date
+                                ? new Date(
+                                    delegationEditFormData.task_start_date,
+                                  )
+                                    .toISOString()
+                                    .split("T")[0]
+                                : ""
+                            }
+                            onChange={(e) =>
+                              handleDelegationFieldChange(
+                                "task_start_date",
+                                e.target.value,
+                              )
+                            }
+                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
+                          />
+                        ) : (
+                          formatDate(task.task_start_date)
+                        )}
+                      </td>
+                      {/* END DATE (planned_date for delegation, submission_date for checklist) */}
+                      <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap bg-yellow-50 dark:bg-yellow-900/10">
+                        {isDelegationEditing ? (
+                          <input
+                            type="date"
+                            value={
+                              delegationEditFormData.planned_date
+                                ? new Date(delegationEditFormData.planned_date)
+                                    .toISOString()
+                                    .split("T")[0]
+                                : ""
+                            }
+                            onChange={(e) =>
+                              handleDelegationFieldChange(
+                                "planned_date",
+                                e.target.value,
+                              )
+                            }
+                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
+                          />
+                        ) : (
+                          formatDate(task.submission_date)
+                        )}
+                      </td>
+                      {/* FREQUENCY */}
+                      <td className="px-3 py-3 whitespace-nowrap">
+                        {isDelegationEditing ? (
+                          <select
+                            value={delegationEditFormData.frequency || ""}
+                            onChange={(e) =>
+                              handleDelegationFieldChange(
+                                "frequency",
+                                e.target.value,
+                              )
+                            }
+                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
+                          >
+                            <option value="daily">daily</option>
+                            <option value="weekly">weekly</option>
+                            <option value="monthly">monthly</option>
+                            <option value="one-time">one-time</option>
+                          </select>
+                        ) : (
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-xs font-medium ${getFrequencyBadge(task.frequency || "")}`}
+                          >
+                            {task.frequency || "—"}
+                          </span>
+                        )}
+                      </td>
+                      {/* REMINDERS */}
+                      <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
+                        {isDelegationEditing ? (
+                          <select
+                            value={
+                              delegationEditFormData.enable_reminder || "no"
+                            }
+                            onChange={(e) =>
+                              handleDelegationFieldChange(
+                                "enable_reminder",
+                                e.target.value,
+                              )
+                            }
+                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
+                          >
+                            <option value="yes">yes</option>
+                            <option value="no">no</option>
+                          </select>
+                        ) : (
+                          task.enable_reminder || "—"
+                        )}
+                      </td>
+                      {/* ATTACHMENT */}
+                      <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
+                        {isChecklistEditing ? (
+                          <select
+                            value={editFormData.require_attachment || "no"}
+                            onChange={(e) =>
+                              handleInputChange(
+                                "require_attachment",
+                                e.target.value,
+                              )
+                            }
+                            className="w-full px-2 py-1 text-xs border rounded bg-white dark:bg-neutral-700 text-gray-900 dark:text-white border-gray-200 dark:border-neutral-600 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                          >
+                            <option value="no">No</option>
+                            <option value="yes">Yes</option>
+                          </select>
+                        ) : isDelegationEditing ? (
+                          <select
+                            value={
+                              delegationEditFormData.require_attachment || "no"
+                            }
+                            onChange={(e) =>
+                              handleDelegationFieldChange(
+                                "require_attachment",
+                                e.target.value,
+                              )
+                            }
+                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
+                          >
+                            <option value="yes">yes</option>
+                            <option value="no">no</option>
+                          </select>
+                        ) : (
+                          task.require_attachment || "—"
+                        )}
+                      </td>
+                      {/* ACTIONS */}
+                      {activeTab === "checklist" && (
+                        <td className="px-3 py-3">
+                          <div className="flex gap-1">
+                            {isChecklistEditing ? (
+                              <>
+                                <button
+                                  onClick={handleSaveEdit}
+                                  disabled={updateChecklistMutation.isPending}
+                                  className="p-1 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+                                >
+                                  {updateChecklistMutation.isPending ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <Save className="w-3 h-3" />
+                                  )}
+                                </button>
+                                <button
+                                  onClick={handleCancelEdit}
+                                  className="p-1 rounded bg-gray-200 dark:bg-neutral-700 hover:bg-gray-300"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() =>
+                                    handleEditClick(task as ChecklistTask)
+                                  }
+                                  className="p-1 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 hover:bg-blue-200"
+                                >
+                                  <Edit className="w-3 h-3" />
+                                </button>
+                                {userRole === "admin" && (
+                                  <button
+                                    onClick={() =>
+                                      handleDeleteTask(task as ChecklistTask)
+                                    }
+                                    disabled={deleteChecklistMutation.isPending}
+                                    className="p-1 rounded bg-red-100 dark:bg-red-900/30 text-red-600 hover:bg-red-200 disabled:opacity-50"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
                                 )}
-                              </button>
-                              <button
-                                onClick={handleCancelEdit}
-                                className="p-1 rounded bg-gray-200 dark:bg-neutral-700 hover:bg-gray-300"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            </>
-                          ) : (
-                            <>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      )}
+                      {activeTab === "delegation" && (
+                        <td className="px-3 py-3">
+                          <div className="flex gap-1">
+                            {isDelegationEditing ? (
+                              <>
+                                <button
+                                  onClick={handleDelegationSaveEdit}
+                                  disabled={isSavingDelegationEdit}
+                                  className="p-1 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+                                >
+                                  {isSavingDelegationEdit ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <Save className="w-3 h-3" />
+                                  )}
+                                </button>
+                                <button
+                                  onClick={handleDelegationCancelEdit}
+                                  className="p-1 rounded bg-gray-200 dark:bg-neutral-700 hover:bg-gray-300"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </>
+                            ) : (
                               <button
                                 onClick={() =>
-                                  handleEditClick(task as ChecklistTask)
+                                  handleDelegationEditClick(
+                                    task as unknown as Record<string, unknown>,
+                                  )
                                 }
                                 className="p-1 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 hover:bg-blue-200"
                               >
                                 <Edit className="w-3 h-3" />
                               </button>
-                              {userRole === "admin" && (
-                                <button
-                                  onClick={() =>
-                                    handleDeleteTask(task as ChecklistTask)
-                                  }
-                                  disabled={deleteChecklistMutation.isPending}
-                                  className="p-1 rounded bg-red-100 dark:bg-red-900/30 text-red-600 hover:bg-red-200 disabled:opacity-50"
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </button>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                ))}
+                            )}
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

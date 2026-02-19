@@ -41,7 +41,7 @@ const routes: Route[] = [
   },
   {
     href: "/quick-task",
-    label: "Quick Task",
+    label: "Edit Task",
     icon: "Zap",
     showFor: ["admin"] as const,
     permissionResource: "quick_task",

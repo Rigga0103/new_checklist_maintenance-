@@ -247,7 +247,12 @@ export const pushAssignTaskApi = async (
 
       // If delegation (one-time), it supports status text
       if (submitTable === "delegation") {
-        tasksData = tasksData.map((t) => ({ ...t, status: "pending" }));
+        tasksData = tasksData.map((t, index) => ({
+          ...t,
+          status: "pending",
+          // Store the end date (deadline) as planned_date if provided
+          planned_date: generatedTasks[index]?.endDate || null,
+        }));
       }
     }
 

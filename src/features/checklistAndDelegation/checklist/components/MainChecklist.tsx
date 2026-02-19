@@ -15,6 +15,7 @@ import {
   Users,
   User,
   ChevronDown,
+  Calendar,
 } from "lucide-react";
 // import Image from "next/image";
 import {
@@ -54,6 +55,10 @@ export default function MainChecklist() {
     Record<number, string>
   >({});
 
+  // Date range filter for History tab
+  const [historyFromDate, setHistoryFromDate] = useState("");
+  const [historyToDate, setHistoryToDate] = useState("");
+
   // Read role and username from localStorage for role-based filtering
   const [role, setRole] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
@@ -90,9 +95,30 @@ export default function MainChecklist() {
   const historyTasks = historyData?.pages.flatMap((page) => page.data) || [];
 
   const rawTasks = activeTab === "pending" ? activeTasks : historyTasks;
+
+  // Apply date-range filter on history tab (filters by submission_date)
+  const dateFilteredTasks =
+    activeTab === "history" && (historyFromDate || historyToDate)
+      ? rawTasks.filter((t) => {
+          if (!t.submission_date) return false;
+          const d = new Date(t.submission_date).setHours(0, 0, 0, 0);
+          if (
+            historyFromDate &&
+            d < new Date(historyFromDate).setHours(0, 0, 0, 0)
+          )
+            return false;
+          if (
+            historyToDate &&
+            d > new Date(historyToDate).setHours(23, 59, 59, 999)
+          )
+            return false;
+          return true;
+        })
+      : rawTasks;
+
   const tasks = nameFilter
-    ? rawTasks.filter((t) => t.name === nameFilter)
-    : rawTasks;
+    ? dateFilteredTasks.filter((t) => t.name === nameFilter)
+    : dateFilteredTasks;
 
   const isLoading = isFetchingActive || isFetchingHistory;
 
@@ -476,6 +502,49 @@ export default function MainChecklist() {
             </div>
           )}
         </div>
+
+        {/* Date range filter — History only */}
+        {activeTab === "history" && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground font-medium">
+              <Calendar className="w-3.5 h-3.5" />
+              From:
+            </div>
+            <input
+              type="date"
+              value={historyFromDate}
+              onChange={(e) => {
+                setHistoryFromDate(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="px-2 py-1.5 text-sm border border-gray-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+            <span className="text-xs text-muted-foreground font-medium">
+              To:
+            </span>
+            <input
+              type="date"
+              value={historyToDate}
+              onChange={(e) => {
+                setHistoryToDate(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="px-2 py-1.5 text-sm border border-gray-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+            {(historyFromDate || historyToDate) && (
+              <button
+                onClick={() => {
+                  setHistoryFromDate("");
+                  setHistoryToDate("");
+                  setCurrentPage(1);
+                }}
+                className="px-2 py-1 text-xs rounded-lg bg-gray-100 dark:bg-neutral-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-neutral-600 transition-colors"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        )}
 
         {activeTab === "pending" && tasks.length > 0 && (
           <div className="flex items-center gap-2 ml-auto">

@@ -17,23 +17,47 @@ interface PermissionsModalProps {
 const RESOURCE_GROUPS: { label: string; resources: PermissionResource[] }[] = [
   {
     label: "Checklist & Delegation",
-    resources: ["dashboard", "assign_task", "checklist", "delegation", "quick_task"],
+    resources: [
+      "dashboard",
+      "assign_task",
+      "checklist",
+      "delegation",
+      "quick_task",
+    ],
   },
   {
     label: "Repairing",
-    resources: ["repair_dashboard", "repair_request", "repairing", "repair_history"],
+    resources: [
+      "repair_dashboard",
+      "repair_request",
+      "repairing",
+      "repair_history",
+    ],
   },
   {
     label: "Maintenance",
-    resources: ["maintenance", "maintenance_history", "maintenance_schedules", "maintenance_calendar"],
+    resources: [
+      "maintenance",
+      "maintenance_history",
+      "maintenance_schedules",
+      "maintenance_calendar",
+    ],
   },
   {
     label: "Other",
-    resources: ["machines", "approval", "settings", "license", "training_video"],
+    resources: [
+      "machines",
+      "approval",
+      "settings",
+      "license",
+      "training_video",
+    ],
   },
 ];
 
-const RESOURCES: PermissionResource[] = RESOURCE_GROUPS.flatMap((g) => g.resources);
+const RESOURCES: PermissionResource[] = RESOURCE_GROUPS.flatMap(
+  (g) => g.resources,
+);
 
 const RESOURCE_LABELS: Record<PermissionResource, string> = {
   // Checklist & Delegation
@@ -41,7 +65,7 @@ const RESOURCE_LABELS: Record<PermissionResource, string> = {
   assign_task: "Assign Task",
   checklist: "Checklist",
   delegation: "Delegation",
-  quick_task: "Quick Task",
+  quick_task: "Edit Task",
   // Repairing
   repair_dashboard: "Repairing - Dashboard",
   repair_request: "Repairing - Request Form",
@@ -219,7 +243,11 @@ export default function PermissionsModal({
                             className="hover:bg-gray-50 dark:hover:bg-neutral-700/50"
                           >
                             <td className="px-4 py-3 pl-8 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                              {RESOURCE_LABELS[perm.resource as PermissionResource]}
+                              {
+                                RESOURCE_LABELS[
+                                  perm.resource as PermissionResource
+                                ]
+                              }
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-center">
                               <input
@@ -231,7 +259,10 @@ export default function PermissionsModal({
                                   perm.can_delete
                                 }
                                 onChange={(e) =>
-                                  handleSelectAll(perm.resource, e.target.checked)
+                                  handleSelectAll(
+                                    perm.resource,
+                                    e.target.checked,
+                                  )
                                 }
                                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:bg-neutral-700 dark:border-neutral-600"
                               />

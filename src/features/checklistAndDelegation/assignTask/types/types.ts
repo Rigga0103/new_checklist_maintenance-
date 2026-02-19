@@ -10,6 +10,7 @@ export interface AssignTaskFormData {
   frequency: FrequencyType;
   enableReminders: boolean;
   requireAttachment: boolean;
+  endDate?: string; // Only for one-time tasks in checklist section
 }
 
 export type FrequencyType =
@@ -43,6 +44,7 @@ export interface GeneratedTask {
   status: "pending" | "completed" | "overdue";
   enableReminders: boolean;
   requireAttachment: boolean;
+  endDate?: string; // End date/deadline for one-time tasks (stored as planned_date in delegation)
 }
 
 export interface WorkingDay {

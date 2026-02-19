@@ -28,7 +28,6 @@ const FREQUENCIES: FrequencyOption[] = [
   { label: "Yearly", value: "yearly" },
 ];
 
-// Initial form data
 const initialFormData: AssignTaskFormData = {
   department: "",
   givenBy: "",
@@ -39,6 +38,7 @@ const initialFormData: AssignTaskFormData = {
   frequency: "one-time",
   enableReminders: true,
   requireAttachment: false,
+  endDate: "",
 };
 
 // Get current timestamp in DD/MM/YYYY HH:MM:SS format
@@ -104,6 +104,8 @@ export interface UseAssignTaskReturn {
   formData: AssignTaskFormData;
   selectedDate: Date | null;
   setSelectedDate: (date: Date | null) => void;
+  selectedEndDate: Date | null;
+  setSelectedEndDate: (date: Date | null) => void;
   showCalendar: boolean;
   setShowCalendar: (show: boolean) => void;
 
@@ -148,6 +150,7 @@ export function useAssignTask(): UseAssignTaskReturn {
   // Form state
   const [formData, setFormData] = useState<AssignTaskFormData>(initialFormData);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
   const [showCalendar, setShowCalendar] = useState(false);
 
   // Generated tasks
@@ -205,10 +208,12 @@ export function useAssignTask(): UseAssignTaskReturn {
       ...prev,
       frequency: selectedSection === "checklist" ? "one-time" : "daily",
       department: "",
+      endDate: "",
     }));
     setDoerNames([]);
     setGeneratedTasks([]);
     setSelectedDate(null);
+    setSelectedEndDate(null);
     setAccordionOpen(false);
   }, [selectedSection]);
 
@@ -400,6 +405,9 @@ export function useAssignTask(): UseAssignTaskReturn {
         frequency: formData.frequency,
         enableReminders: formData.enableReminders,
         requireAttachment: formData.requireAttachment,
+        endDate: selectedEndDate
+          ? formatDateTimeForStorage(selectedEndDate, formData.time)
+          : undefined,
       });
     } else {
       // For recurring tasks
@@ -547,6 +555,7 @@ export function useAssignTask(): UseAssignTaskReturn {
     toast.success(`${tasks.length} task preview(s) generated!`);
   }, [
     selectedDate,
+    selectedEndDate,
     formData,
     workingDays,
     findNextWorkingDay,
@@ -606,6 +615,7 @@ export function useAssignTask(): UseAssignTaskReturn {
       frequency: selectedSection === "checklist" ? "one-time" : "daily",
     });
     setSelectedDate(null);
+    setSelectedEndDate(null);
     setGeneratedTasks([]);
     setAccordionOpen(false);
   }, [selectedSection]);
@@ -626,6 +636,8 @@ export function useAssignTask(): UseAssignTaskReturn {
     formData,
     selectedDate,
     setSelectedDate,
+    selectedEndDate,
+    setSelectedEndDate,
     showCalendar,
     setShowCalendar,
 

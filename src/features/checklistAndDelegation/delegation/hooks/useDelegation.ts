@@ -6,6 +6,7 @@ import {
   fetchDelegationDataSortByDate,
   fetchDelegationDataForHistory,
   updateDelegationData,
+  editDelegationTaskApi,
 } from "../server/api/delegationApi";
 import {
   DelegationTask,
@@ -41,6 +42,11 @@ export function useDelegation(roleOverride?: string | null) {
   const [nextTargetDates, setNextTargetDates] = useState<
     Record<number, string>
   >({});
+
+  // Edit state
+  const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
+  const [editFormData, setEditFormData] = useState<Partial<DelegationTask>>({});
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   // Load pending tasks
   const loadPendingTasks = useCallback(async () => {
@@ -233,6 +239,67 @@ export function useDelegation(roleOverride?: string | null) {
     setNextTargetDates((prev) => ({ ...prev, [taskId]: date }));
   }, []);
 
+  // --- Edit handlers ---
+  const handleEditClick = useCallback((task: DelegationTask) => {
+    setEditingTaskId(task.task_id);
+    setEditFormData({ ...task });
+  }, []);
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingTaskId(null);
+    setEditFormData({});
+  }, []);
+
+  const handleEditFieldChange = useCallback(
+    (field: keyof DelegationTask, value: string) => {
+      setEditFormData((prev) => ({ ...prev, [field]: value }));
+    },
+    [],
+  );
+
+  const handleSaveEdit = useCallback(async () => {
+    if (!editingTaskId) return;
+    setIsSavingEdit(true);
+    try {
+      const result = await editDelegationTaskApi(editingTaskId, {
+        department: editFormData.department || undefined,
+        given_by: editFormData.given_by || undefined,
+        name: editFormData.name || undefined,
+        task_description: editFormData.task_description || undefined,
+        frequency: editFormData.frequency || undefined,
+        enable_reminder: editFormData.enable_reminder || undefined,
+        require_attachment: editFormData.require_attachment || undefined,
+        task_start_date: editFormData.task_start_date || undefined,
+        planned_date: editFormData.planned_date || undefined,
+      });
+
+      if (result.success) {
+        toast.success("Task updated successfully");
+        setEditingTaskId(null);
+        setEditFormData({});
+        // Reload to reflect changes
+        if (activeTab === "pending") {
+          loadPendingTasks();
+        } else {
+          loadHistoryTasks();
+        }
+      } else {
+        toast.error(result.message || "Failed to update task");
+      }
+    } catch (error) {
+      console.error("Edit save error:", error);
+      toast.error("Failed to update task");
+    } finally {
+      setIsSavingEdit(false);
+    }
+  }, [
+    editingTaskId,
+    editFormData,
+    activeTab,
+    loadPendingTasks,
+    loadHistoryTasks,
+  ]);
+
   // Submit selected tasks
   const submitSelectedTasks = useCallback(async () => {
     if (selectedTasks.size === 0) {
@@ -395,5 +462,14 @@ export function useDelegation(roleOverride?: string | null) {
     nextTargetDates,
     handleImageUpload,
     updateNextTargetDate,
+
+    // Edit
+    editingTaskId,
+    editFormData,
+    isSavingEdit,
+    handleEditClick,
+    handleCancelEdit,
+    handleEditFieldChange,
+    handleSaveEdit,
   };
 }

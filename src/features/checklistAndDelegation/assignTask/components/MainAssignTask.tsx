@@ -32,6 +32,8 @@ export default function MainAssignTask() {
     formData,
     selectedDate,
     setSelectedDate,
+    selectedEndDate,
+    setSelectedEndDate,
     generatedTasks,
     accordionOpen,
     setAccordionOpen,
@@ -59,6 +61,22 @@ export default function MainAssignTask() {
     } else {
       setSelectedDate(null);
     }
+  };
+
+  // Handle end date input change (one-time only)
+  const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value) {
+      setSelectedEndDate(new Date(value));
+    } else {
+      setSelectedEndDate(null);
+    }
+  };
+
+  // Get end date input value
+  const getInputEndDateValue = () => {
+    if (!selectedEndDate) return "";
+    return selectedEndDate.toISOString().split("T")[0];
   };
 
   if (isLoading) {
@@ -228,6 +246,26 @@ export default function MainAssignTask() {
               </div>
             </div>
 
+            {/* End Date — only for one-time checklist tasks */}
+            {formData.frequency === "one-time" &&
+              selectedSection === "checklist" && (
+                <div className="mb-3">
+                  <label className={labelClass}>
+                    End Date (Deadline){" "}
+                    <span className="text-xs text-muted-foreground font-normal">
+                      — task shows as Overdue after this date
+                    </span>
+                  </label>
+                  <input
+                    type="date"
+                    value={getInputEndDateValue()}
+                    onChange={handleEndDateChange}
+                    min={getInputDateValue() || undefined}
+                    className={inputClass}
+                  />
+                </div>
+              )}
+
             {/* Row 4: Additional Options (inline) + Generate Button */}
             <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-gray-100 dark:border-neutral-700">
               {/* Toggles */}
@@ -324,7 +362,13 @@ export default function MainAssignTask() {
                             {task.description}
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                            {task.department} • {task.assignTo} • {task.dueDate}
+                            {task.department} • {task.assignTo} • Start:{" "}
+                            {task.dueDate.split("T")[0]}
+                            {task.endDate && (
+                              <span className="ml-2 text-orange-600 dark:text-orange-400 font-medium">
+                                Deadline: {task.endDate.split("T")[0]}
+                              </span>
+                            )}
                           </p>
                         </div>
                         <div className="flex gap-1 ml-2">

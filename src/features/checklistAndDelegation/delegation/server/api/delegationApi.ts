@@ -217,3 +217,68 @@ export const postDelegationAdminDoneAPI = async (
     return { error: error as Error };
   }
 };
+
+// Edit core fields of a delegation task (admin edit)
+export const editDelegationTaskApi = async (
+  taskId: number,
+  fields: Partial<
+    Pick<
+      DelegationTask,
+      | "department"
+      | "given_by"
+      | "name"
+      | "task_description"
+      | "task_start_date"
+      | "planned_date"
+      | "enable_reminder"
+      | "require_attachment"
+      | "frequency"
+    >
+  >,
+): Promise<{ success: boolean; message?: string }> => {
+  try {
+    const updatePayload: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (fields.department !== undefined)
+      updatePayload.department = fields.department;
+    if (fields.given_by !== undefined) updatePayload.given_by = fields.given_by;
+    if (fields.name !== undefined) updatePayload.name = fields.name;
+    if (fields.task_description !== undefined)
+      updatePayload.task_description = fields.task_description;
+    if (fields.frequency !== undefined)
+      updatePayload.frequency = fields.frequency;
+    if (fields.enable_reminder !== undefined)
+      updatePayload.enable_reminder = fields.enable_reminder;
+    if (fields.require_attachment !== undefined)
+      updatePayload.require_attachment = fields.require_attachment;
+
+    // Convert date strings to ISO if provided
+    if (fields.task_start_date !== undefined) {
+      updatePayload.task_start_date = fields.task_start_date
+        ? new Date(fields.task_start_date).toISOString()
+        : null;
+    }
+    if (fields.planned_date !== undefined) {
+      updatePayload.planned_date = fields.planned_date
+        ? new Date(fields.planned_date).toISOString()
+        : null;
+    }
+
+    const { error } = await supabase
+      .from("delegation")
+      .update(updatePayload)
+      .eq("task_id", taskId);
+
+    if (error) {
+      console.error("Error editing delegation task:", error);
+      return { success: false, message: error.message };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error in editDelegationTaskApi:", error);
+    return { success: false, message: "Failed to update task" };
+  }
+};

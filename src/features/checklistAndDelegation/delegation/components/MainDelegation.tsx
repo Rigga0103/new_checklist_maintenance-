@@ -18,6 +18,9 @@ import {
   Users,
   User,
   ChevronDown,
+  Edit,
+  Save,
+  Calendar,
 } from "lucide-react";
 import { useUsers } from "../../quickTask/server/tanstackQuery/useQuickTask";
 import { useDelegation } from "../hooks/useDelegation";
@@ -27,6 +30,9 @@ export default function MainDelegation() {
   const [username, setUsername] = useState<string | null>(null);
   const [viewMyTasksOnly, setViewMyTasksOnly] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  // Date range filter for History tab
+  const [historyFromDate, setHistoryFromDate] = useState("");
+  const [historyToDate, setHistoryToDate] = useState("");
 
   useEffect(() => {
     setRole(localStorage.getItem("role") || "user");
@@ -66,6 +72,14 @@ export default function MainDelegation() {
     updateNextTargetDate,
     filters,
     handleNameFilter,
+    // Edit
+    editingTaskId,
+    editFormData,
+    isSavingEdit,
+    handleEditClick,
+    handleCancelEdit,
+    handleEditFieldChange,
+    handleSaveEdit,
   } = useDelegation(effectiveRole);
 
   const { data: usersData } = useUsers();
@@ -75,7 +89,27 @@ export default function MainDelegation() {
 
   console.log(pendingTasks, "pending taks ");
 
-  const tasks = activeTab === "pending" ? pendingTasks : historyTasks;
+  const rawHistoryTasks =
+    activeTab === "history" && (historyFromDate || historyToDate)
+      ? historyTasks.filter((t) => {
+          const dateStr = t.submission_date || t.created_at || null;
+          if (!dateStr) return false;
+          const d = new Date(dateStr).setHours(0, 0, 0, 0);
+          if (
+            historyFromDate &&
+            d < new Date(historyFromDate).setHours(0, 0, 0, 0)
+          )
+            return false;
+          if (
+            historyToDate &&
+            d > new Date(historyToDate).setHours(23, 59, 59, 999)
+          )
+            return false;
+          return true;
+        })
+      : historyTasks;
+
+  const tasks = activeTab === "pending" ? pendingTasks : rawHistoryTasks;
   const totalPages = Math.ceil(totalCount / 50);
 
   // Format frequency display
@@ -89,6 +123,17 @@ export default function MainDelegation() {
         "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300",
     };
     return colors[frequency?.toLowerCase()] || colors["one-time"];
+  };
+
+  // Overdue check: planned_date < today AND status is not done/completed
+  const isOverdue = (task: {
+    planned_date?: string | null;
+    status?: string | null;
+  }) => {
+    if (!task.planned_date) return false;
+    const done = ["done", "completed", "Done", "Completed"];
+    if (done.includes(task.status || "")) return false;
+    return new Date(task.planned_date) < new Date();
   };
 
   return (
@@ -275,6 +320,46 @@ export default function MainDelegation() {
           )}
         </div>
 
+        {/* Date range filter — History only */}
+        {activeTab === "history" && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground font-medium">
+              <Calendar className="w-3.5 h-3.5" />
+              From:
+            </div>
+            <input
+              type="date"
+              value={historyFromDate}
+              onChange={(e) => {
+                setHistoryFromDate(e.target.value);
+              }}
+              className="px-2 py-1.5 text-sm border border-gray-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+            <span className="text-xs text-muted-foreground font-medium">
+              To:
+            </span>
+            <input
+              type="date"
+              value={historyToDate}
+              onChange={(e) => {
+                setHistoryToDate(e.target.value);
+              }}
+              className="px-2 py-1.5 text-sm border border-gray-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+            {(historyFromDate || historyToDate) && (
+              <button
+                onClick={() => {
+                  setHistoryFromDate("");
+                  setHistoryToDate("");
+                }}
+                className="px-2 py-1 text-xs rounded-lg bg-gray-100 dark:bg-neutral-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-neutral-600 transition-colors"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        )}
+
         {activeTab === "pending" && pendingTasks.length > 0 && (
           <div className="flex items-center gap-2 ml-auto">
             <button
@@ -403,6 +488,10 @@ export default function MainDelegation() {
                       </th>
                     </>
                   )}
+                  {/* Edit column header - sticky right */}
+                  <th className="sticky right-0 z-10 bg-gray-50 dark:bg-neutral-900/50 px-3 py-2 text-left text-xs font-medium text-blue-600 dark:text-blue-400 uppercase w-16 border-l border-gray-200 dark:border-neutral-700">
+                    Edit
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-neutral-800 divide-y divide-gray-100 dark:divide-neutral-700">
@@ -412,9 +501,11 @@ export default function MainDelegation() {
                     className={`hover:bg-gray-50 dark:hover:bg-neutral-700/50 ${
                       selectedTasks.has(task.task_id)
                         ? "bg-blue-50 dark:bg-blue-900/20"
-                        : task.status === "extend"
-                          ? "bg-red-50 dark:bg-red-900/20"
-                          : ""
+                        : isOverdue(task)
+                          ? "bg-orange-50 dark:bg-orange-900/20"
+                          : task.status === "extend"
+                            ? "bg-red-50 dark:bg-red-900/20"
+                            : ""
                     }`}
                   >
                     {activeTab === "pending" && (
@@ -456,9 +547,18 @@ export default function MainDelegation() {
                       {formatDate(task.task_start_date) || "—"}
                     </td>
                     <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap bg-yellow-50 dark:bg-yellow-900/10">
-                      {activeTab === "pending"
-                        ? formatDate(task.planned_date)
-                        : formatDate(task.submission_date)}
+                      {activeTab === "pending" ? (
+                        <span className="flex flex-col gap-0.5">
+                          <span>{formatDate(task.planned_date) || "—"}</span>
+                          {isOverdue(task) && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400">
+                              ⚠ Overdue
+                            </span>
+                          )}
+                        </span>
+                      ) : (
+                        formatDate(task.submission_date)
+                      )}
                     </td>
                     {activeTab === "pending" && (
                       <td className="px-3 py-3 bg-blue-50 dark:bg-blue-900/10">
@@ -588,6 +688,16 @@ export default function MainDelegation() {
                         </td>
                       </>
                     )}
+                    {/* Edit button cell - sticky right */}
+                    <td className="sticky right-0 z-10 bg-white dark:bg-neutral-800 px-3 py-3 border-l border-gray-100 dark:border-neutral-700">
+                      <button
+                        onClick={() => handleEditClick(task)}
+                        title="Edit task"
+                        className="p-1.5 rounded text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -622,6 +732,220 @@ export default function MainDelegation() {
           </div>
         )}
       </div>
+
+      {/* ===== EDIT TASK MODAL ===== */}
+      {editingTaskId !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-neutral-700">
+              <div className="flex items-center gap-2">
+                <Edit className="w-4 h-4 text-blue-600" />
+                <h2 className="text-base font-semibold text-foreground dark:text-foreground">
+                  Edit Task #{editingTaskId}
+                </h2>
+              </div>
+              <button
+                onClick={handleCancelEdit}
+                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700 text-muted-foreground"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="overflow-y-auto flex-1 px-5 py-4 space-y-3">
+              {/* Department */}
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1 uppercase tracking-wide">
+                  Department
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.department || ""}
+                  onChange={(e) =>
+                    handleEditFieldChange("department", e.target.value)
+                  }
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-foreground dark:text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                  placeholder="Department"
+                />
+              </div>
+
+              {/* Given By */}
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1 uppercase tracking-wide">
+                  Given By
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.given_by || ""}
+                  onChange={(e) =>
+                    handleEditFieldChange("given_by", e.target.value)
+                  }
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-foreground dark:text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                  placeholder="Given By"
+                />
+              </div>
+
+              {/* Assign To (name) */}
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1 uppercase tracking-wide">
+                  Assign To
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.name || ""}
+                  onChange={(e) =>
+                    handleEditFieldChange("name", e.target.value)
+                  }
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-foreground dark:text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                  placeholder="Employee name"
+                />
+              </div>
+
+              {/* Task Description */}
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1 uppercase tracking-wide">
+                  Task Description
+                </label>
+                <textarea
+                  value={editFormData.task_description || ""}
+                  onChange={(e) =>
+                    handleEditFieldChange("task_description", e.target.value)
+                  }
+                  rows={3}
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-foreground dark:text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/30 resize-none"
+                  placeholder="Describe the task..."
+                />
+              </div>
+
+              {/* Frequency */}
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1 uppercase tracking-wide">
+                  Frequency
+                </label>
+                <select
+                  value={editFormData.frequency || ""}
+                  onChange={(e) =>
+                    handleEditFieldChange("frequency", e.target.value)
+                  }
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-foreground dark:text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                >
+                  <option value="">Select frequency</option>
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="one-time">One Time</option>
+                </select>
+              </div>
+
+              {/* Start Date & End Date in a row */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1 uppercase tracking-wide">
+                    Start Date
+                  </label>
+                  <input
+                    type="date"
+                    value={
+                      editFormData.task_start_date
+                        ? new Date(editFormData.task_start_date)
+                            .toISOString()
+                            .split("T")[0]
+                        : ""
+                    }
+                    onChange={(e) =>
+                      handleEditFieldChange("task_start_date", e.target.value)
+                    }
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-foreground dark:text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1 uppercase tracking-wide">
+                    End Date
+                    <span className="text-orange-500 ml-1 font-normal normal-case">
+                      (deadline)
+                    </span>
+                  </label>
+                  <input
+                    type="date"
+                    value={
+                      editFormData.planned_date
+                        ? new Date(editFormData.planned_date)
+                            .toISOString()
+                            .split("T")[0]
+                        : ""
+                    }
+                    onChange={(e) =>
+                      handleEditFieldChange("planned_date", e.target.value)
+                    }
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-foreground dark:text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                  />
+                </div>
+              </div>
+
+              {/* Enable Reminder & Require Attachment */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1 uppercase tracking-wide">
+                    Reminder
+                  </label>
+                  <select
+                    value={editFormData.enable_reminder || "no"}
+                    onChange={(e) =>
+                      handleEditFieldChange("enable_reminder", e.target.value)
+                    }
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-foreground dark:text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                  >
+                    <option value="yes">Yes</option>
+                    <option value="no">No</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1 uppercase tracking-wide">
+                    Require Attachment
+                  </label>
+                  <select
+                    value={editFormData.require_attachment || "no"}
+                    onChange={(e) =>
+                      handleEditFieldChange(
+                        "require_attachment",
+                        e.target.value,
+                      )
+                    }
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-foreground dark:text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                  >
+                    <option value="yes">Yes</option>
+                    <option value="no">No</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-gray-100 dark:border-neutral-700">
+              <button
+                onClick={handleCancelEdit}
+                className="px-4 py-2 text-sm rounded-lg border border-gray-200 dark:border-neutral-600 text-muted-foreground hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={isSavingEdit}
+                className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isSavingEdit ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                {isSavingEdit ? "Saving…" : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
