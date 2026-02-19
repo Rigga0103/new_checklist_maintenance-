@@ -82,6 +82,7 @@ export type PermissionResource =
   | "repair_history"
   // Maintenance
   | "maintenance"
+  | "maintenance_dashboard"
   | "maintenance_history"
   | "maintenance_schedules"
   | "maintenance_calendar"

@@ -102,7 +102,7 @@ const routes: Route[] = [
         label: "Dashboard",
         icon: "Home",
         showFor: ["admin", "user"] as const,
-        permissionResource: "maintenance",
+        permissionResource: "maintenance_dashboard",
       },
       {
         href: "/maintenance/pending",
