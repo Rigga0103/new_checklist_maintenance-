@@ -113,7 +113,7 @@ export function useDashboard() {
 
   // ============ Derived State ============
 
-  const isLoading = isSummaryLoading || isTasksLoading || isStaffSummaryLoading;
+  const isLoading = isSummaryLoading || isTasksLoading;
 
   const availableDepartments = departmentsData || [];
   const availableStaff = staffData || [];
@@ -221,6 +221,7 @@ export function useDashboard() {
     username,
     filteredTasks,
     staffTaskSummary: (staffTaskSummary as StaffTaskData[]) || [],
+    isStaffSummaryLoading,
 
     // Actions
     setDashboardType,

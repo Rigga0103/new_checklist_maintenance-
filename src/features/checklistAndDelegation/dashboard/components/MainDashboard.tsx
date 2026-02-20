@@ -36,6 +36,7 @@ export default function MainDashboard() {
     filteredTasks,
     taskView,
     staffTaskSummary,
+    isStaffSummaryLoading,
     setDashboardType,
     setFilterStatus,
     setSearchQuery,
@@ -78,7 +79,7 @@ export default function MainDashboard() {
         </h2>
       </div>
       <div className="overflow-x-auto">
-        {isLoading ? (
+        {isStaffSummaryLoading ? (
           <div className="p-4">
             <StaffTableSkeleton rows={5} />
           </div>

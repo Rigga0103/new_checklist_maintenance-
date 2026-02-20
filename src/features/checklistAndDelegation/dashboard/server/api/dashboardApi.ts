@@ -483,7 +483,10 @@ export const getStaffTaskSummaryApi = async (
 
   if (!data || data.length === 0) return [];
 
-  return data
+  // Filter out rows where worker_name is null (users with no username)
+  const validData = data.filter((stat: any) => stat.worker_name != null);
+
+  return validData
     .map((stat: any) => {
       const total = Number(stat.total_tasks || 0);
       const completed = Number(stat.completed_tasks || 0);
