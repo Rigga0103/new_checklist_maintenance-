@@ -42,6 +42,7 @@ const RESOURCE_GROUPS: { label: string; resources: PermissionResource[] }[] = [
       "maintenance_history",
       "maintenance_schedules",
       "maintenance_calendar",
+      "maintenance_edit",
     ],
   },
   {
@@ -78,6 +79,7 @@ const RESOURCE_LABELS: Record<PermissionResource, string> = {
   maintenance_history: "Maintenance - History",
   maintenance_schedules: "Maintenance - Schedules",
   maintenance_calendar: "Maintenance - Calendar",
+  maintenance_edit: "Maintenance - Edit Task",
   // Other
   machines: "Machines Master",
   approval: "Admin Approvals",

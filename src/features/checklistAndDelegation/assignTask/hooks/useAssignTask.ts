@@ -149,7 +149,7 @@ export function useAssignTask(): UseAssignTaskReturn {
 
   // Form state
   const [formData, setFormData] = useState<AssignTaskFormData>(initialFormData);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
   const [showCalendar, setShowCalendar] = useState(false);
 
@@ -212,7 +212,7 @@ export function useAssignTask(): UseAssignTaskReturn {
     }));
     setDoerNames([]);
     setGeneratedTasks([]);
-    setSelectedDate(null);
+    setSelectedDate(new Date()); // auto-fill today's date
     setSelectedEndDate(null);
     setAccordionOpen(false);
   }, [selectedSection]);
@@ -592,7 +592,7 @@ export function useAssignTask(): UseAssignTaskReturn {
             ...initialFormData,
             frequency: selectedSection === "checklist" ? "one-time" : "daily",
           });
-          setSelectedDate(null);
+          setSelectedDate(new Date());
           setGeneratedTasks([]);
           setAccordionOpen(false);
         } else {
@@ -614,7 +614,7 @@ export function useAssignTask(): UseAssignTaskReturn {
       ...initialFormData,
       frequency: selectedSection === "checklist" ? "one-time" : "daily",
     });
-    setSelectedDate(null);
+    setSelectedDate(new Date());
     setSelectedEndDate(null);
     setGeneratedTasks([]);
     setAccordionOpen(false);

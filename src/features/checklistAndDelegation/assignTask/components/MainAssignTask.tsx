@@ -119,8 +119,8 @@ export default function MainAssignTask() {
       <form onSubmit={handleSubmit}>
         <div className="bg-white dark:bg-neutral-800 rounded-lg border border-gray-200 dark:border-neutral-700 shadow-sm">
           <div className="p-4">
-            {/* Row 1: Department/Machine, Given By, Doer Name */}
-            <div className="grid gap-3 sm:grid-cols-3 mb-3">
+            {/* Row 1: Department/Machine, Given By, Doer Name, Frequency */}
+            <div className="grid gap-3 sm:grid-cols-4 mb-3">
               <div>
                 <label className={labelClass}>
                   {selectedSection === "checklist"
@@ -189,6 +189,22 @@ export default function MainAssignTask() {
                   ))}
                 </select>
               </div>
+              <div>
+                <label className={labelClass}>Frequency *</label>
+                <select
+                  name="frequency"
+                  value={formData.frequency}
+                  onChange={handleChange}
+                  required
+                  className={selectClass}
+                >
+                  {frequencies.map((freq) => (
+                    <option key={freq.value} value={freq.value}>
+                      {freq.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {/* Row 2: Description */}
@@ -205,18 +221,8 @@ export default function MainAssignTask() {
               />
             </div>
 
-            {/* Row 3: Date, Time, Frequency */}
+            {/* Row 3: Time */}
             <div className="grid gap-3 sm:grid-cols-3 mb-3">
-              <div>
-                <label className={labelClass}>Start Date *</label>
-                <input
-                  type="date"
-                  value={getInputDateValue()}
-                  onChange={handleDateChange}
-                  required
-                  className={inputClass}
-                />
-              </div>
               <div>
                 <label className={labelClass}>Time *</label>
                 <input
@@ -227,22 +233,6 @@ export default function MainAssignTask() {
                   required
                   className={inputClass}
                 />
-              </div>
-              <div>
-                <label className={labelClass}>Frequency *</label>
-                <select
-                  name="frequency"
-                  value={formData.frequency}
-                  onChange={handleChange}
-                  required
-                  className={selectClass}
-                >
-                  {frequencies.map((freq) => (
-                    <option key={freq.value} value={freq.value}>
-                      {freq.label}
-                    </option>
-                  ))}
-                </select>
               </div>
             </div>
 

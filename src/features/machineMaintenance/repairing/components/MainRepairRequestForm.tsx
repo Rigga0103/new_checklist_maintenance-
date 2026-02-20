@@ -114,11 +114,19 @@ export default function MainRepairRequestForm() {
                   className={selectClass}
                 >
                   <option value="">Select Machine</option>
-                  {machines.map((machine) => (
-                    <option key={machine} value={machine}>
-                      {machine}
-                    </option>
-                  ))}
+                  {[...machines]
+                    .sort((a, b) => {
+                      const aIsLetter = a.trim().length === 1;
+                      const bIsLetter = b.trim().length === 1;
+                      if (aIsLetter && !bIsLetter) return -1;
+                      if (!aIsLetter && bIsLetter) return 1;
+                      return a.localeCompare(b);
+                    })
+                    .map((machine) => (
+                      <option key={machine} value={machine}>
+                        {machine}
+                      </option>
+                    ))}
                   <option value="other">Other (Enter manually)</option>
                 </select>
               </div>

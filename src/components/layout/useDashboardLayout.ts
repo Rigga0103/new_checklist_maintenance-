@@ -132,6 +132,13 @@ const routes: Route[] = [
         showFor: ["admin", "user"] as const,
         permissionResource: "maintenance_calendar",
       },
+      {
+        href: "/maintenance/edit-task",
+        label: "Edit Task",
+        icon: "Edit",
+        showFor: ["admin"] as const,
+        permissionResource: "maintenance_edit",
+      },
     ],
   },
   {
@@ -219,8 +226,8 @@ export function useDashboardLayout() {
 
   // Compute accessible routes and departments using useMemo
   const accessibleRoutes = useMemo(() => {
-    const userRole = (userInfo.userRole as "admin" | "user") || "user";
-    const isAdmin = userRole === "admin";
+    const userRole = (userInfo.userRole || "user").toLowerCase();
+    const isAdmin = userRole === "admin" || userRole === "super_admin";
 
     // Helper to check if a route is active (or one of its children)
     const isRouteActive = (route: Route) => {

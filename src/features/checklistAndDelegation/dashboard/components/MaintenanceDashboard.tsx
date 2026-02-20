@@ -357,7 +357,7 @@ export default function MaintenanceDashboard() {
                 ) : (
                   paginatedTasks.map((task, idx) => (
                     <tr
-                      key={task.id || idx}
+                      key={task.task_id || idx}
                       className="hover:bg-gray-50 dark:hover:bg-neutral-700/50"
                     >
                       <td className="px-4 py-4">

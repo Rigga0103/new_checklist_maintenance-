@@ -123,7 +123,7 @@ export default function MaintenanceList({
   };
 
   const selectAllTasks = () => {
-    const allIds = paginatedTasks.map((t) => t.id);
+    const allIds = paginatedTasks.map((t) => t.task_id);
     setSelectedTasks(new Set(allIds));
   };
 
@@ -132,7 +132,7 @@ export default function MaintenanceList({
   };
 
   const markAllDone = () => {
-    const allIds = paginatedTasks.map((t) => t.id);
+    const allIds = paginatedTasks.map((t) => t.task_id);
     setSelectedTasks(new Set(allIds));
     const newStatuses: Record<number, string> = { ...taskStatuses };
     allIds.forEach((id) => {
@@ -565,9 +565,9 @@ export default function MaintenanceList({
               <tbody className="bg-white dark:bg-neutral-800 divide-y divide-gray-100 dark:divide-neutral-700">
                 {paginatedTasks.map((task, index) => (
                   <tr
-                    key={task.id}
+                    key={task.task_id}
                     className={`hover:bg-gray-50 dark:hover:bg-neutral-700/50 ${
-                      selectedTasks.has(task.id)
+                      selectedTasks.has(task.task_id)
                         ? "bg-blue-50 dark:bg-blue-900/20"
                         : ""
                     }`}
@@ -579,8 +579,8 @@ export default function MaintenanceList({
                       <td className="px-3 py-3">
                         <input
                           type="checkbox"
-                          checked={selectedTasks.has(task.id)}
-                          onChange={() => toggleTaskSelection(task.id)}
+                          checked={selectedTasks.has(task.task_id)}
+                          onChange={() => toggleTaskSelection(task.task_id)}
                           className="w-4 h-4 rounded border-gray-300 text-blue-600"
                         />
                       </td>
@@ -620,10 +620,10 @@ export default function MaintenanceList({
                       <>
                         <td className="px-3 py-3 bg-blue-50 dark:bg-blue-900/10">
                           <select
-                            disabled={!selectedTasks.has(task.id)}
-                            value={taskStatuses[task.id] || ""}
+                            disabled={!selectedTasks.has(task.task_id)}
+                            value={taskStatuses[task.task_id] || ""}
                             onChange={(e) =>
-                              updateTaskStatus(task.id, e.target.value)
+                              updateTaskStatus(task.task_id, e.target.value)
                             }
                             className="border border-gray-300 dark:border-neutral-600 rounded-md px-2 py-1 w-full disabled:bg-gray-100 dark:disabled:bg-neutral-800 disabled:cursor-not-allowed text-xs bg-white dark:bg-neutral-700 text-gray-900 dark:text-white"
                           >
@@ -638,12 +638,14 @@ export default function MaintenanceList({
                               type="file"
                               accept="image/jpeg,image/png,image/webp"
                               className="hidden"
-                              onChange={(e) => handleImageUpload(task.id, e)}
-                              disabled={taskImages[task.id]?.uploading}
+                              onChange={(e) =>
+                                handleImageUpload(task.task_id, e)
+                              }
+                              disabled={taskImages[task.task_id]?.uploading}
                             />
-                            {taskImages[task.id]?.uploading ? (
+                            {taskImages[task.task_id]?.uploading ? (
                               <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-                            ) : taskImages[task.id]?.uploadedUrl ? (
+                            ) : taskImages[task.task_id]?.uploadedUrl ? (
                               <Check className="w-4 h-4 text-green-600" />
                             ) : (
                               <Upload className="w-4 h-4 text-blue-600 hover:text-blue-700" />
@@ -653,9 +655,9 @@ export default function MaintenanceList({
                         <td className="px-3 py-3">
                           <input
                             type="text"
-                            value={taskRemarks[task.id] || ""}
+                            value={taskRemarks[task.task_id] || ""}
                             onChange={(e) =>
-                              updateTaskRemark(task.id, e.target.value)
+                              updateTaskRemark(task.task_id, e.target.value)
                             }
                             placeholder="Remark..."
                             className="w-24 px-2 py-1 text-xs rounded border border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"

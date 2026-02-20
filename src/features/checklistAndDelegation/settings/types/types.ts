@@ -86,6 +86,7 @@ export type PermissionResource =
   | "maintenance_history"
   | "maintenance_schedules"
   | "maintenance_calendar"
+  | "maintenance_edit"
   // Other
   | "machines"
   | "approval"
