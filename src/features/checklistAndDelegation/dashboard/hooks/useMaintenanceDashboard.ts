@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   useMaintenanceDataQuery,
+  useMaintenancePendingQuery,
+  useMaintenanceHistoryQuery,
   useUpdateMaintenanceTask,
 } from "../server/tanstackQuery/useRepairDashboardQuery";
 import { useUploadMaintenanceImage } from "../server/tanstackQuery/useMaintenanceUpload";
@@ -46,7 +48,16 @@ export interface FrequencyChartItem {
 
 export type MaintenanceTab = "pending" | "history";
 
-export function useMaintenanceDashboard() {
+interface UseMaintenanceDashboardOptions {
+  role?: string | null;
+  username?: string | null;
+}
+
+export function useMaintenanceDashboard(
+  options: UseMaintenanceDashboardOptions = {},
+) {
+  const { role = null, username = null } = options;
+
   // ---- Filter State ----
   const [activeTab, setActiveTab] = useState<MaintenanceTab>("pending");
   const [searchTerm, setSearchTerm] = useState("");
@@ -54,16 +65,42 @@ export function useMaintenanceDashboard() {
   const [showMachineDropdown, setShowMachineDropdown] = useState(false);
   const machineDropdownRef = useRef<HTMLDivElement>(null);
 
-  // ---- Data Queries (TanStack Query) ----
+  // ---- Data Queries ----
+  // Filtered queries for MaintenanceList (pending/history views)
   const {
-    data: maintenanceTasks = [],
-    isLoading: maintenanceLoading,
-    error: maintenanceError,
-    refetch: refetchMaintenance,
+    data: pendingTasks = [],
+    isLoading: pendingLoading,
+    error: pendingError,
+    refetch: refetchPending,
+  } = useMaintenancePendingQuery(searchTerm, role, username);
+
+  const {
+    data: historyTasks = [],
+    isLoading: historyLoading,
+    error: historyError,
+    refetch: refetchHistory,
+  } = useMaintenanceHistoryQuery(searchTerm, role, username);
+
+  // Full data query for Dashboard charts/stats (no user/date filter)
+  const {
+    data: allMaintenanceTasks = [],
+    isLoading: allMaintenanceLoading,
+    refetch: refetchAllMaintenance,
   } = useMaintenanceDataQuery();
 
   const updateTaskMutation = useUpdateMaintenanceTask();
   const uploadImageMutation = useUploadMaintenanceImage();
+
+  // ---- Loading & Error (based on active tab) ----
+  const maintenanceLoading =
+    activeTab === "pending" ? pendingLoading : historyLoading;
+  const maintenanceError = pendingError || historyError;
+
+  const refetchMaintenance = useCallback(() => {
+    refetchPending();
+    refetchHistory();
+    refetchAllMaintenance();
+  }, [refetchPending, refetchHistory, refetchAllMaintenance]);
 
   // ---- Click-away handler for machine dropdown ----
   useEffect(() => {
@@ -79,49 +116,25 @@ export function useMaintenanceDashboard() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // ---- Derived filter lists ----
+  // ---- Active data based on tab ----
+  const currentTabData = useMemo(() => {
+    return activeTab === "pending" ? pendingTasks : historyTasks;
+  }, [activeTab, pendingTasks, historyTasks]);
+
+  // ---- Derived filter lists (from current tab data) ----
   const machinesList = useMemo(() => {
     const set = new Set<string>();
-    maintenanceTasks.forEach((t) => {
+    currentTabData.forEach((t) => {
       if (t.machine_name) set.add(t.machine_name);
     });
     return Array.from(set).sort();
-  }, [maintenanceTasks]);
+  }, [currentTabData]);
 
-  // ---- Maintenance filtering ----
+  // ---- Machine filter (client-side, on top of server-side filtering) ----
   const filteredMaintenanceData = useMemo(() => {
-    let data = maintenanceTasks;
+    let data = currentTabData;
 
-    // 1. Filter by Tab (Pending vs History)
-    if (activeTab === "pending") {
-      data = data.filter(
-        (task) => !task.actual_date || task.actual_date.trim() === "",
-      );
-    } else {
-      data = data.filter(
-        (task) => task.actual_date && task.actual_date.trim() !== "",
-      );
-    }
-
-    // 2. Filter by Search
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      data = data.filter((task) => {
-        const searchable = [
-          task.machine_name,
-          task.task_description,
-          task.doer_name,
-          task.assigned_to,
-          task.frequency,
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        return searchable.includes(term);
-      });
-    }
-
-    // 3. Filter by Machine
+    // Filter by Machine
     if (selectedMachines.length > 0) {
       data = data.filter((task) => {
         const name = task.machine_name || "";
@@ -130,48 +143,48 @@ export function useMaintenanceDashboard() {
     }
 
     return data;
-  }, [maintenanceTasks, activeTab, searchTerm, selectedMachines]);
+  }, [currentTabData, selectedMachines]);
 
   // ---- Active filters check ----
   const hasActiveFilters = useMemo(() => {
     return selectedMachines.length > 0 || searchTerm !== "";
   }, [selectedMachines, searchTerm]);
 
-  // ---- Stats Calculation ----
+  // ---- Stats Calculation (uses ALL data for dashboard) ----
   const maintenanceStats = useMemo<MaintenanceStats>(() => {
-    const totalTasks = maintenanceTasks.length;
-    const completedTasks = maintenanceTasks.filter(
+    const totalTasks = allMaintenanceTasks.length;
+    const completedTasks = allMaintenanceTasks.filter(
       (t) => t.actual_date && t.actual_date.trim() !== "",
     ).length;
-    const pendingTasks = totalTasks - completedTasks;
+    const pendingTasksCount = totalTasks - completedTasks;
 
     const today = new Date().toISOString().split("T")[0];
 
     // Overdue: Start date < today and not completed
-    const overdueTasks = maintenanceTasks.filter((t) => {
-      if (t.actual_date && t.actual_date.trim() !== "") return false; // Completed
+    const overdueTasks = allMaintenanceTasks.filter((t) => {
+      if (t.actual_date && t.actual_date.trim() !== "") return false;
       if (!t.task_start_date) return false;
       return t.task_start_date < today;
     }).length;
 
     // Unique machines
     const distinctMachines = new Set(
-      maintenanceTasks.map((t) => t.machine_name).filter(Boolean),
+      allMaintenanceTasks.map((t) => t.machine_name).filter(Boolean),
     ).size;
 
     return {
       totalMachines: distinctMachines,
       totalTasks,
       completedTasks,
-      pendingTasks,
+      pendingTasks: pendingTasksCount,
       overdueTasks,
     };
-  }, [maintenanceTasks]);
+  }, [allMaintenanceTasks]);
 
   // ---- Chart Data: Frequency Distribution ----
   const frequencyChartData = useMemo<FrequencyChartItem[]>(() => {
     const counts: Record<string, number> = {};
-    maintenanceTasks.forEach((t) => {
+    allMaintenanceTasks.forEach((t) => {
       const freq = t.frequency || "Unknown";
       counts[freq] = (counts[freq] || 0) + 1;
     });
@@ -179,12 +192,12 @@ export function useMaintenanceDashboard() {
     return Object.entries(counts)
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count);
-  }, [maintenanceTasks]);
+  }, [allMaintenanceTasks]);
 
   // ---- Chart Data: Machines with most tasks ----
   const machineChartData = useMemo(() => {
     const counts: Record<string, number> = {};
-    maintenanceTasks.forEach((t) => {
+    allMaintenanceTasks.forEach((t) => {
       const name = t.machine_name || "Unknown";
       counts[name] = (counts[name] || 0) + 1;
     });
@@ -193,7 +206,7 @@ export function useMaintenanceDashboard() {
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
-  }, [maintenanceTasks]);
+  }, [allMaintenanceTasks]);
 
   // ---- Dashboard Task Views (Recent / Upcoming / Overdue) ----
   const [dashboardView, setDashboardView] = useState<
@@ -202,45 +215,31 @@ export function useMaintenanceDashboard() {
 
   const dashboardTasks = useMemo(() => {
     const today = new Date().toISOString().split("T")[0];
-    let data = maintenanceTasks;
+    let data = allMaintenanceTasks;
 
-    // Filter by View
     if (dashboardView === "recent") {
-      // Recent & Today: Start Date <= Today (and usually we might show some history, but for "Recent/Today" usually implies active context)
-      // MainDashboard logic: start_date == today (or range).
-      // User asked for "Today upcoming".
-      // Let's interpret "Recent" as Today's tasks + Recent History?
-      // Or just Today's tasks.
-      // MainDashboard "recent" was: `task_start_date` == today.
       data = data.filter(
-        (t) => t.task_start_date && t.task_start_date === today,
+        (t) => t.task_start_date && t.task_start_date.startsWith(today),
       );
     } else if (dashboardView === "upcoming") {
-      // Upcoming: Start Date > Today
       data = data.filter((t) => t.task_start_date && t.task_start_date > today);
     } else if (dashboardView === "overdue") {
-      // Overdue: Start Date < Today AND Not Completed
       data = data.filter((t) => {
-        if (t.actual_date && t.actual_date.trim() !== "") return false; // Completed
+        if (t.actual_date && t.actual_date.trim() !== "") return false;
         if (!t.task_start_date) return false;
         return t.task_start_date < today;
       });
     }
 
-    // Apply strict sorting
     return data.sort((a, b) => {
       const dateA = a.task_start_date || "";
       const dateB = b.task_start_date || "";
-      // For upcoming: ascending. For recent/overdue: descending?
-      // Usually Overdue: oldest first (ascending).
-      // Upcoming: soonest first (ascending).
-      // Recent: newest first (descending).
       if (dashboardView === "recent") {
         return dateB.localeCompare(dateA);
       }
       return dateA.localeCompare(dateB);
     });
-  }, [maintenanceTasks, dashboardView]);
+  }, [allMaintenanceTasks, dashboardView]);
 
   // ---- Handlers ----
   const handleMachineSelection = useCallback((machine: string) => {
@@ -260,6 +259,7 @@ export function useMaintenanceDashboard() {
   return {
     // Loading & Error
     maintenanceLoading,
+    allMaintenanceLoading,
     maintenanceError: maintenanceError
       ? maintenanceError instanceof Error
         ? maintenanceError.message
@@ -268,9 +268,9 @@ export function useMaintenanceDashboard() {
     refetchMaintenance,
 
     // Data
-    maintenanceTasks,
+    maintenanceTasks: allMaintenanceTasks,
     filteredMaintenanceData,
-    dashboardTasks, // Exposed for dashboard table
+    dashboardTasks,
     dashboardView,
     setDashboardView,
 

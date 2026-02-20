@@ -65,7 +65,7 @@ export const fetchRepairData = async (): Promise<MachineRepairTask[]> => {
   }
 };
 
-// Fetch all maintenance data
+// Fetch all maintenance data (used by Dashboard for charts/stats)
 export const fetchMaintenanceData = async (): Promise<
   MachineMaintenanceTask[]
 > => {
@@ -83,6 +83,92 @@ export const fetchMaintenanceData = async (): Promise<
     return data || [];
   } catch (error) {
     console.error("Unexpected error in fetchMaintenanceData:", error);
+    return [];
+  }
+};
+
+// Fetch today's pending maintenance tasks (mirrors checklist pattern)
+export const fetchMaintenancePending = async (
+  searchTerm = "",
+  role: string | null = null,
+  username: string | null = null,
+): Promise<MachineMaintenanceTask[]> => {
+  try {
+    const today = new Date().toISOString().split("T")[0];
+    const startOfToday = `${today}T00:00:00`;
+    const endOfToday = `${today}T23:59:59`;
+
+    let query = supabase
+      .from("machine_maintenance")
+      .select("*")
+      .gte("task_start_date", startOfToday)
+      .lte("task_start_date", endOfToday)
+      .is("actual_date", null)
+      .order("task_start_date", { ascending: true });
+
+    // Search filter
+    if (searchTerm && searchTerm.trim() !== "") {
+      const sv = searchTerm.trim();
+      query = query.or(
+        `machine_name.ilike.%${sv}%,task_description.ilike.%${sv}%,doer_name.ilike.%${sv}%,frequency.ilike.%${sv}%`,
+      );
+    }
+
+    // Role filter - regular users only see their own tasks
+    if (role === "user" && username) {
+      query = query.eq("doer_name", username);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("Error fetching pending maintenance:", error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error("Unexpected error in fetchMaintenancePending:", error);
+    return [];
+  }
+};
+
+// Fetch completed maintenance tasks (history)
+export const fetchMaintenanceHistory = async (
+  searchTerm = "",
+  role: string | null = null,
+  username: string | null = null,
+): Promise<MachineMaintenanceTask[]> => {
+  try {
+    let query = supabase
+      .from("machine_maintenance")
+      .select("*")
+      .not("actual_date", "is", null)
+      .order("actual_date", { ascending: false });
+
+    // Search filter
+    if (searchTerm && searchTerm.trim() !== "") {
+      const sv = searchTerm.trim();
+      query = query.or(
+        `machine_name.ilike.%${sv}%,task_description.ilike.%${sv}%,doer_name.ilike.%${sv}%,frequency.ilike.%${sv}%`,
+      );
+    }
+
+    // Role filter
+    if (role === "user" && username) {
+      query = query.eq("doer_name", username);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("Error fetching maintenance history:", error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error("Unexpected error in fetchMaintenanceHistory:", error);
     return [];
   }
 };

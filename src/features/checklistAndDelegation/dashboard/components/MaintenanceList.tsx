@@ -12,6 +12,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
+  Users,
+  User,
 } from "lucide-react";
 import { useMaintenanceDashboard } from "../hooks/useMaintenanceDashboard";
 import { toast } from "sonner";
@@ -28,6 +30,20 @@ export default function MaintenanceList({
   initialTab = "pending",
   showTabs = true,
 }: MaintenanceListProps) {
+  // Read role and username from localStorage (same as MainChecklist)
+  const [role, setRole] = useState<string | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
+  const [viewMyTasksOnly, setViewMyTasksOnly] = useState(false);
+
+  useEffect(() => {
+    setRole(localStorage.getItem("role") || "user");
+    setUsername(localStorage.getItem("user-name") || null);
+  }, []);
+
+  // When admin toggles "My Tasks", override role to "user" so API filters by their username
+  const effectiveRole = role === "admin" && viewMyTasksOnly ? "user" : role;
+  const isAdmin = role === "admin";
+
   const {
     maintenanceLoading,
     maintenanceError,
@@ -48,7 +64,7 @@ export default function MaintenanceList({
     resetFilters,
     updateTaskMutation,
     uploadImageMutation,
-  } = useMaintenanceDashboard();
+  } = useMaintenanceDashboard({ role: effectiveRole, username });
 
   // Set initial tab on mount if provided
   useEffect(() => {
@@ -271,21 +287,52 @@ export default function MaintenanceList({
                 : "Maintenance"}
           </h1>
           <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-            {initialTab === "pending"
-              ? "Manage pending maintenance tasks"
-              : "View maintenance history"}
+            {viewMyTasksOnly && username
+              ? `Showing your tasks only (${username})`
+              : initialTab === "pending"
+                ? "Manage pending maintenance tasks"
+                : "View maintenance history"}
           </p>
         </div>
-        <button
-          onClick={() => refetchMaintenance()}
-          disabled={maintenanceLoading}
-          className="flex items-center gap-2 px-3 py-2 text-sm text-foreground dark:text-gray-300 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors"
-        >
-          <RefreshCw
-            className={`w-4 h-4 ${maintenanceLoading ? "animate-spin" : ""}`}
-          />
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          {/* My Tasks / All Tasks Toggle - only for admin */}
+          {isAdmin && (
+            <div className="flex p-1 bg-gray-100 dark:bg-neutral-700 rounded-lg">
+              <button
+                onClick={() => setViewMyTasksOnly(false)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                  !viewMyTasksOnly
+                    ? "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 shadow-sm"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                All Tasks
+              </button>
+              <button
+                onClick={() => setViewMyTasksOnly(true)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                  viewMyTasksOnly
+                    ? "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 shadow-sm"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                }`}
+              >
+                <User className="w-3.5 h-3.5" />
+                My Tasks
+              </button>
+            </div>
+          )}
+          <button
+            onClick={() => refetchMaintenance()}
+            disabled={maintenanceLoading}
+            className="flex items-center gap-2 px-3 py-2 text-sm text-foreground dark:text-gray-300 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors"
+          >
+            <RefreshCw
+              className={`w-4 h-4 ${maintenanceLoading ? "animate-spin" : ""}`}
+            />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Tabs & Filters */}
