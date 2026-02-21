@@ -47,6 +47,8 @@ export const fetchDashboardDataApi = async ({
   departmentFilter = null,
   role = null,
   username = null,
+  startDate = null,
+  endDate = null,
 }: DashboardFetchParams & {
   role?: string | null;
   username?: string | null;
@@ -81,40 +83,63 @@ export const fetchDashboardDataApi = async ({
       query = query.eq("name", staffFilter);
     }
 
-    // Task view filtering
-    switch (taskView) {
-      case "recent":
-        query = query
-          .gte("task_start_date", `${today}T00:00:00`)
-          .lte("task_start_date", `${today}T23:59:59`);
-        if (dashboardType === "checklist") {
-          query = query.or("status.is.null,status.neq.yes");
-        }
-        break;
+    // Task view filtering OR Date Range mapping
+    if (startDate && endDate) {
+      // Date range overrides conventional taskView dates
+      const searchStart = `${startDate}T00:00:00`;
+      const searchEnd = `${endDate}T23:59:59`;
 
-      case "upcoming": {
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomorrowStr = tomorrow.toISOString().split("T")[0];
-        query = query
-          .gte("task_start_date", `${tomorrowStr}T00:00:00`)
-          .lte("task_start_date", `${tomorrowStr}T23:59:59`);
-        break;
-      }
+      query = query
+        .gte("task_start_date", searchStart)
+        .lte("task_start_date", searchEnd);
 
-      case "overdue":
-        query = query
-          .lt("task_start_date", `${today}T00:00:00`)
-          .is("submission_date", null);
+      if (taskView === "overdue") {
+        query = query.is("submission_date", null);
         if (dashboardType === "checklist") {
           query = query.or("status.is.null,status.neq.yes");
         } else {
           query = query.neq("status", "done");
         }
-        break;
+      } else if (taskView === "recent") {
+        if (dashboardType === "checklist") {
+          query = query.or("status.is.null,status.neq.yes");
+        }
+      }
+    } else {
+      switch (taskView) {
+        case "recent":
+          query = query
+            .gte("task_start_date", `${today}T00:00:00`)
+            .lte("task_start_date", `${today}T23:59:59`);
+          if (dashboardType === "checklist") {
+            query = query.or("status.is.null,status.neq.yes");
+          }
+          break;
 
-      default:
-        query = query.lte("task_start_date", `${today}T23:59:59`);
+        case "upcoming": {
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          const tomorrowStr = tomorrow.toISOString().split("T")[0];
+          query = query
+            .gte("task_start_date", `${tomorrowStr}T00:00:00`)
+            .lte("task_start_date", `${tomorrowStr}T23:59:59`);
+          break;
+        }
+
+        case "overdue":
+          query = query
+            .lt("task_start_date", `${today}T00:00:00`)
+            .is("submission_date", null);
+          if (dashboardType === "checklist") {
+            query = query.or("status.is.null,status.neq.yes");
+          } else {
+            query = query.neq("status", "done");
+          }
+          break;
+
+        default:
+          query = query.lte("task_start_date", `${today}T23:59:59`);
+      }
     }
 
     const { data, error } = await query;
@@ -319,18 +344,120 @@ export const getDashboardSummaryApi = async (
   departmentFilter: string | null = null,
   role: string | null = null,
   username: string | null = null,
+  startDate: string | null = null,
+  endDate: string | null = null,
 ): Promise<DashboardSummary> => {
   const today = new Date().toISOString().split("T")[0];
 
-  // Determine filter name based on role
-  // If user, use their username. If admin, use selected staff filter.
-  // If admin selects 'all', pass null or rely on RPC to handle 'all'.
   const filterName =
     role === "user" && username
       ? username
       : staffFilter && staffFilter !== "all"
         ? staffFilter
         : null;
+
+  if (startDate && endDate) {
+    const searchStart = `${startDate}T00:00:00`;
+    const searchEnd = `${endDate}T23:59:59`;
+
+    let baseQuery = supabase
+      .from(dashboardType)
+      .select("*", { count: "exact", head: true });
+    if (filterName) baseQuery = baseQuery.eq("name", filterName);
+    if (
+      dashboardType === "checklist" &&
+      departmentFilter &&
+      departmentFilter !== "all"
+    ) {
+      baseQuery = baseQuery.eq("department", departmentFilter);
+    }
+
+    const { count: totalTasks } = await baseQuery
+      .gte("task_start_date", searchStart)
+      .lte("task_start_date", searchEnd);
+
+    let completedQuery = supabase
+      .from(dashboardType)
+      .select("*", { count: "exact", head: true });
+    if (filterName) completedQuery = completedQuery.eq("name", filterName);
+    if (
+      dashboardType === "checklist" &&
+      departmentFilter &&
+      departmentFilter !== "all"
+    ) {
+      completedQuery = completedQuery.eq("department", departmentFilter);
+    }
+    completedQuery = completedQuery
+      .gte("task_start_date", searchStart)
+      .lte("task_start_date", searchEnd);
+
+    if (dashboardType === "delegation") {
+      completedQuery = completedQuery.not("submission_date", "is", null);
+    } else {
+      completedQuery = completedQuery.eq("status", "yes");
+    }
+    const { count: completedTasks } = await completedQuery;
+
+    let pendingQuery = supabase
+      .from(dashboardType)
+      .select("*", { count: "exact", head: true });
+    if (filterName) pendingQuery = pendingQuery.eq("name", filterName);
+    if (
+      dashboardType === "checklist" &&
+      departmentFilter &&
+      departmentFilter !== "all"
+    ) {
+      pendingQuery = pendingQuery.eq("department", departmentFilter);
+    }
+    pendingQuery = pendingQuery
+      .gte("task_start_date", searchStart)
+      .lte("task_start_date", searchEnd);
+
+    if (dashboardType === "delegation") {
+      pendingQuery = pendingQuery.is("submission_date", null);
+    } else {
+      pendingQuery = pendingQuery.or("status.is.null,status.neq.yes");
+    }
+    const { count: pendingTasks } = await pendingQuery;
+
+    let overdueQuery = supabase
+      .from(dashboardType)
+      .select("*", { count: "exact", head: true });
+    if (filterName) overdueQuery = overdueQuery.eq("name", filterName);
+    if (
+      dashboardType === "checklist" &&
+      departmentFilter &&
+      departmentFilter !== "all"
+    ) {
+      overdueQuery = overdueQuery.eq("department", departmentFilter);
+    }
+
+    overdueQuery = overdueQuery.lt("task_start_date", `${today}T00:00:00`);
+    if (dashboardType === "delegation") {
+      overdueQuery = overdueQuery
+        .is("submission_date", null)
+        .neq("status", "done");
+    } else {
+      overdueQuery = overdueQuery
+        .or("status.is.null,status.neq.yes")
+        .is("submission_date", null);
+    }
+    const { count: overdueTasks } = await overdueQuery;
+
+    const total = totalTasks || 0;
+    const completed = completedTasks || 0;
+    const pending = pendingTasks || 0;
+    const overdue = overdueTasks || 0;
+
+    return {
+      totalTasks: total,
+      completedTasks: completed,
+      pendingTasks: pending,
+      overdueTasks: overdue,
+      completionRate:
+        total > 0 ? Number(((completed / total) * 100).toFixed(1)) : 0,
+    };
+  }
 
   const { data, error } = await supabase.rpc("get_dashboard_counts", {
     p_dashboard_type: dashboardType,
@@ -349,7 +476,6 @@ export const getDashboardSummaryApi = async (
     throw error;
   }
 
-  // RPC returns an array with one object
   const result =
     data && data.length > 0
       ? data[0]

@@ -15,10 +15,32 @@ import type { DashboardType, TaskView } from "../../types/types";
 
 export const dashboardKeys = {
   all: ["dashboard"] as const,
-  summary: (type: DashboardType, staff?: string, dept?: string) =>
-    [...dashboardKeys.all, "summary", type, staff, dept] as const,
-  data: (type: DashboardType, view: TaskView, staff?: string, dept?: string) =>
-    [...dashboardKeys.all, "data", type, view, staff, dept] as const,
+  summary: (
+    type: DashboardType,
+    staff?: string,
+    dept?: string,
+    start?: string | null,
+    end?: string | null,
+  ) =>
+    [...dashboardKeys.all, "summary", type, staff, dept, start, end] as const,
+  data: (
+    type: DashboardType,
+    view: TaskView,
+    staff?: string,
+    dept?: string,
+    start?: string | null,
+    end?: string | null,
+  ) =>
+    [
+      ...dashboardKeys.all,
+      "data",
+      type,
+      view,
+      staff,
+      dept,
+      start,
+      end,
+    ] as const,
   departments: () => [...dashboardKeys.all, "departments"] as const,
   staff: (dept?: string) => [...dashboardKeys.all, "staff", dept] as const,
   usersCount: (dept?: string) =>
@@ -37,12 +59,16 @@ export function useDashboardSummary(
   departmentFilter?: string,
   role?: string | null,
   username?: string | null,
+  startDate?: string | null,
+  endDate?: string | null,
 ) {
   return useQuery({
     queryKey: dashboardKeys.summary(
       dashboardType,
       staffFilter,
       departmentFilter,
+      startDate,
+      endDate,
     ),
     queryFn: () =>
       getDashboardSummaryApi(
@@ -51,6 +77,8 @@ export function useDashboardSummary(
         departmentFilter,
         role,
         username,
+        startDate,
+        endDate,
       ),
     enabled: dashboardType !== "repair",
     staleTime: 60 * 1000, // 1 minute
@@ -71,6 +99,8 @@ export function useDashboardData(
   username?: string | null,
   page = 1,
   limit = 1000,
+  startDate?: string | null,
+  endDate?: string | null,
 ) {
   return useQuery({
     queryKey: dashboardKeys.data(
@@ -78,6 +108,8 @@ export function useDashboardData(
       taskView,
       staffFilter,
       departmentFilter,
+      startDate,
+      endDate,
     ),
     queryFn: () =>
       fetchDashboardDataApi({
@@ -89,6 +121,8 @@ export function useDashboardData(
         departmentFilter,
         role,
         username,
+        startDate,
+        endDate,
       }),
     enabled: dashboardType !== "repair",
     staleTime: 30 * 1000, // 30 seconds

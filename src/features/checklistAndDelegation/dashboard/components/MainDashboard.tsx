@@ -732,73 +732,92 @@ export default function MainDashboard() {
           {userRole === "admin" && renderStaffSummary()}
 
           {/* Task Sections Tabs */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700 p-1.5 flex gap-1">
-            <button
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                taskView === "recent"
-                  ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 shadow-sm"
-                  : "text-muted-foreground hover:bg-gray-50 dark:hover:bg-neutral-700 hover:text-foreground"
-              }`}
-              onClick={() => {
-                setTaskView("recent");
-                setTaskPage(1);
-              }}
-            >
-              <Clock className="w-4 h-4" />
-              Recent & Today
-            </button>
-            <button
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                taskView === "upcoming"
-                  ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 shadow-sm"
-                  : "text-muted-foreground hover:bg-gray-50 dark:hover:bg-neutral-700 hover:text-foreground"
-              }`}
-              onClick={() => {
-                setTaskView("upcoming");
-                setTaskPage(1);
-              }}
-            >
-              <Calendar className="w-4 h-4" />
-              Upcoming
-            </button>
-            <button
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                taskView === "overdue"
-                  ? "bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 shadow-sm"
-                  : "text-muted-foreground hover:bg-gray-50 dark:hover:bg-neutral-700 hover:text-foreground"
-              }`}
-              onClick={() => {
-                setTaskView("overdue");
-                setTaskPage(1);
-              }}
-            >
-              <AlertTriangle className="w-4 h-4" />
-              Overdue
-            </button>
-          </div>
+          {!dateRange.filtered && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700 p-1.5 flex gap-1">
+              <button
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  taskView === "recent"
+                    ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 shadow-sm"
+                    : "text-muted-foreground hover:bg-gray-50 dark:hover:bg-neutral-700 hover:text-foreground"
+                }`}
+                onClick={() => {
+                  setTaskView("recent");
+                  setTaskPage(1);
+                }}
+              >
+                <Clock className="w-4 h-4" />
+                Recent & Today
+              </button>
+              <button
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  taskView === "upcoming"
+                    ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 shadow-sm"
+                    : "text-muted-foreground hover:bg-gray-50 dark:hover:bg-neutral-700 hover:text-foreground"
+                }`}
+                onClick={() => {
+                  setTaskView("upcoming");
+                  setTaskPage(1);
+                }}
+              >
+                <Calendar className="w-4 h-4" />
+                Upcoming
+              </button>
+              <button
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  taskView === "overdue"
+                    ? "bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 shadow-sm"
+                    : "text-muted-foreground hover:bg-gray-50 dark:hover:bg-neutral-700 hover:text-foreground"
+                }`}
+                onClick={() => {
+                  setTaskView("overdue");
+                  setTaskPage(1);
+                }}
+              >
+                <AlertTriangle className="w-4 h-4" />
+                Overdue
+              </button>
+            </div>
+          )}
 
           {/* Conditional Rendering of Task Table */}
           <div className="mt-4">
             {isLoading ? (
               <>
-                {taskView === "recent" &&
-                  renderTaskTableSkeleton("Recent & Today's Tasks")}
-                {taskView === "upcoming" &&
-                  renderTaskTableSkeleton("Upcoming Tasks (Next 7 Days)")}
-                {taskView === "overdue" &&
-                  renderTaskTableSkeleton("Overdue Tasks")}
+                {dateRange.filtered ? (
+                  renderTaskTableSkeleton(
+                    `Tasks from ${dateRange.startDate} to ${dateRange.endDate}`,
+                  )
+                ) : (
+                  <>
+                    {taskView === "recent" &&
+                      renderTaskTableSkeleton("Recent & Today's Tasks")}
+                    {taskView === "upcoming" &&
+                      renderTaskTableSkeleton("Upcoming Tasks (Next 7 Days)")}
+                    {taskView === "overdue" &&
+                      renderTaskTableSkeleton("Overdue Tasks")}
+                  </>
+                )}
               </>
             ) : (
               <>
-                {taskView === "recent" &&
-                  renderTaskTable("Recent & Today's Tasks", filteredTasks)}
-                {taskView === "upcoming" &&
+                {dateRange.filtered ? (
                   renderTaskTable(
-                    "Upcoming Tasks (Next 7 Days)",
+                    `Tasks from ${dateRange.startDate} to ${dateRange.endDate}`,
                     filteredTasks,
-                  )}
-                {taskView === "overdue" &&
-                  renderTaskTable("Overdue Tasks", filteredTasks)}
+                  )
+                ) : (
+                  <>
+                    {taskView === "recent" &&
+                      renderTaskTable("Recent & Today's Tasks", filteredTasks)}
+                    {taskView === "upcoming" &&
+                      renderTaskTable(
+                        "Upcoming Tasks (Next 7 Days)",
+                        filteredTasks,
+                      )}
+                    {taskView === "overdue" &&
+                      renderTaskTable("Overdue Tasks", filteredTasks)}
+                  </>
+                )}
               </>
             )}
           </div>

@@ -84,6 +84,8 @@ export function useDashboard() {
       departmentFilter !== "all" ? departmentFilter : undefined,
       userRole,
       username,
+      dateRange.filtered ? dateRange.startDate : undefined,
+      dateRange.filtered ? dateRange.endDate : undefined,
     );
 
   // Fetch task list data (based on taskView)
@@ -94,6 +96,10 @@ export function useDashboard() {
     departmentFilter !== "all" ? departmentFilter : undefined,
     userRole,
     username,
+    1,
+    1000,
+    dateRange.filtered ? dateRange.startDate : undefined,
+    dateRange.filtered ? dateRange.endDate : undefined,
   );
 
   // Fetch Staff Task Summary
@@ -121,7 +127,8 @@ export function useDashboard() {
   // Transform tasks data to match expected format
   const filteredTasks: Task[] = useMemo(() => {
     if (!tasksData) return [];
-    return tasksData.map((task: Record<string, unknown>) => {
+
+    let result = tasksData.map((task: Record<string, unknown>) => {
       const taskStartDate = (task.task_start_date as string) || "";
       const today = new Date().toISOString().split("T")[0];
 
@@ -165,7 +172,22 @@ export function useDashboard() {
         rating: (task.rating || 0) as number,
       };
     });
-  }, [tasksData, dashboardType]);
+
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (t) =>
+          t.title.toLowerCase().includes(query) ||
+          t.assignedTo.toLowerCase().includes(query),
+      );
+    }
+
+    if (filterStatus !== "all") {
+      result = result.filter((t) => t.status === filterStatus);
+    }
+
+    return result;
+  }, [tasksData, dashboardType, searchQuery, filterStatus]);
 
   // Build department data from real data (Stats)
   const departmentData: DepartmentData = useMemo(() => {
