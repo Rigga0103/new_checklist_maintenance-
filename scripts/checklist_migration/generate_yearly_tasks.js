@@ -193,6 +193,7 @@ async function main() {
   const { data: templates, error: fetchError } = await supabase
     .from("checklist")
     .select("*")
+    .eq("status", "pending")
     .order("task_id", { ascending: true });
 
   if (fetchError) {
