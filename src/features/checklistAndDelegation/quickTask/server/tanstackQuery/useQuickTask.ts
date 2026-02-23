@@ -13,12 +13,15 @@ import {
   deleteChecklistTasksApi,
   deleteDelegationTasksApi,
   updateChecklistTaskApi,
+  updateDelegationTaskApi,
 } from "../api/quickTaskApi";
 import type {
   ChecklistTask,
   DelegationTask,
   ChecklistUpdatePayload,
   ChecklistOriginalMatch,
+  DelegationUpdatePayload,
+  DelegationOriginalMatch,
 } from "../../types/types";
 
 // ============ Query Keys ============
@@ -152,7 +155,7 @@ export function useDeleteDelegationTasks() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (taskIds: number[]) => deleteDelegationTasksApi(taskIds),
+    mutationFn: (tasks: DelegationTask[]) => deleteDelegationTasksApi(tasks),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: quickTaskKeys.delegation() });
     },
@@ -175,6 +178,26 @@ export function useUpdateChecklistTask() {
     }) => updateChecklistTaskApi(updatedTask, originalTask),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: quickTaskKeys.checklist() });
+    },
+  });
+}
+
+/**
+ * Update delegation task mutation
+ */
+export function useUpdateDelegationTask() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      updatedTask,
+      originalTask,
+    }: {
+      updatedTask: DelegationUpdatePayload;
+      originalTask: DelegationOriginalMatch;
+    }) => updateDelegationTaskApi(updatedTask, originalTask),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: quickTaskKeys.delegation() });
     },
   });
 }

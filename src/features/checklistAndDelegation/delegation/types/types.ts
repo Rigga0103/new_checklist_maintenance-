@@ -22,8 +22,8 @@ export interface DelegationTask {
 
 export interface DelegationFilters {
   search: string;
-  status: "all" | "pending" | "completed";
-  dateRange: "all" | "today" | "week" | "month";
+  status: string;
+  dateRange: string;
   name?: string;
 }
 

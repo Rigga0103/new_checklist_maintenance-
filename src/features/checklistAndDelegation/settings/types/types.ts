@@ -80,6 +80,7 @@ export type PermissionResource =
   | "repair_request"
   | "repairing"
   | "repair_history"
+  | "repair_part_vendor"
   // Maintenance
   | "maintenance"
   | "maintenance_dashboard"

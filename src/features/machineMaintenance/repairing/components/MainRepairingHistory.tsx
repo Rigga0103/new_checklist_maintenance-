@@ -75,6 +75,7 @@ export default function MainRepairingHistory() {
       "Machine Name",
       "Issue Detail",
       "Part Replaced",
+      "Warranty",
       "Work Done",
       "Requested By",
       "Assigned To",
@@ -90,6 +91,7 @@ export default function MainRepairingHistory() {
       r.machine_name || "",
       r.issue_detail || "",
       r.part_replaced || "",
+      r.warranty || "",
       r.work_done || "",
       r.form_filled_by || "",
       r.assigned_to || "",
@@ -221,6 +223,9 @@ export default function MainRepairingHistory() {
                     Part Replaced
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Warranty
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                     Assigned To
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
@@ -254,6 +259,9 @@ export default function MainRepairingHistory() {
                     </td>
                     <td className="px-4 py-3 text-sm text-foreground">
                       {repair.part_replaced || "-"}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-foreground">
+                      {repair.warranty || "-"}
                     </td>
                     <td className="px-4 py-3 text-sm text-foreground">
                       {repair.assigned_to || "-"}
@@ -359,6 +367,12 @@ export default function MainRepairingHistory() {
                   <p className="text-sm text-muted-foreground">Part Replaced</p>
                   <p className="font-medium text-foreground">
                     {selectedRepair.part_replaced || "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Warranty</p>
+                  <p className="font-medium text-foreground">
+                    {selectedRepair.warranty || "-"}
                   </p>
                 </div>
                 <div>

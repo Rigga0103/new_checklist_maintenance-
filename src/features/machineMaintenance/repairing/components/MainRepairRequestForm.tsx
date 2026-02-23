@@ -1,7 +1,8 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useRepairRequestForm } from "../hooks/useRepairRequestForm";
-import { Loader2, Send, X, Wrench } from "lucide-react";
+import { Loader2, Send, X, Wrench, QrCode } from "lucide-react";
 import { useRBAC } from "@/hooks/useRBAC";
 
 const inputClass =
@@ -11,7 +12,19 @@ const selectClass =
 const labelClass =
   "block text-xs font-medium text-muted-foreground dark:text-muted-foreground mb-1";
 
-export default function MainRepairRequestForm() {
+export default function MainRepairRequestForm({
+  isPublic = false,
+}: {
+  isPublic?: boolean;
+}) {
+  const [showQR, setShowQR] = useState(false);
+  const [publicUrl, setPublicUrl] = useState("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setPublicUrl(`${window.location.origin}/public/repair-request`);
+    }
+  }, []);
   const {
     formData,
     requestByUsers,
@@ -31,7 +44,13 @@ export default function MainRepairRequestForm() {
     isLoading: isRbacLoading,
   } = useRBAC("repair_request");
 
-  if (isLoading || isRbacLoading) {
+  const effectiveCanRead = isPublic ? true : canRead;
+  const effectiveCanWrite = isPublic ? true : canWrite;
+
+  // We only wait for RBAC if it's not public
+  const showLoader = isLoading || (!isPublic && isRbacLoading);
+
+  if (showLoader) {
     return (
       <div className="flex items-center justify-center min-h-75">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
@@ -39,7 +58,7 @@ export default function MainRepairRequestForm() {
     );
   }
 
-  if (!canRead) {
+  if (!effectiveCanRead) {
     return (
       <div className="flex items-center justify-center h-96 text-muted-foreground">
         Access Denied. You do not have permission to view the Repair Request
@@ -58,6 +77,15 @@ export default function MainRepairRequestForm() {
             New Repair Request
           </h1>
         </div>
+        {!isPublic && (
+          <button
+            onClick={() => setShowQR(true)}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 rounded-lg transition-colors border border-blue-200 dark:border-blue-800"
+          >
+            <QrCode className="w-4 h-4" />
+            <span className="hidden sm:inline">Get QR Code</span>
+          </button>
+        )}
       </div>
 
       {/* Main Form Card */}
@@ -243,6 +271,66 @@ export default function MainRepairRequestForm() {
           </div>
         </div>
       </form>
+
+      {/* QR Code Modal for Public Access */}
+      {!isPublic && showQR && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-xl max-w-sm w-full mx-auto overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-700">
+              <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <QrCode className="w-5 h-5 text-blue-500" />
+                Public Form Link
+              </h2>
+              <button
+                onClick={() => setShowQR(false)}
+                className="p-1 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 flex flex-col items-center space-y-4">
+              <p className="text-sm text-center text-muted-foreground">
+                Scan this code to fill the repair request on any device without
+                logging in.
+              </p>
+              <div className="p-4 bg-white rounded-xl shadow-sm border border-neutral-200">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
+                    publicUrl,
+                  )}`}
+                  alt="Public Request Form QR Code"
+                  className="w-48 h-48"
+                />
+              </div>
+              <div className="pt-2 w-full">
+                <p className="text-xs font-medium text-foreground mb-1">
+                  Direct Link:
+                </p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={publicUrl}
+                    className="flex-1 w-full px-3 py-2 text-xs bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-md text-foreground focus:outline-none"
+                    onClick={(e) => {
+                      (e.target as HTMLInputElement).select();
+                      navigator.clipboard.writeText(publicUrl);
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-end px-6 py-4 border-t border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900/50">
+              <button
+                onClick={() => setShowQR(false)}
+                className="px-4 py-2 text-sm font-medium text-foreground bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-50 dark:hover:bg-neutral-700 rounded-lg transition-colors shadow-sm"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

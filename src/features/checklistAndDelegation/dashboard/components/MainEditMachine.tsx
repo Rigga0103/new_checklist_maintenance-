@@ -90,6 +90,15 @@ export default function MainEditMachine() {
     Partial<MachineRepairTask>
   >({});
 
+  // Delete Confirmation State
+  const [deleteConfirmTask, setDeleteConfirmTask] = useState<{
+    type: "maintenance" | "repair";
+    isBulk: boolean;
+    task?: MachineMaintenanceTask | MachineRepairTask;
+    taskId?: number;
+    count?: number;
+  } | null>(null);
+
   const [userRole, setUserRole] = useState<string>("");
   const tableRef = useRef<HTMLDivElement>(null);
 
@@ -211,7 +220,17 @@ export default function MainEditMachine() {
     }
   };
 
-  const handleDeleteMaintenanceSelected = async () => {
+  const confirmDeleteMaintenanceSelected = () => {
+    if (selectedMaintenanceIds.length === 0) return;
+    setDeleteConfirmTask({ type: "maintenance", isBulk: true });
+  };
+
+  const confirmDeleteMaintenanceTask = (task: MachineMaintenanceTask) => {
+    const count = (task as any).task_count || 1;
+    setDeleteConfirmTask({ type: "maintenance", isBulk: false, task, count });
+  };
+
+  const executeDeleteMaintenanceSelected = async () => {
     if (selectedMaintenanceIds.length === 0) return;
     const selectedTasks = maintenanceTasks.filter((t) =>
       selectedMaintenanceIds.includes(t.task_id),
@@ -220,12 +239,6 @@ export default function MainEditMachine() {
       (sum, t) => sum + ((t as any).task_count || 1),
       0,
     );
-    if (
-      !confirm(
-        `Delete ${selectedTasks.length} unique task group(s) (${totalAffected} total tasks)?`,
-      )
-    )
-      return;
 
     try {
       for (const task of selectedTasks) {
@@ -240,17 +253,15 @@ export default function MainEditMachine() {
     } catch (error) {
       console.error(error);
       toast.error("Failed to delete tasks");
+    } finally {
+      setDeleteConfirmTask(null);
     }
   };
 
-  const handleDeleteMaintenanceTask = async (task: MachineMaintenanceTask) => {
-    const count = (task as any).task_count || 1;
-    if (
-      !confirm(
-        `Delete all ${count} task(s) for "${task.task_description}" assigned to "${task.doer_name || "—"}"?`,
-      )
-    )
-      return;
+  const executeDeleteMaintenanceTask = async () => {
+    const task = deleteConfirmTask?.task as MachineMaintenanceTask;
+    if (!task) return;
+    const count = deleteConfirmTask?.count || 1;
 
     try {
       await deleteMaintenanceMutation.mutateAsync({
@@ -262,6 +273,8 @@ export default function MainEditMachine() {
     } catch (error) {
       console.error(error);
       toast.error("Failed to delete task");
+    } finally {
+      setDeleteConfirmTask(null);
     }
   };
 
@@ -326,25 +339,38 @@ export default function MainEditMachine() {
     }
   };
 
-  const handleDeleteRepairSelected = async () => {
+  const confirmDeleteRepairSelected = () => {
     if (selectedRepairIds.length === 0) return;
-    if (!confirm(`Delete ${selectedRepairIds.length} repair task(s)?`)) return;
+    setDeleteConfirmTask({ type: "repair", isBulk: true });
+  };
+
+  const confirmDeleteRepairTask = (taskId: number) => {
+    setDeleteConfirmTask({ type: "repair", isBulk: false, taskId });
+  };
+
+  const executeDeleteRepairSelected = async () => {
+    if (selectedRepairIds.length === 0) return;
     try {
       await deleteRepairMutation.mutateAsync(selectedRepairIds);
       setSelectedRepairIds([]);
       toast.success(`Deleted ${selectedRepairIds.length} tasks`);
     } catch {
       toast.error("Failed to delete tasks");
+    } finally {
+      setDeleteConfirmTask(null);
     }
   };
 
-  const handleDeleteRepairTask = async (taskId: number) => {
-    if (!confirm("Delete this repair task?")) return;
+  const executeDeleteRepairTask = async () => {
+    const taskId = deleteConfirmTask?.taskId;
+    if (!taskId) return;
     try {
       await deleteRepairMutation.mutateAsync([taskId]);
       toast.success("Task deleted");
     } catch {
       toast.error("Failed to delete task");
+    } finally {
+      setDeleteConfirmTask(null);
     }
   };
 
@@ -370,6 +396,7 @@ export default function MainEditMachine() {
           vendor_name: repairEditForm.vendor_name,
           part_replaced: repairEditForm.part_replaced,
           work_done: repairEditForm.work_done,
+          warranty: repairEditForm.warranty,
           remarks: repairEditForm.remarks,
         },
       });
@@ -414,6 +441,7 @@ export default function MainEditMachine() {
             status: data.status,
             vendor_name: data.vendor_name,
             bill_amount: data.bill_amount,
+            warranty: data.warranty,
           },
         });
         toast.success("Repair task updated");
@@ -638,7 +666,7 @@ export default function MainEditMachine() {
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDeleteMaintenanceTask(task)}
+                          onClick={() => confirmDeleteMaintenanceTask(task)}
                           className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
                           title="Delete task"
                         >
@@ -690,6 +718,9 @@ export default function MainEditMachine() {
           </th>
           <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
             Part Replaced
+          </th>
+          <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
+            Warranty
           </th>
           <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase bg-yellow-50 dark:bg-yellow-900/20">
             Start Date
@@ -806,6 +837,20 @@ export default function MainEditMachine() {
                   task.part_replaced || "—"
                 )}
               </td>
+              <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={repairEditForm.warranty || ""}
+                    onChange={(e) =>
+                      handleRepairFieldChange("warranty", e.target.value)
+                    }
+                    className={inputClass}
+                  />
+                ) : (
+                  task.warranty || "—"
+                )}
+              </td>
               <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap bg-yellow-50 dark:bg-yellow-900/10">
                 {formatDate(task.task_start_date)}
               </td>
@@ -868,7 +913,7 @@ export default function MainEditMachine() {
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleDeleteRepairTask(task.task_id)}
+                        onClick={() => confirmDeleteRepairTask(task.task_id)}
                         className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
                         title="Delete task"
                       >
@@ -1013,8 +1058,8 @@ export default function MainEditMachine() {
             <button
               onClick={
                 activeTab === "maintenance"
-                  ? handleDeleteMaintenanceSelected
-                  : handleDeleteRepairSelected
+                  ? confirmDeleteMaintenanceSelected
+                  : confirmDeleteRepairSelected
               }
               disabled={isDeleting}
               className="flex items-center gap-2 px-3 py-1.5 text-sm bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors ml-auto"
@@ -1077,6 +1122,55 @@ export default function MainEditMachine() {
               Next
               <ChevronRight className="w-4 h-4" />
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-xl w-full max-w-md p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              Confirm Deletion
+            </h3>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">
+              {deleteConfirmTask.isBulk
+                ? deleteConfirmTask.type === "maintenance"
+                  ? `Delete ${selectedMaintenanceIds.length} unique task group(s) (${maintenanceTasks
+                      .filter((t) => selectedMaintenanceIds.includes(t.task_id))
+                      .reduce(
+                        (sum, t) => sum + ((t as any).task_count || 1),
+                        0,
+                      )} total tasks)? This action cannot be undone.`
+                  : `Are you sure you want to delete ${selectedRepairIds.length} repair task(s)? This action cannot be undone.`
+                : deleteConfirmTask.type === "maintenance"
+                  ? `Delete all ${deleteConfirmTask.count} task(s) for "${(deleteConfirmTask.task as MachineMaintenanceTask)?.task_description}" assigned to "${(deleteConfirmTask.task as MachineMaintenanceTask)?.doer_name || "—"}"? This action cannot be undone.`
+                  : `Are you sure you want to delete this repair task? This action cannot be undone.`}
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setDeleteConfirmTask(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:bg-neutral-700 dark:text-gray-300 dark:hover:bg-neutral-600 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={
+                  deleteConfirmTask.isBulk
+                    ? deleteConfirmTask.type === "maintenance"
+                      ? executeDeleteMaintenanceSelected
+                      : executeDeleteRepairSelected
+                    : deleteConfirmTask.type === "maintenance"
+                      ? executeDeleteMaintenanceTask
+                      : executeDeleteRepairTask
+                }
+                disabled={isDeleting}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 rounded-lg"
+              >
+                {isDeleting && <Loader2 className="w-4 h-4 animate-spin" />}
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

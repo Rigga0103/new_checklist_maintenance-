@@ -13,6 +13,7 @@ export const fetchDelegationDataSortByDate = async (
   searchTerm = "",
   roleOverride?: string | null,
   nameFilter?: string,
+  statusFilter?: string,
 ): Promise<FetchResult> => {
   const role =
     roleOverride ??
@@ -33,8 +34,23 @@ export const fetchDelegationDataSortByDate = async (
       .select("*", { count: "exact" })
       .lte("task_start_date", endOfTodayISO)
       .order("task_start_date", { ascending: true })
-      .or("status.neq.done,status.is.null") // Show pending + extend tasks (until status becomes 'done')
       .range(from, to);
+
+    if (statusFilter && statusFilter !== "all" && statusFilter !== "All") {
+      if (statusFilter.toLowerCase() === "overdue") {
+        query = query
+          .lt("planned_date", endOfTodayISO)
+          .or("status.neq.done,status.is.null");
+      } else if (statusFilter.toLowerCase() === "pending") {
+        query = query.or("status.eq.pending,status.is.null");
+      } else if (statusFilter.toLowerCase() === "extend") {
+        query = query.eq("status", "extend");
+      } else {
+        query = query.eq("status", statusFilter);
+      }
+    } else {
+      query = query.or("status.neq.done,status.is.null"); // Show pending + extend tasks
+    }
 
     if (searchTerm && searchTerm.trim() !== "") {
       const searchValue = searchTerm.trim();

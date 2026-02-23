@@ -75,6 +75,13 @@ const routes: Route[] = [
         permissionResource: "repair_request",
       },
       {
+        href: "/repairing/part-and-vendor",
+        label: "Part And Vendor",
+        icon: "Package",
+        showFor: ["admin", "user"] as const,
+        permissionResource: "repair_part_vendor", // Ensure backend has this permission or relies on role
+      },
+      {
         href: "/repairing/pending",
         label: "Pending",
         icon: "Clock",

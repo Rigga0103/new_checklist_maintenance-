@@ -7,6 +7,9 @@ import {
   fetchActiveUserNames,
   getUniqueMachines,
   getUniqueAssignedPersons,
+  fetchPartsAndVendors,
+  getUniqueVendors,
+  getUniqueParts,
 } from "../api/repairingApi";
 import type {
   RepairProcessFormData,
@@ -34,13 +37,22 @@ export const repairingKeys = {
     searchTerm: string,
     role: string | null,
     username: string | null,
+  ) => [...repairingKeys.all, "history"] as const,
+  filters: () => [...repairingKeys.all, "filters"] as const,
+  partsAndVendors: (
+    page: number,
+    limit: number,
+    searchTerm: string,
+    vendorFilter: string,
+    partFilter: string,
   ) =>
     [
       ...repairingKeys.all,
-      "history",
-      { page, limit, searchTerm, role, username },
+      "partsAndVendors",
+      { page, limit, searchTerm, vendorFilter, partFilter },
     ] as const,
-  filters: () => [...repairingKeys.all, "filters"] as const,
+  partsAndVendorsFilters: () =>
+    [...repairingKeys.all, "partsAndVendorsFilters"] as const,
 };
 
 // --- Queries ---
@@ -92,6 +104,41 @@ export const useRepairFiltersQuery = () => {
       return { machines, persons };
     },
     staleTime: 1000 * 60 * 5, // Cache filters for 5 minutes
+  });
+};
+
+export const usePartsAndVendorsQuery = (
+  page: number,
+  limit: number,
+  searchTerm: string,
+  vendorFilter: string,
+  partFilter: string,
+) => {
+  return useQuery({
+    queryKey: repairingKeys.partsAndVendors(
+      page,
+      limit,
+      searchTerm,
+      vendorFilter,
+      partFilter,
+    ),
+    queryFn: () =>
+      fetchPartsAndVendors(page, limit, searchTerm, vendorFilter, partFilter),
+    placeholderData: (previousData) => previousData,
+  });
+};
+
+export const usePartsAndVendorsFiltersQuery = () => {
+  return useQuery({
+    queryKey: repairingKeys.partsAndVendorsFilters(),
+    queryFn: async () => {
+      const [vendors, parts] = await Promise.all([
+        getUniqueVendors(),
+        getUniqueParts(),
+      ]);
+      return { vendors, parts };
+    },
+    staleTime: 1000 * 60 * 5,
   });
 };
 

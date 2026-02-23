@@ -6,6 +6,8 @@ import type {
   PaginatedResponse,
   ChecklistUpdatePayload,
   ChecklistOriginalMatch,
+  DelegationOriginalMatch,
+  DelegationUpdatePayload,
 } from "../../types/types";
 
 // ============ Checklist API ============
@@ -126,73 +128,175 @@ export const fetchUsersData = async (): Promise<User[]> => {
 // ============ Delete APIs ============
 
 /**
- * Delete checklist tasks by matching name + task_description
- * Only deletes where submission_date is null
+ * Delete checklist tasks by matching department + name + task_description
+ * Only deletes where submission_date is null (pending)
  */
 export const deleteChecklistTasksApi = async (
   tasks: ChecklistTask[],
 ): Promise<ChecklistTask[]> => {
   for (const task of tasks) {
-    const { error } = await supabase
-      .from("checklist")
-      .delete()
-      .eq("name", task.name)
-      .eq("task_description", task.task_description)
-      .is("submission_date", null);
+    let query = supabase.from("checklist").delete().is("submission_date", null);
 
+    // Strict composite match
+    if (task.department) query = query.eq("department", task.department);
+    else query = query.is("department", null);
+
+    if (task.name) query = query.eq("name", task.name);
+    else query = query.is("name", null);
+
+    if (task.task_description)
+      query = query.eq("task_description", task.task_description);
+    else query = query.is("task_description", null);
+
+    const { error } = await query;
     if (error) throw error;
   }
   return tasks;
 };
 
 /**
- * Delete delegation tasks by task_id
- * Only deletes where submission_date is null
+ * Delete delegation tasks by matching department + name + task_description
+ * Only deletes where submission_date is null (pending)
  */
 export const deleteDelegationTasksApi = async (
-  taskIds: number[],
-): Promise<number[]> => {
-  const { error } = await supabase
-    .from("delegation")
-    .delete()
-    .in("task_id", taskIds)
-    .is("submission_date", null);
+  tasks: DelegationTask[],
+): Promise<DelegationTask[]> => {
+  for (const task of tasks) {
+    let query = supabase
+      .from("delegation")
+      .delete()
+      .is("submission_date", null);
 
-  if (error) throw error;
-  return taskIds;
+    // Strict composite match
+    if (task.department) query = query.eq("department", task.department);
+    else query = query.is("department", null);
+
+    if (task.name) query = query.eq("name", task.name);
+    else query = query.is("name", null);
+
+    if (task.task_description)
+      query = query.eq("task_description", task.task_description);
+    else query = query.is("task_description", null);
+
+    const { error } = await query;
+    if (error) throw error;
+  }
+  return tasks;
 };
 
-// ============ Update API ============
+// ============ Update APIs ============
 
 /**
- * Update checklist task by matching department, name, task_description
+ * Update checklist task by matching department + name + task_description
  * Updates all matching rows where submission_date is null
  */
 export const updateChecklistTaskApi = async (
   updatedTask: ChecklistUpdatePayload,
   originalTask: ChecklistOriginalMatch,
 ): Promise<ChecklistTask[]> => {
-  const { data, error } = await supabase
+  const updatePayload: Record<string, unknown> = {};
+
+  if (updatedTask.department !== undefined)
+    updatePayload.department = updatedTask.department;
+  if (updatedTask.given_by !== undefined)
+    updatePayload.given_by = updatedTask.given_by;
+  if (updatedTask.name !== undefined) updatePayload.name = updatedTask.name;
+  if (updatedTask.task_description !== undefined)
+    updatePayload.task_description = updatedTask.task_description;
+  if (updatedTask.enable_reminder !== undefined)
+    updatePayload.enable_reminder = updatedTask.enable_reminder;
+  if (updatedTask.require_attachment !== undefined)
+    updatePayload.require_attachment = updatedTask.require_attachment;
+  if (updatedTask.remark !== undefined)
+    updatePayload.remark = updatedTask.remark;
+
+  let query = supabase
     .from("checklist")
-    .update({
-      department: updatedTask.department,
-      given_by: updatedTask.given_by,
-      name: updatedTask.name,
-      task_description: updatedTask.task_description,
-      enable_reminder: updatedTask.enable_reminder,
-      require_attachment: updatedTask.require_attachment,
-      remark: updatedTask.remark,
-    })
-    .eq("department", originalTask.department)
-    .eq("name", originalTask.name)
-    .eq("task_description", originalTask.task_description)
-    .is("submission_date", null)
-    .select();
+    .update(updatePayload)
+    .is("submission_date", null);
+
+  // Strict composite match
+  if (originalTask.department)
+    query = query.eq("department", originalTask.department);
+  else query = query.is("department", null);
+
+  if (originalTask.name) query = query.eq("name", originalTask.name);
+  else query = query.is("name", null);
+
+  if (originalTask.task_description)
+    query = query.eq("task_description", originalTask.task_description);
+  else query = query.is("task_description", null);
+
+  const { data, error } = await query.select();
 
   if (error) {
-    console.error("Supabase error:", error);
+    console.error("Supabase error (Checklist update):", error);
     throw error;
   }
 
   return data as ChecklistTask[];
+};
+
+/**
+ * Update delegation task by matching department + name + task_description
+ * Updates all matching rows where submission_date is null
+ */
+export const updateDelegationTaskApi = async (
+  updatedTask: DelegationUpdatePayload,
+  originalTask: DelegationOriginalMatch,
+): Promise<DelegationTask[]> => {
+  const updatePayload: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (updatedTask.department !== undefined)
+    updatePayload.department = updatedTask.department;
+  if (updatedTask.given_by !== undefined)
+    updatePayload.given_by = updatedTask.given_by;
+  if (updatedTask.name !== undefined) updatePayload.name = updatedTask.name;
+  if (updatedTask.task_description !== undefined)
+    updatePayload.task_description = updatedTask.task_description;
+  if (updatedTask.frequency !== undefined)
+    updatePayload.frequency = updatedTask.frequency;
+  if (updatedTask.enable_reminder !== undefined)
+    updatePayload.enable_reminder = updatedTask.enable_reminder;
+  if (updatedTask.require_attachment !== undefined)
+    updatePayload.require_attachment = updatedTask.require_attachment;
+
+  if (updatedTask.task_start_date !== undefined) {
+    updatePayload.task_start_date = updatedTask.task_start_date
+      ? new Date(updatedTask.task_start_date).toISOString()
+      : null;
+  }
+  if (updatedTask.planned_date !== undefined) {
+    updatePayload.planned_date = updatedTask.planned_date
+      ? new Date(updatedTask.planned_date).toISOString()
+      : null;
+  }
+
+  let query = supabase
+    .from("delegation")
+    .update(updatePayload)
+    .is("submission_date", null);
+
+  // Strict composite match
+  if (originalTask.department)
+    query = query.eq("department", originalTask.department);
+  else query = query.is("department", null);
+
+  if (originalTask.name) query = query.eq("name", originalTask.name);
+  else query = query.is("name", null);
+
+  if (originalTask.task_description)
+    query = query.eq("task_description", originalTask.task_description);
+  else query = query.is("task_description", null);
+
+  const { data, error } = await query.select();
+
+  if (error) {
+    console.error("Error editing delegation task (cascading):", error);
+    throw error;
+  }
+
+  return data as DelegationTask[];
 };

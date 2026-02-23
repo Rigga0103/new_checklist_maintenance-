@@ -285,6 +285,11 @@ export default function MainRepairingDashboard() {
                         Vendor: {repair.vendor_name}
                       </p>
                     )}
+                    {repair.warranty && (
+                      <p className="text-xs text-green-600 dark:text-green-400 font-medium">
+                        Warranty: {repair.warranty}
+                      </p>
+                    )}
                   </div>
                   <div className="ml-4">{getStatusBadge(repair.status)}</div>
                 </div>

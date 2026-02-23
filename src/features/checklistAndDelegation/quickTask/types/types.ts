@@ -33,12 +33,30 @@ export interface ChecklistUpdatePayload {
 }
 
 export interface ChecklistOriginalMatch {
-  department: string;
-  name: string;
-  task_description: string;
+  department: string | null;
+  name: string | null;
+  task_description: string | null;
 }
 
 // ============ Delegation Types ============
+
+export interface DelegationUpdatePayload {
+  department?: string;
+  given_by?: string;
+  name?: string;
+  task_description?: string;
+  frequency?: string;
+  enable_reminder?: "yes" | "no";
+  require_attachment?: string;
+  task_start_date?: string;
+  planned_date?: string;
+}
+
+export interface DelegationOriginalMatch {
+  department: string | null;
+  name: string | null;
+  task_description: string | null;
+}
 
 export interface DelegationTask {
   task_id: number;

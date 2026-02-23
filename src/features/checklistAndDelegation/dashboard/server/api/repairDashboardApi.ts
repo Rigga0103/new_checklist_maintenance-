@@ -20,6 +20,7 @@ export interface MachineRepairTask {
   bill_copy_url?: string;
   bill_amount?: number;
   remarks?: string;
+  warranty?: string;
 }
 
 export interface MachineMaintenanceTask {

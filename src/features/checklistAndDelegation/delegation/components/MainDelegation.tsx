@@ -30,6 +30,7 @@ export default function MainDelegation() {
   const [username, setUsername] = useState<string | null>(null);
   const [viewMyTasksOnly, setViewMyTasksOnly] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   // Date range filter for History tab
   const [historyFromDate, setHistoryFromDate] = useState("");
   const [historyToDate, setHistoryToDate] = useState("");
@@ -72,6 +73,7 @@ export default function MainDelegation() {
     updateNextTargetDate,
     filters,
     handleNameFilter,
+    handleStatusFilter,
     // Edit
     editingTaskId,
     editFormData,
@@ -319,6 +321,46 @@ export default function MainDelegation() {
             </div>
           )}
         </div>
+
+        {/* Status Filter Dropdown */}
+        {activeTab === "pending" && (
+          <div className="relative">
+            <button
+              onClick={() => setStatusDropdownOpen(!statusDropdownOpen)}
+              className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800"
+            >
+              {filters.status === "all" ? "Filter by Status" : filters.status}
+              <ChevronDown
+                className={`w-4 h-4 transition-transform ${statusDropdownOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+            {statusDropdownOpen && (
+              <div className="absolute z-50 mt-1 w-40 max-h-60 overflow-auto rounded-lg bg-white dark:bg-neutral-800 shadow-lg border border-gray-200 dark:border-neutral-700">
+                <button
+                  onClick={() => {
+                    handleStatusFilter("all");
+                    setStatusDropdownOpen(false);
+                  }}
+                  className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700"
+                >
+                  All Statuses
+                </button>
+                {["Pending", "Extend", "Overdue"].map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => {
+                      handleStatusFilter(st);
+                      setStatusDropdownOpen(false);
+                    }}
+                    className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700"
+                  >
+                    {st}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Date range filter — History only */}
         {activeTab === "history" && (

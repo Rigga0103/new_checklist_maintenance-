@@ -22,10 +22,11 @@ import {
   useUsers,
   useDeleteChecklistTasks,
   useUpdateChecklistTask,
+  useDeleteDelegationTasks,
+  useUpdateDelegationTask,
 } from "../server/tanstackQuery/useQuickTask";
 import { QuickTaskSkeleton } from "./QuickTaskSkeleton";
-import type { ChecklistTask } from "../types/types";
-import { editDelegationTaskApi } from "../../delegation/server/api/delegationApi";
+import type { ChecklistTask, DelegationTask } from "../types/types";
 
 export default function MainQuickTask() {
   const [activeTab, setActiveTab] = useState<"checklist" | "delegation">(
@@ -38,19 +39,29 @@ export default function MainQuickTask() {
     name: false,
     frequency: false,
   });
+
+  // Checklist State
   const [selectedTasks, setSelectedTasks] = useState<ChecklistTask[]>([]);
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<ChecklistTask>>({});
 
-  // Delegation edit state
+  // Delegation State
+  const [selectedDelegationTasks, setSelectedDelegationTasks] = useState<
+    DelegationTask[]
+  >([]);
   const [delegationEditingId, setDelegationEditingId] = useState<number | null>(
     null,
   );
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [delegationEditFormData, setDelegationEditFormData] = useState<
-    Record<string, any>
+    Partial<DelegationTask>
   >({});
-  const [isSavingDelegationEdit, setIsSavingDelegationEdit] = useState(false);
+
+  // Delete Confirmation State
+  const [deleteConfirmTask, setDeleteConfirmTask] = useState<
+    ChecklistTask | DelegationTask | null
+  >(null);
+  const [isBulkDeleteConfirm, setIsBulkDeleteConfirm] = useState(false);
+
   const [userRole, setUserRole] = useState<string>(() => {
     if (typeof window === "undefined") return "";
     return localStorage.getItem("role") || "";
@@ -71,8 +82,12 @@ export default function MainQuickTask() {
     useDelegationTasksQuery(delegationPage, pageSize, nameFilter);
 
   const { data: usersData } = useUsers();
+
+  // Mutations
   const deleteChecklistMutation = useDeleteChecklistTasks();
   const updateChecklistMutation = useUpdateChecklistTask();
+  const deleteDelegationMutation = useDeleteDelegationTasks();
+  const updateDelegationMutation = useUpdateDelegationTask();
 
   // Data
   const checklistTasks = checklistResponse?.data || [];
@@ -177,41 +192,93 @@ export default function MainQuickTask() {
   };
 
   // Checkbox handlers
-  const handleCheckboxChange = (task: ChecklistTask) => {
-    if (selectedTasks.find((t) => t.task_id === task.task_id)) {
-      setSelectedTasks(selectedTasks.filter((t) => t.task_id !== task.task_id));
+  const handleCheckboxChange = (task: ChecklistTask | DelegationTask) => {
+    if (activeTab === "checklist") {
+      const cTask = task as ChecklistTask;
+      if (selectedTasks.find((t) => t.task_id === cTask.task_id)) {
+        setSelectedTasks(
+          selectedTasks.filter((t) => t.task_id !== cTask.task_id),
+        );
+      } else {
+        setSelectedTasks([...selectedTasks, cTask]);
+      }
     } else {
-      setSelectedTasks([...selectedTasks, task]);
+      const dTask = task as DelegationTask;
+      if (selectedDelegationTasks.find((t) => t.task_id === dTask.task_id)) {
+        setSelectedDelegationTasks(
+          selectedDelegationTasks.filter((t) => t.task_id !== dTask.task_id),
+        );
+      } else {
+        setSelectedDelegationTasks([...selectedDelegationTasks, dTask]);
+      }
     }
   };
 
   const handleSelectAll = () => {
-    if (selectedTasks.length === filteredChecklistTasks.length) {
-      setSelectedTasks([]);
+    if (activeTab === "checklist") {
+      if (selectedTasks.length === filteredChecklistTasks.length) {
+        setSelectedTasks([]);
+      } else {
+        setSelectedTasks([...filteredChecklistTasks]);
+      }
     } else {
-      setSelectedTasks([...filteredChecklistTasks]);
+      if (selectedDelegationTasks.length === filteredDelegationTasks.length) {
+        setSelectedDelegationTasks([]);
+      } else {
+        setSelectedDelegationTasks([...filteredDelegationTasks]);
+      }
     }
   };
 
   // Delete handlers
-  const handleDeleteSelected = async () => {
-    if (selectedTasks.length === 0) return;
-    try {
-      await deleteChecklistMutation.mutateAsync(selectedTasks);
-      setSelectedTasks([]);
-      toast.success(`Deleted ${selectedTasks.length} tasks`);
-    } catch {
-      toast.error("Failed to delete tasks");
-    }
+  const confirmDeleteTask = (task: ChecklistTask | DelegationTask) => {
+    setDeleteConfirmTask(task);
   };
 
-  const handleDeleteTask = async (task: ChecklistTask) => {
-    if (!confirm("Delete this task?")) return;
+  const confirmBulkDelete = () => {
+    if (activeTab === "checklist" && selectedTasks.length === 0) return;
+    if (activeTab === "delegation" && selectedDelegationTasks.length === 0)
+      return;
+    setIsBulkDeleteConfirm(true);
+  };
+
+  const executeDeleteTask = async () => {
+    if (!deleteConfirmTask) return;
     try {
-      await deleteChecklistMutation.mutateAsync([task]);
+      if (activeTab === "checklist") {
+        await deleteChecklistMutation.mutateAsync([
+          deleteConfirmTask as ChecklistTask,
+        ]);
+      } else {
+        await deleteDelegationMutation.mutateAsync([
+          deleteConfirmTask as DelegationTask,
+        ]);
+      }
       toast.success("Task deleted");
     } catch {
       toast.error("Failed to delete task");
+    } finally {
+      setDeleteConfirmTask(null);
+    }
+  };
+
+  const executeBulkDelete = async () => {
+    try {
+      if (activeTab === "checklist") {
+        if (selectedTasks.length === 0) return;
+        await deleteChecklistMutation.mutateAsync(selectedTasks);
+        setSelectedTasks([]);
+        toast.success(`Deleted ${selectedTasks.length} tasks`);
+      } else {
+        if (selectedDelegationTasks.length === 0) return;
+        await deleteDelegationMutation.mutateAsync(selectedDelegationTasks);
+        setSelectedDelegationTasks([]);
+        toast.success(`Deleted ${selectedDelegationTasks.length} tasks`);
+      }
+    } catch {
+      toast.error("Failed to delete tasks");
+    } finally {
+      setIsBulkDeleteConfirm(false);
     }
   };
 
@@ -267,8 +334,8 @@ export default function MainQuickTask() {
   };
 
   // Delegation edit handlers
-  const handleDelegationEditClick = (task: Record<string, unknown>) => {
-    setDelegationEditingId(task.task_id as number);
+  const handleDelegationEditClick = (task: DelegationTask) => {
+    setDelegationEditingId(task.task_id);
     setDelegationEditFormData({ ...task });
   };
 
@@ -277,38 +344,51 @@ export default function MainQuickTask() {
     setDelegationEditFormData({});
   };
 
-  const handleDelegationFieldChange = (field: string, value: string) => {
+  const handleDelegationFieldChange = (
+    field: keyof DelegationTask,
+    value: string,
+  ) => {
     setDelegationEditFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleDelegationSaveEdit = async () => {
     if (!delegationEditingId) return;
-    setIsSavingDelegationEdit(true);
+
+    const originalTask = delegationTasks.find(
+      (t) => t.task_id === delegationEditingId,
+    );
+    if (!originalTask) return;
+
     try {
-      const result = await editDelegationTaskApi(delegationEditingId, {
-        department: delegationEditFormData.department || undefined,
-        given_by: delegationEditFormData.given_by || undefined,
-        name: delegationEditFormData.name || undefined,
-        task_description: delegationEditFormData.task_description || undefined,
-        frequency: delegationEditFormData.frequency || undefined,
-        enable_reminder: delegationEditFormData.enable_reminder || undefined,
-        require_attachment:
-          delegationEditFormData.require_attachment || undefined,
-        task_start_date: delegationEditFormData.task_start_date || undefined,
-        planned_date: delegationEditFormData.planned_date || undefined,
+      await updateDelegationMutation.mutateAsync({
+        updatedTask: {
+          department: delegationEditFormData.department || undefined,
+          given_by: delegationEditFormData.given_by || undefined,
+          name: delegationEditFormData.name || undefined,
+          task_description:
+            delegationEditFormData.task_description || undefined,
+          frequency: delegationEditFormData.frequency || undefined,
+          enable_reminder:
+            (delegationEditFormData.enable_reminder as
+              | "yes"
+              | "no"
+              | undefined) || undefined,
+          require_attachment:
+            delegationEditFormData.require_attachment || undefined,
+          task_start_date: delegationEditFormData.task_start_date || undefined,
+          planned_date: delegationEditFormData.planned_date || undefined,
+        },
+        originalTask: {
+          department: originalTask.department || null,
+          name: originalTask.name || null,
+          task_description: originalTask.task_description || null,
+        },
       });
-      if (result.success) {
-        toast.success("Delegation task updated");
-        setDelegationEditingId(null);
-        setDelegationEditFormData({});
-        window.location.reload();
-      } else {
-        toast.error(result.message || "Failed to update");
-      }
+      toast.success("Delegation task updated");
+      setDelegationEditingId(null);
+      setDelegationEditFormData({});
     } catch {
       toast.error("Failed to update delegation task");
-    } finally {
-      setIsSavingDelegationEdit(false);
     }
   };
 
@@ -519,20 +599,31 @@ export default function MainQuickTask() {
           </div>
 
           {/* Bulk Delete */}
-          {selectedTasks.length > 0 &&
-            userRole === "admin" &&
-            activeTab === "checklist" && (
+          {(selectedTasks.length > 0 || selectedDelegationTasks.length > 0) &&
+            userRole === "admin" && (
               <button
-                onClick={handleDeleteSelected}
-                disabled={deleteChecklistMutation.isPending}
+                onClick={confirmBulkDelete}
+                disabled={
+                  activeTab === "checklist"
+                    ? deleteChecklistMutation.isPending
+                    : deleteDelegationMutation.isPending
+                }
                 className="flex items-center gap-2 px-3 py-1.5 text-sm bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors ml-auto"
               >
-                {deleteChecklistMutation.isPending ? (
+                {(
+                  activeTab === "checklist"
+                    ? deleteChecklistMutation.isPending
+                    : deleteDelegationMutation.isPending
+                ) ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <Trash2 className="w-4 h-4" />
                 )}
-                Delete ({selectedTasks.length})
+                Delete (
+                {activeTab === "checklist"
+                  ? selectedTasks.length
+                  : selectedDelegationTasks.length}
+                )
               </button>
             )}
         </div>
@@ -556,14 +647,18 @@ export default function MainQuickTask() {
             <table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
               <thead className="bg-gray-50 dark:bg-neutral-900/50 sticky top-0 z-10">
                 <tr>
-                  {userRole === "admin" && activeTab === "checklist" && (
+                  {userRole === "admin" && (
                     <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase w-10">
                       <input
                         type="checkbox"
                         checked={
-                          selectedTasks.length ===
-                            filteredChecklistTasks.length &&
-                          filteredChecklistTasks.length > 0
+                          activeTab === "checklist"
+                            ? selectedTasks.length ===
+                                filteredChecklistTasks.length &&
+                              filteredChecklistTasks.length > 0
+                            : selectedDelegationTasks.length ===
+                                filteredDelegationTasks.length &&
+                              filteredDelegationTasks.length > 0
                         }
                         onChange={handleSelectAll}
                         className="w-4 h-4 rounded border-gray-300 text-blue-600"
@@ -625,18 +720,20 @@ export default function MainQuickTask() {
                       key={task.task_id || index}
                       className={getRowClassName(task)}
                     >
-                      {userRole === "admin" && activeTab === "checklist" && (
+                      {userRole === "admin" && (
                         <td className="px-3 py-3">
                           <input
                             type="checkbox"
                             checked={
-                              !!selectedTasks.find(
-                                (t) => t.task_id === task.task_id,
-                              )
+                              activeTab === "checklist"
+                                ? !!selectedTasks.find(
+                                    (t) => t.task_id === task.task_id,
+                                  )
+                                : !!selectedDelegationTasks.find(
+                                    (t) => t.task_id === task.task_id,
+                                  )
                             }
-                            onChange={() =>
-                              handleCheckboxChange(task as ChecklistTask)
-                            }
+                            onChange={() => handleCheckboxChange(task)}
                             className="w-4 h-4 rounded border-gray-300 text-blue-600"
                           />
                         </td>
@@ -895,93 +992,75 @@ export default function MainQuickTask() {
                         )}
                       </td>
                       {/* ACTIONS */}
-                      {activeTab === "checklist" && (
-                        <td className="px-3 py-3">
-                          <div className="flex gap-1">
-                            {isChecklistEditing ? (
-                              <>
-                                <button
-                                  onClick={handleSaveEdit}
-                                  disabled={updateChecklistMutation.isPending}
-                                  className="p-1 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
-                                >
-                                  {updateChecklistMutation.isPending ? (
-                                    <Loader2 className="w-3 h-3 animate-spin" />
-                                  ) : (
-                                    <Save className="w-3 h-3" />
-                                  )}
-                                </button>
-                                <button
-                                  onClick={handleCancelEdit}
-                                  className="p-1 rounded bg-gray-200 dark:bg-neutral-700 hover:bg-gray-300"
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <button
-                                  onClick={() =>
-                                    handleEditClick(task as ChecklistTask)
-                                  }
-                                  className="p-1 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 hover:bg-blue-200"
-                                >
-                                  <Edit className="w-3 h-3" />
-                                </button>
-                                {userRole === "admin" && (
-                                  <button
-                                    onClick={() =>
-                                      handleDeleteTask(task as ChecklistTask)
-                                    }
-                                    disabled={deleteChecklistMutation.isPending}
-                                    className="p-1 rounded bg-red-100 dark:bg-red-900/30 text-red-600 hover:bg-red-200 disabled:opacity-50"
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                  </button>
+                      <td className="px-3 py-3">
+                        <div className="flex gap-1">
+                          {isChecklistEditing || isDelegationEditing ? (
+                            <>
+                              <button
+                                onClick={
+                                  activeTab === "checklist"
+                                    ? handleSaveEdit
+                                    : handleDelegationSaveEdit
+                                }
+                                disabled={
+                                  activeTab === "checklist"
+                                    ? updateChecklistMutation.isPending
+                                    : updateDelegationMutation.isPending
+                                }
+                                className="p-1 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+                              >
+                                {(
+                                  activeTab === "checklist"
+                                    ? updateChecklistMutation.isPending
+                                    : updateDelegationMutation.isPending
+                                ) ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <Save className="w-3 h-3" />
                                 )}
-                              </>
-                            )}
-                          </div>
-                        </td>
-                      )}
-                      {activeTab === "delegation" && (
-                        <td className="px-3 py-3">
-                          <div className="flex gap-1">
-                            {isDelegationEditing ? (
-                              <>
-                                <button
-                                  onClick={handleDelegationSaveEdit}
-                                  disabled={isSavingDelegationEdit}
-                                  className="p-1 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
-                                >
-                                  {isSavingDelegationEdit ? (
-                                    <Loader2 className="w-3 h-3 animate-spin" />
-                                  ) : (
-                                    <Save className="w-3 h-3" />
-                                  )}
-                                </button>
-                                <button
-                                  onClick={handleDelegationCancelEdit}
-                                  className="p-1 rounded bg-gray-200 dark:bg-neutral-700 hover:bg-gray-300"
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
-                              </>
-                            ) : (
+                              </button>
+                              <button
+                                onClick={
+                                  activeTab === "checklist"
+                                    ? handleCancelEdit
+                                    : handleDelegationCancelEdit
+                                }
+                                className="p-1 rounded bg-gray-200 dark:bg-neutral-700 hover:bg-gray-300"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </>
+                          ) : (
+                            <>
                               <button
                                 onClick={() =>
-                                  handleDelegationEditClick(
-                                    task as unknown as Record<string, unknown>,
-                                  )
+                                  activeTab === "checklist"
+                                    ? handleEditClick(task as ChecklistTask)
+                                    : handleDelegationEditClick(
+                                        task as DelegationTask,
+                                      )
                                 }
                                 className="p-1 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 hover:bg-blue-200"
                               >
                                 <Edit className="w-3 h-3" />
                               </button>
-                            )}
-                          </div>
-                        </td>
-                      )}
+                              {userRole === "admin" && (
+                                <button
+                                  onClick={() => confirmDeleteTask(task)}
+                                  disabled={
+                                    activeTab === "checklist"
+                                      ? deleteChecklistMutation.isPending
+                                      : deleteDelegationMutation.isPending
+                                  }
+                                  className="p-1 rounded bg-red-100 dark:bg-red-900/30 text-red-600 hover:bg-red-200 disabled:opacity-50"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   );
                 })}
@@ -1017,6 +1096,55 @@ export default function MainQuickTask() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {(deleteConfirmTask || isBulkDeleteConfirm) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-xl w-full max-w-md p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              Confirm Deletion
+            </h3>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">
+              {isBulkDeleteConfirm
+                ? `Are you sure you want to delete ${
+                    activeTab === "checklist"
+                      ? selectedTasks.length
+                      : selectedDelegationTasks.length
+                  } selected tasks? This action cannot be undone.`
+                : `Are you sure you want to delete this task? This action cannot be undone.`}
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setDeleteConfirmTask(null);
+                  setIsBulkDeleteConfirm(false);
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:bg-neutral-700 dark:text-gray-300 dark:hover:bg-neutral-600 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={
+                  isBulkDeleteConfirm ? executeBulkDelete : executeDeleteTask
+                }
+                disabled={
+                  activeTab === "checklist"
+                    ? deleteChecklistMutation.isPending
+                    : deleteDelegationMutation.isPending
+                }
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 rounded-lg"
+              >
+                {(activeTab === "checklist"
+                  ? deleteChecklistMutation.isPending
+                  : deleteDelegationMutation.isPending) && (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                )}
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

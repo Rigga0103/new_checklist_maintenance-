@@ -1,0 +1,23 @@
+
+> rigga_checklist_nextjs@0.1.0 build
+> next build
+
+▲ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local, .env
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 5.6s
+  Running TypeScript ...
+Failed to compile.
+
+./src/features/checklistAndDelegation/settings/components/PermissionsModal.tsx:64:7
+Type error: Property 'repair_part_vendor' is missing in type '{ dashboard: string; assign_task: string; checklist: string; delegation: string; quick_task: string; repair_dashboard: string; repair_request: string; repairing: string; repair_history: string; ... 10 more ...; training_video: string; }' but required in type 'Record<PermissionResource, string>'.
+
+[0m [90m 62 |[39m )[33m;[39m
+ [90m 63 |[39m
+[31m[1m>[22m[39m[90m 64 |[39m [36mconst[39m [33mRESOURCE_LABELS[39m[33m:[39m [33mRecord[39m[33m<[39m[33mPermissionResource[39m[33m,[39m string[33m>[39m [33m=[39m {
+ [90m    |[39m       [31m[1m^[22m[39m
+ [90m 65 |[39m   [90m// Checklist & Delegation[39m
+ [90m 66 |[39m   dashboard[33m:[39m [32m"Dashboard"[39m[33m,[39m
+ [90m 67 |[39m   assign_task[33m:[39m [32m"Assign Task"[39m[33m,[39m[0m
+Next.js build worker exited with code: 1 and signal: null

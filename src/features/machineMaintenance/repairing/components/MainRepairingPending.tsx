@@ -77,6 +77,7 @@ export default function MainRepairingPending() {
     vendorName: "",
     billAmount: undefined,
     remarks: "",
+    warranty: "",
   });
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [billFile, setBillFile] = useState<File | null>(null);
@@ -96,6 +97,7 @@ export default function MainRepairingPending() {
       vendorName: repair.vendor_name || "",
       billAmount: repair.bill_amount || undefined,
       remarks: repair.remarks || "",
+      warranty: repair.warranty || "",
     });
     setPhotoFile(null);
     setBillFile(null);
@@ -433,22 +435,43 @@ export default function MainRepairingPending() {
               {processForm.status === "completed" && (
                 <>
                   {/* Part Replaced */}
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1.5">
-                      Part Replaced
-                    </label>
-                    <input
-                      type="text"
-                      value={processForm.partReplaced}
-                      onChange={(e) =>
-                        setProcessForm((prev) => ({
-                          ...prev,
-                          partReplaced: e.target.value,
-                        }))
-                      }
-                      placeholder="e.g., Motor, Belt, Bearing"
-                      className="w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1.5">
+                        Part Replaced
+                      </label>
+                      <input
+                        type="text"
+                        value={processForm.partReplaced}
+                        onChange={(e) =>
+                          setProcessForm((prev) => ({
+                            ...prev,
+                            partReplaced: e.target.value,
+                          }))
+                        }
+                        placeholder="e.g., Motor, Belt, Bearing"
+                        className="w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground"
+                      />
+                    </div>
+
+                    {/* Warranty */}
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1.5">
+                        Warranty Details
+                      </label>
+                      <input
+                        type="text"
+                        value={processForm.warranty || ""}
+                        onChange={(e) =>
+                          setProcessForm((prev) => ({
+                            ...prev,
+                            warranty: e.target.value,
+                          }))
+                        }
+                        placeholder="e.g., 1 Year, 6 Months"
+                        className="w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground"
+                      />
+                    </div>
                   </div>
 
                   {/* Work Done */}

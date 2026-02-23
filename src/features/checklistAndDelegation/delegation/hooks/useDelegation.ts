@@ -58,6 +58,7 @@ export function useDelegation(roleOverride?: string | null) {
         filters.search,
         roleOverride,
         filters.name,
+        filters.status,
       );
       setPendingTasks(result.data);
       setTotalCount(result.totalCount);
@@ -67,7 +68,7 @@ export function useDelegation(roleOverride?: string | null) {
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, filters.search, filters.name, roleOverride]);
+  }, [currentPage, filters.search, filters.name, filters.status, roleOverride]);
 
   // Load history tasks
   const loadHistoryTasks = useCallback(async () => {
@@ -107,6 +108,12 @@ export function useDelegation(roleOverride?: string | null) {
   // Handle name filter
   const handleNameFilter = useCallback((value: string) => {
     setFilters((prev) => ({ ...prev, name: value }));
+    setCurrentPage(1);
+  }, []);
+
+  // Handle status filter
+  const handleStatusFilter = useCallback((value: string) => {
+    setFilters((prev) => ({ ...prev, status: value }));
     setCurrentPage(1);
   }, []);
 
@@ -445,6 +452,7 @@ export function useDelegation(roleOverride?: string | null) {
     // Actions
     handleSearch,
     handleNameFilter,
+    handleStatusFilter,
     handleTabChange,
     toggleTaskSelection,
     selectAllTasks,

@@ -488,6 +488,7 @@ export default function RepairingDashboard() {
                   "Part Replaced",
                   "Assigned To",
                   "Vendor",
+                  "Warranty",
                   "Bill Amount",
                   "Bill Copy",
                   "Photo",
@@ -496,7 +497,7 @@ export default function RepairingDashboard() {
                   <th
                     key={header}
                     className={`px-5 py-4 text-xs font-semibold tracking-wider text-muted-foreground dark:text-gray-300 uppercase ${
-                      i === 7 || i === 8 ? "text-center" : "text-left"
+                      i === 8 || i === 9 ? "text-center" : "text-left"
                     }`}
                   >
                     {header}
@@ -537,6 +538,9 @@ export default function RepairingDashboard() {
                     </td>
                     <td className="px-5 py-4 text-sm text-gray-700 dark:text-gray-300 align-middle">
                       {row.vendor_name || "—"}
+                    </td>
+                    <td className="px-5 py-4 text-sm text-gray-700 dark:text-gray-300 align-middle">
+                      {row.warranty || "—"}
                     </td>
                     <td className="px-5 py-4 text-sm font-bold text-gray-900 dark:text-white align-middle">
                       {row.bill_amount ? formatCurrency(row.bill_amount) : "—"}

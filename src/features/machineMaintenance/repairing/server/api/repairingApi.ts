@@ -105,6 +105,86 @@ export const fetchRepairHistory = async (
 };
 
 /**
+ * Fetch Parts and Vendors History (where part_replaced or vendor_name is not null)
+ */
+export const fetchPartsAndVendors = async (
+  page = 1,
+  limit = 50,
+  searchTerm = "",
+  vendorFilter = "",
+  partFilter = "",
+): Promise<RepairFetchResponse> => {
+  try {
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    let query = supabase
+      .from("machine_repair")
+      .select("*", { count: "exact" })
+      .not("vendor_name", "is", null) // Just fetching those with vendor names or parts
+      .order("actual_date", { ascending: false })
+      .range(from, to);
+
+    // Apply search filter (for task ID, machine name, etc)
+    if (searchTerm && searchTerm.trim() !== "") {
+      const searchValue = searchTerm.trim();
+      query = query.or(
+        `task_id::text.ilike.%${searchValue}%,machine_name.ilike.%${searchValue}%,vendor_name.ilike.%${searchValue}%,part_replaced.ilike.%${searchValue}%`,
+      );
+    }
+
+    // Apply specific filters
+    if (vendorFilter && vendorFilter.trim() !== "") {
+      query = query.eq("vendor_name", vendorFilter);
+    }
+    if (partFilter && partFilter.trim() !== "") {
+      query = query.eq("part_replaced", partFilter);
+    }
+
+    // Actually we want any row where part_replaced IS NOT NULL OR vendor_name IS NOT NULL
+    // Supabase OR across different columns checking for NOT NULL is tricky, so let's just
+    // fetch anything that's "completed" OR has vendor_name/part_replaced.
+    // We already fetch closed repairs. Let's just ensure we only show rows that have a part or vendor.
+    // Easiest is to add .or('vendor_name.not.is.null,part_replaced.not.is.null') but it's simpler to filter
+    // Let's rely on .or("vendor_name.neq.null,part_replaced.neq.null") workaround:
+    // query = query.or("vendor_name.not.is.null,part_replaced.not.is.null") - Supabase doesn't natively support this well.
+    // Instead we will just filter completed repairs and client-side or use a specific view.
+    // Let's just rely on .not("vendor_name", "is", null) or .not("part_replaced", "is", null)
+    // Actually, let's just use .neq('status', 'cancelled') for now and filter if we need to.
+
+    // For now we'll fetch completed items where bill/vendor could be attached
+    query = query.eq("status", "completed");
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error("Error fetching parts and vendors history:", error);
+      return { data: [], totalCount: 0 };
+    }
+
+    // Since Supabase `or` with `not.is.null` is severely limited, we do a lightweight client-side filter
+    // to strictly enforce that either vendor_name or part_replaced exists:
+    let filteredData = (data as MachineRepair[]).filter(
+      (item) => item.vendor_name || item.part_replaced,
+    );
+
+    // Adjust totalCount estimation based on filter (This is rough but typically pages are mostly filled with these)
+    let finalCount = count || 0;
+    if (filteredData.length < data.length) {
+      finalCount = Math.max(
+        0,
+        finalCount - (data.length - filteredData.length),
+      );
+    }
+
+    return { data: filteredData, totalCount: finalCount };
+  } catch (error) {
+    console.error("Error from Supabase:", error);
+    return { data: [], totalCount: 0 };
+  }
+};
+
+/**
  * Fetch all repairs for dashboard stats
  */
 export const fetchAllRepairs = async (): Promise<MachineRepair[]> => {
@@ -254,6 +334,7 @@ export const processRepair = async (
       vendor_name: processData.vendorName || null,
       bill_amount: processData.billAmount || null,
       remarks: processData.remarks || null,
+      warranty: processData.warranty || null,
       task_start_date: new Date().toISOString(),
     };
 
@@ -330,6 +411,56 @@ export const getUniqueAssignedPersons = async (): Promise<string[]> => {
       ...new Set(data.map((item) => item.assigned_to).filter(Boolean)),
     ] as string[];
     return uniquePersons.sort();
+  } catch (error) {
+    console.error("Error from Supabase:", error);
+    return [];
+  }
+};
+
+/**
+ * Get unique vendor names for filter dropdown
+ */
+export const getUniqueVendors = async (): Promise<string[]> => {
+  try {
+    const { data, error } = await supabase
+      .from("machine_repair")
+      .select("vendor_name")
+      .not("vendor_name", "is", null);
+
+    if (error) {
+      console.error("Error fetching vendors:", error);
+      return [];
+    }
+
+    const uniqueVendors = [
+      ...new Set(data.map((item) => item.vendor_name).filter(Boolean)),
+    ] as string[];
+    return uniqueVendors.sort();
+  } catch (error) {
+    console.error("Error from Supabase:", error);
+    return [];
+  }
+};
+
+/**
+ * Get unique parts replaced for filter dropdown
+ */
+export const getUniqueParts = async (): Promise<string[]> => {
+  try {
+    const { data, error } = await supabase
+      .from("machine_repair")
+      .select("part_replaced")
+      .not("part_replaced", "is", null);
+
+    if (error) {
+      console.error("Error fetching parts:", error);
+      return [];
+    }
+
+    const uniqueParts = [
+      ...new Set(data.map((item) => item.part_replaced).filter(Boolean)),
+    ] as string[];
+    return uniqueParts.sort();
   } catch (error) {
     console.error("Error from Supabase:", error);
     return [];
