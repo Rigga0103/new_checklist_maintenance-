@@ -247,13 +247,8 @@ export default function MainRepairRequestForm({
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting || !canWrite}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                title={
-                  !canWrite
-                    ? "You do not have permission to submit requests"
-                    : ""
-                }
+                disabled={isSubmitting}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 active:bg-green-800 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {isSubmitting ? (
                   <>
