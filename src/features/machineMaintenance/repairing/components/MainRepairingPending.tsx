@@ -401,7 +401,7 @@ export default function MainRepairingPending() {
                       status: e.target.value as RepairProcessFormData["status"],
                     }))
                   }
-                  className="w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground"
+                  className="min-w-32 w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground"
                 >
                   <option value="pending">Pending</option>
                   <option value="in_progress">In Progress</option>

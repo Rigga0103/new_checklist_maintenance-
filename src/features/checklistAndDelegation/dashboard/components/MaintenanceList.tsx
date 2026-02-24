@@ -625,7 +625,7 @@ export default function MaintenanceList({
                             onChange={(e) =>
                               updateTaskStatus(task.task_id, e.target.value)
                             }
-                            className="border border-gray-300 dark:border-neutral-600 rounded-md px-2 py-1 w-full disabled:bg-gray-100 dark:disabled:bg-neutral-800 disabled:cursor-not-allowed text-xs bg-white dark:bg-neutral-700 text-gray-900 dark:text-white"
+                            className="min-w-32 border border-gray-300 dark:border-neutral-600 rounded-md px-2 py-1 w-full disabled:bg-gray-100 dark:disabled:bg-neutral-800 disabled:cursor-not-allowed text-xs bg-white dark:bg-neutral-700 text-gray-900 dark:text-white"
                           >
                             <option value="">Select</option>
                             <option value="Done">Done</option>
