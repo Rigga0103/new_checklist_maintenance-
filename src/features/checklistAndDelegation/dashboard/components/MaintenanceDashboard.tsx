@@ -12,6 +12,7 @@ import {
   PieChart as PieChartIcon,
   ChevronLeft,
   ChevronRight,
+  Download,
 } from "lucide-react";
 import {
   BarChart,
@@ -119,6 +120,53 @@ export default function MaintenanceDashboard() {
     currentPage * ITEMS_PER_PAGE,
     dashboardTasks.length,
   );
+
+  const exportToCSV = () => {
+    if (dashboardTasks.length === 0) {
+      alert("No data to export");
+      return;
+    }
+
+    const headers = [
+      "Machine Name",
+      "Task Description",
+      "Assigned To",
+      "Start Date",
+      "Actual Date",
+      "Status",
+    ];
+
+    const csvRows = dashboardTasks.map((t) => {
+      let statusStr = "Pending";
+      if (t.actual_date && t.actual_date.trim() !== "") {
+        statusStr = "Completed";
+      } else if (dashboardView === "overdue") {
+        statusStr = "Overdue";
+      }
+
+      return [
+        `"${(t.machine_name || "").replace(/"/g, '""')}"`,
+        `"${(t.task_description || "").replace(/"/g, '""')}"`,
+        `"${(t.assigned_to || t.doer_name || "").replace(/"/g, '""')}"`,
+        t.task_start_date || "",
+        t.actual_date || "",
+        statusStr,
+      ];
+    });
+
+    const csvContent = [
+      headers.join(","),
+      ...csvRows.map((e) => e.join(",")),
+    ].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `Maintenance_${dashboardView}_Tasks.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   if (maintenanceLoading) {
     return (
@@ -318,10 +366,19 @@ export default function MaintenanceDashboard() {
               {dashboardView === "upcoming" && "Upcoming Tasks"}
               {dashboardView === "overdue" && "Overdue Tasks"}
             </h2>
-            <span className="text-xs text-muted-foreground">
-              {dashboardTasks.length} task
-              {dashboardTasks.length !== 1 ? "s" : ""}
-            </span>
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <span>
+                {dashboardTasks.length} task
+                {dashboardTasks.length !== 1 ? "s" : ""}
+              </span>
+              <button
+                onClick={exportToCSV}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                Download CSV
+              </button>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">

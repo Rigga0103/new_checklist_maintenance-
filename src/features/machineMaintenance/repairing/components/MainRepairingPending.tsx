@@ -12,6 +12,7 @@ import {
   X,
   Upload,
   Save,
+  Download,
 } from "lucide-react";
 import Image from "next/image";
 import {
@@ -185,6 +186,42 @@ export default function MainRepairingPending() {
 
   const totalPages = Math.ceil(totalCount / limit);
 
+  const exportToExcel = () => {
+    const headers = [
+      "Task ID",
+      "Machine Name",
+      "Issue Detail",
+      "Requested By",
+      "Assigned To",
+      "Vendor",
+      "Date",
+      "Status",
+    ];
+
+    const rows = repairs.map((t) => [
+      t.task_id,
+      t.machine_name || "",
+      t.issue_detail || "",
+      t.form_filled_by || "",
+      t.assigned_to || "",
+      t.vendor_name || "",
+      formatDate(t.created_at),
+      t.status || "",
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `repairing_pending_${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+  };
+
   if (isLoading || isRbacLoading) {
     return (
       <div className="flex items-center justify-center min-h-100">
@@ -212,6 +249,15 @@ export default function MainRepairingPending() {
           <p className="text-muted-foreground">
             Process and manage repair requests
           </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={exportToExcel}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-foreground bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            Export
+          </button>
         </div>
       </div>
 

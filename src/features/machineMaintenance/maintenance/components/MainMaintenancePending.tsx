@@ -10,6 +10,7 @@ import {
   X,
   Upload,
   Save,
+  Download,
 } from "lucide-react";
 import Image from "next/image";
 import {
@@ -142,6 +143,38 @@ export default function MainMaintenancePending() {
 
   const totalPages = Math.ceil(totalCount / limit);
 
+  const exportToExcel = () => {
+    const headers = [
+      "Task ID",
+      "Machine Name",
+      "Task Description",
+      "Frequency",
+      "Doer",
+      "Planned Date",
+    ];
+
+    const rows = tasks.map((t) => [
+      t.task_id,
+      t.machine_name || "",
+      t.task_description || "",
+      t.frequency || "",
+      t.doer_name || "",
+      formatDate(t.task_start_date),
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `maintenance_pending_${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+  };
+
   if (isLoading || isRbacLoading) {
     return (
       <div className="flex items-center justify-center min-h-100">
@@ -169,6 +202,15 @@ export default function MainMaintenancePending() {
           <p className="text-muted-foreground">
             Complete maintenance tasks for today
           </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={exportToExcel}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-foreground bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            Export
+          </button>
         </div>
       </div>
 

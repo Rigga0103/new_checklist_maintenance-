@@ -163,10 +163,10 @@ export default function RepairingDashboard() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
-            Repair & Maintenance Dashboard
+            Repair Dashboard
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Complete overview of repair requests and scheduled maintenance
+            Complete overview of repair requests 
             activities
           </p>
         </div>

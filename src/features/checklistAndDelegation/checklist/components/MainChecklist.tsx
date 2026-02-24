@@ -16,6 +16,7 @@ import {
   User,
   ChevronDown,
   Calendar,
+  Download,
 } from "lucide-react";
 // import Image from "next/image";
 import {
@@ -361,6 +362,56 @@ export default function MainChecklist() {
     return colors[freq] || colors["one-time"];
   };
 
+  const exportToCSV = () => {
+    if (tasks.length === 0) {
+      toast.error("No data to export");
+      return;
+    }
+
+    const headers = [
+      "Task ID",
+      "Timestamp",
+      "Department",
+      "Given By",
+      "Name",
+      "Description",
+      "Start Date",
+      activeTab === "pending" ? "End Date" : "Submitted Date",
+      "Status",
+      "Freq",
+      "Remarks",
+    ];
+
+    const csvRows = tasks.map((t) => [
+      t.task_id,
+      formatDate(t.created_at),
+      t.department || "",
+      t.given_by || "",
+      t.name || "",
+      `"${(t.task_description || "").replace(/"/g, '""')}"`,
+      formatDate(t.task_start_date),
+      activeTab === "pending"
+        ? formatDate(t.planned_date)
+        : formatDate(t.submission_date),
+      t.status || "Pending",
+      t.frequency || "One-time",
+      `"${(t.remark || "").replace(/"/g, '""')}"`,
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...csvRows.map((e) => e.join(",")),
+    ].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `Checklist_${activeTab}_Tasks.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -545,6 +596,14 @@ export default function MainChecklist() {
             )}
           </div>
         )}
+
+        <button
+          onClick={exportToCSV}
+          className="flex items-center gap-1.5 px-3 py-1.5 ml-auto text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+        >
+          <Download className="w-4 h-4" />
+          Download CSV
+        </button>
 
         {activeTab === "pending" && tasks.length > 0 && (
           <div className="flex items-center gap-2 ml-auto">
