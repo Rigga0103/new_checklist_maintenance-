@@ -72,6 +72,8 @@ export const repairDashboardKeys = {
     searchTerm: string,
     role: string | null,
     username: string | null,
+    startDate?: string,
+    endDate?: string,
   ) =>
     [
       ...repairDashboardKeys.all,
@@ -79,11 +81,15 @@ export const repairDashboardKeys = {
       searchTerm,
       role,
       username,
+      startDate,
+      endDate,
     ] as const,
   maintenanceHistory: (
     searchTerm: string,
     role: string | null,
     username: string | null,
+    startDate?: string,
+    endDate?: string,
   ) =>
     [
       ...repairDashboardKeys.all,
@@ -91,6 +97,8 @@ export const repairDashboardKeys = {
       searchTerm,
       role,
       username,
+      startDate,
+      endDate,
     ] as const,
 };
 
@@ -123,14 +131,19 @@ export function useMaintenancePendingQuery(
   searchTerm = "",
   role: string | null = null,
   username: string | null = null,
+  startDate?: string,
+  endDate?: string,
 ) {
   return useQuery({
     queryKey: repairDashboardKeys.maintenancePending(
       searchTerm,
       role,
       username,
+      startDate,
+      endDate,
     ),
-    queryFn: () => fetchMaintenancePending(searchTerm, role, username),
+    queryFn: () =>
+      fetchMaintenancePending(searchTerm, role, username, startDate, endDate),
     staleTime: 1000 * 60 * 2,
   });
 }
@@ -142,14 +155,19 @@ export function useMaintenanceHistoryQuery(
   searchTerm = "",
   role: string | null = null,
   username: string | null = null,
+  startDate?: string,
+  endDate?: string,
 ) {
   return useQuery({
     queryKey: repairDashboardKeys.maintenanceHistory(
       searchTerm,
       role,
       username,
+      startDate,
+      endDate,
     ),
-    queryFn: () => fetchMaintenanceHistory(searchTerm, role, username),
+    queryFn: () =>
+      fetchMaintenanceHistory(searchTerm, role, username, startDate, endDate),
     staleTime: 1000 * 60 * 2,
   });
 }

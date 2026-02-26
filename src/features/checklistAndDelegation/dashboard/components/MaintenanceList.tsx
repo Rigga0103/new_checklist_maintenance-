@@ -14,6 +14,7 @@ import {
   Filter,
   Users,
   User,
+  Download,
 } from "lucide-react";
 import { useMaintenanceDashboard } from "../hooks/useMaintenanceDashboard";
 import { toast } from "sonner";
@@ -53,6 +54,10 @@ export default function MaintenanceList({
     setActiveTab,
     searchTerm,
     setSearchTerm,
+    startDate,
+    setStartDate,
+    endDate,
+    setEndDate,
     selectedMachines,
     setSelectedMachines,
     showMachineDropdown,
@@ -72,6 +77,86 @@ export default function MaintenanceList({
       setActiveTab(initialTab);
     }
   }, [initialTab, setActiveTab]);
+
+  const exportToExcel = () => {
+    if (filteredMaintenanceData.length === 0) {
+      toast.error("No data to export");
+      return;
+    }
+
+    const csvRows = [];
+
+    if (activeTab === "pending") {
+      const headers = [
+        "Task ID",
+        "Machine Name",
+        "Task Description",
+        "Assigned To",
+        "Frequency",
+        "Planned Date",
+        "Department",
+      ];
+      csvRows.push(headers.join(","));
+
+      filteredMaintenanceData.forEach((task) => {
+        const row = [
+          task.task_id,
+          `"${task.machine_name || ""}"`,
+          `"${task.task_description || ""}"`,
+          `"${task.doer_name || ""}"`,
+          `"${task.frequency || ""}"`,
+          task.task_start_date ? formatDate(task.task_start_date) : "",
+          `"${task.department || ""}"`,
+        ];
+        csvRows.push(row.join(","));
+      });
+    } else {
+      const headers = [
+        "Task ID",
+        "Machine Name",
+        "Task Description",
+        "Assigned To",
+        "Frequency",
+        "Planned Date",
+        "Completed Date",
+        "Delay",
+        "Status",
+        "Remarks",
+        "Maintenance Cost",
+      ];
+      csvRows.push(headers.join(","));
+
+      filteredMaintenanceData.forEach((task) => {
+        const row = [
+          task.task_id,
+          `"${task.machine_name || ""}"`,
+          `"${task.task_description || ""}"`,
+          `"${task.doer_name || ""}"`,
+          `"${task.frequency || ""}"`,
+          task.task_start_date ? formatDate(task.task_start_date) : "",
+          task.actual_date ? formatDate(task.actual_date) : "",
+          `"${task.delay || ""}"`,
+          `"${task.status || ""}"`,
+          `"${(task.remarks || "").replace(/"/g, '""')}"`,
+          task.maintenance_cost || "",
+        ];
+        csvRows.push(row.join(","));
+      });
+    }
+
+    const csvContent = csvRows.join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    const dateStr = new Date().toISOString().split("T")[0];
+    const fileName = `maintenance_${activeTab}_export_${dateStr}.csv`;
+    link.setAttribute("download", fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Exported successfully");
+  };
 
   // Local state for interactions
   const [selectedTasks, setSelectedTasks] = useState<Set<number>>(new Set());
@@ -371,6 +456,32 @@ export default function MaintenanceList({
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
+        </div>
+
+        {/* Date Filter & Export */}
+        <div className="flex items-center gap-2">
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="px-2 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            title="From Date"
+          />
+          <span className="text-gray-500 dark:text-gray-400 text-sm">-</span>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="px-2 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            title="To Date"
+          />
+          <button
+            onClick={exportToExcel}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            Export CSV
+          </button>
         </div>
 
         {/* Machine Filter Dropdown */}

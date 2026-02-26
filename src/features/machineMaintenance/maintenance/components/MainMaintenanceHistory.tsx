@@ -19,6 +19,8 @@ import { useRBAC } from "@/hooks/useRBAC";
 
 export default function MainMaintenanceHistory() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [page, setPage] = useState(1);
   const [selectedTask, setSelectedTask] = useState<MachineMaintenance | null>(
     null,
@@ -37,6 +39,8 @@ export default function MainMaintenanceHistory() {
     searchTerm,
     role,
     username,
+    startDate || undefined,
+    endDate || undefined,
   );
 
   const { canRead, isLoading: isRbacLoading } = useRBAC("maintenance_history");
@@ -171,16 +175,44 @@ export default function MainMaintenanceHistory() {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-        <input
-          type="text"
-          placeholder="Search by machine, task, or person..."
-          value={searchTerm}
-          onChange={(e) => handleSearch(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground focus:ring-2 focus:ring-green-500 focus:border-green-500"
-        />
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-4">
+        {/* Search */}
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search by machine, task, or person..."
+            value={searchTerm}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          />
+        </div>
+
+        {/* Date Filters */}
+        <div className="flex flex-col sm:flex-row items-center gap-2">
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => {
+              setStartDate(e.target.value);
+              setPage(1);
+            }}
+            className="w-full sm:w-auto px-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground xl:min-w-37.5 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            title="Start Date"
+          />
+          <span className="text-muted-foreground hidden sm:inline">to</span>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => {
+              setEndDate(e.target.value);
+              setPage(1);
+            }}
+            className="w-full sm:w-auto px-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground xl:min-w-37.5 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            title="End Date"
+          />
+        </div>
       </div>
 
       {/* Table */}

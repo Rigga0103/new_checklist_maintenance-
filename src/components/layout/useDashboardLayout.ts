@@ -41,7 +41,7 @@ const routes: Route[] = [
   },
   {
     href: "/quick-task",
-    label: "Edit Task",
+    label: "Checklist Edit Task",
     icon: "Zap",
     showFor: ["admin"] as const,
     permissionResource: "quick_task",
@@ -139,14 +139,14 @@ const routes: Route[] = [
         showFor: ["admin", "user"] as const,
         permissionResource: "maintenance_calendar",
       },
-      {
-        href: "/maintenance/edit-task",
-        label: "Edit Task",
-        icon: "Edit",
-        showFor: ["admin"] as const,
-        permissionResource: "maintenance_edit",
-      },
     ],
+  },
+  {
+    href: "/maintenance/edit-task",
+    label: "Machine Edit Task",
+    icon: "Edit",
+    showFor: ["admin"] as const,
+    permissionResource: "maintenance_edit",
   },
   {
     href: "/machines",

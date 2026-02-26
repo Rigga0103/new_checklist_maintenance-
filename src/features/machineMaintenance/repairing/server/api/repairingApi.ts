@@ -17,6 +17,8 @@ export const fetchPendingRepairs = async (
   searchTerm = "",
   role: string | null = null,
   username: string | null = null,
+  startDate?: string,
+  endDate?: string,
 ): Promise<RepairFetchResponse> => {
   try {
     const from = (page - 1) * limit;
@@ -28,6 +30,14 @@ export const fetchPendingRepairs = async (
       .or("status.eq.pending,status.eq.in_progress")
       .order("created_at", { ascending: false })
       .range(from, to);
+
+    // Apply date filter
+    if (startDate) {
+      query = query.gte("created_at", `${startDate}T00:00:00.000Z`);
+    }
+    if (endDate) {
+      query = query.lte("created_at", `${endDate}T23:59:59.999Z`);
+    }
 
     // Apply search filter
     if (searchTerm && searchTerm.trim() !== "") {
@@ -65,6 +75,8 @@ export const fetchRepairHistory = async (
   searchTerm = "",
   role: string | null = null,
   username: string | null = null,
+  startDate?: string,
+  endDate?: string,
 ): Promise<RepairFetchResponse> => {
   try {
     const from = (page - 1) * limit;
@@ -76,6 +88,14 @@ export const fetchRepairHistory = async (
       .eq("status", "completed")
       .order("actual_date", { ascending: false })
       .range(from, to);
+
+    // Apply date filter
+    if (startDate) {
+      query = query.gte("created_at", `${startDate}T00:00:00.000Z`);
+    }
+    if (endDate) {
+      query = query.lte("created_at", `${endDate}T23:59:59.999Z`);
+    }
 
     // Apply search filter
     if (searchTerm && searchTerm.trim() !== "") {

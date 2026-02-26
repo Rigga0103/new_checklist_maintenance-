@@ -18,11 +18,13 @@ export const maintenanceKeys = {
     searchTerm: string,
     role: string | null,
     username: string | null,
+    startDate?: string,
+    endDate?: string,
   ) =>
     [
       ...maintenanceKeys.all,
       "pending",
-      { page, limit, searchTerm, role, username },
+      { page, limit, searchTerm, role, username, startDate, endDate },
     ] as const,
   history: (
     page: number,
@@ -30,11 +32,13 @@ export const maintenanceKeys = {
     searchTerm: string,
     role: string | null,
     username: string | null,
+    startDate?: string,
+    endDate?: string,
   ) =>
     [
       ...maintenanceKeys.all,
       "history",
-      { page, limit, searchTerm, role, username },
+      { page, limit, searchTerm, role, username, startDate, endDate },
     ] as const,
   filters: () => [...maintenanceKeys.all, "filters"] as const,
   allTasks: () => [...maintenanceKeys.all, "allTasks"] as const,
@@ -48,11 +52,29 @@ export const usePendingMaintenanceQuery = (
   searchTerm: string,
   role: string | null,
   username: string | null,
+  startDate?: string,
+  endDate?: string,
 ) => {
   return useQuery({
-    queryKey: maintenanceKeys.pending(page, limit, searchTerm, role, username),
+    queryKey: maintenanceKeys.pending(
+      page,
+      limit,
+      searchTerm,
+      role,
+      username,
+      startDate,
+      endDate,
+    ),
     queryFn: () =>
-      fetchPendingMaintenance(page, limit, searchTerm, role, username),
+      fetchPendingMaintenance(
+        page,
+        limit,
+        searchTerm,
+        role,
+        username,
+        startDate,
+        endDate,
+      ),
     placeholderData: (previousData) => previousData,
   });
 };
@@ -63,11 +85,29 @@ export const useMaintenanceHistoryQuery = (
   searchTerm: string,
   role: string | null,
   username: string | null,
+  startDate?: string,
+  endDate?: string,
 ) => {
   return useQuery({
-    queryKey: maintenanceKeys.history(page, limit, searchTerm, role, username),
+    queryKey: maintenanceKeys.history(
+      page,
+      limit,
+      searchTerm,
+      role,
+      username,
+      startDate,
+      endDate,
+    ),
     queryFn: () =>
-      fetchMaintenanceHistory(page, limit, searchTerm, role, username),
+      fetchMaintenanceHistory(
+        page,
+        limit,
+        searchTerm,
+        role,
+        username,
+        startDate,
+        endDate,
+      ),
     placeholderData: (previousData) => previousData,
   });
 };

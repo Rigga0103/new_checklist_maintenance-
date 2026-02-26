@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 import {
   RefreshCw,
@@ -87,7 +87,43 @@ export default function MainChecklist() {
   } = useChecklistHistory(searchTerm, effectiveRole, username);
 
   const { data: usersData } = useUsers();
-  const allNames = usersData?.map((u) => u.user_name) || [];
+  const allNames = useMemo(() => {
+    if (!usersData) return [];
+    const activeUsers = [
+      "Sumeet Kukreja",
+      "Botivet",
+      "Amit Kukreja",
+      "Shivcharan Satnami",
+      "Pratap Kumar Rout",
+      "Chandrakant Kurre",
+      "Mohan Chandrakar",
+      "Vinod Kumar Sahu",
+      "Guddu Kumar",
+      "Rakesh Kumar Rout",
+      "Mansi Verma",
+      "Gayatri Nishad",
+      "Hemlata Verma",
+      "Lokesh Verma",
+      "Sandhya Dhruw",
+      "Mukul Verma",
+      "Divya Nayak",
+      "Sanjay Kurre",
+      "Dinesh Driver",
+      "Lalita Nishad",
+      "Daya Garden",
+      "Kamal Sharma 65-18",
+      "Santosh Das 52-18",
+      "Ritu Sahu",
+      "Rakesh Walecha",
+      "Tokeshwari Sahu",
+    ];
+
+    const validNames = usersData
+      .map((u) => u.user_name)
+      .filter((name) => name && activeUsers.includes(name));
+
+    return Array.from(new Set(validNames)).sort();
+  }, [usersData]);
 
   const submitMutation = useSubmitChecklist();
   const uploadImageMutation = useUploadChecklistImage();
@@ -375,7 +411,7 @@ export default function MainChecklist() {
       "Given By",
       "Name",
       "Description",
-      "Start Date",
+      "Plan Date",
       activeTab === "pending" ? "End Date" : "Submitted Date",
       "Status",
       "Freq",
@@ -515,44 +551,46 @@ export default function MainChecklist() {
         </div>
 
         {/* Name Filter Dropdown */}
-        <div className="relative">
-          <button
-            onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800"
-          >
-            {nameFilter || "Filter by Name"}
-            <ChevronDown
-              className={`w-4 h-4 transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
-            />
-          </button>
-          {dropdownOpen && (
-            <div className="absolute z-50 mt-1 w-48 max-h-60 overflow-auto rounded-lg bg-white dark:bg-neutral-800 shadow-lg border border-gray-200 dark:border-neutral-700">
-              <button
-                onClick={() => {
-                  setNameFilter("");
-                  setDropdownOpen(false);
-                  setCurrentPage(1);
-                }}
-                className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700"
-              >
-                All Names
-              </button>
-              {allNames.map((name) => (
+        {isAdmin && (
+          <div className="relative">
+            <button
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800"
+            >
+              {nameFilter || "Filter by Name"}
+              <ChevronDown
+                className={`w-4 h-4 transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+            {dropdownOpen && (
+              <div className="absolute z-50 mt-1 w-48 max-h-60 overflow-auto rounded-lg bg-white dark:bg-neutral-800 shadow-lg border border-gray-200 dark:border-neutral-700">
                 <button
-                  key={name}
                   onClick={() => {
-                    setNameFilter(name);
+                    setNameFilter("");
                     setDropdownOpen(false);
                     setCurrentPage(1);
                   }}
                   className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700"
                 >
-                  {name}
+                  All Names
                 </button>
-              ))}
-            </div>
-          )}
-        </div>
+                {allNames.map((name) => (
+                  <button
+                    key={name}
+                    onClick={() => {
+                      setNameFilter(name);
+                      setDropdownOpen(false);
+                      setCurrentPage(1);
+                    }}
+                    className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700"
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Date range filter — History only */}
         {activeTab === "history" && (
@@ -690,8 +728,8 @@ export default function MainChecklist() {
                       />
                     </th>
                   )}
-                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase">
-                    Timestamp
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase bg-yellow-50 dark:bg-yellow-900/20">
+                    Plan Date
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase">
                     Task ID
@@ -709,9 +747,6 @@ export default function MainChecklist() {
                     Description
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase bg-yellow-50 dark:bg-yellow-900/20">
-                    Start Date
-                  </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase bg-yellow-50 dark:bg-yellow-900/20">
                     {activeTab === "pending" ? "End Date" : "Submitted Date"}
                   </th>
                   {activeTab === "pending" && (
@@ -719,11 +754,7 @@ export default function MainChecklist() {
                       Status
                     </th>
                   )}
-                  {activeTab === "pending" && (
-                    <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase bg-indigo-50 dark:bg-indigo-900/20">
-                      Next Target
-                    </th>
-                  )}
+
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase">
                     Freq
                   </th>
@@ -780,8 +811,8 @@ export default function MainChecklist() {
                         />
                       </td>
                     )}
-                    <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
-                      {formatDate(task.created_at)}
+                    <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap bg-yellow-50 dark:bg-yellow-900/10">
+                      {formatDate(task.task_start_date)}
                     </td>
                     <td className="px-3 py-3 text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap">
                       {task.task_id}
@@ -804,9 +835,6 @@ export default function MainChecklist() {
                       </div>
                     </td>
                     <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap bg-yellow-50 dark:bg-yellow-900/10">
-                      {formatDate(task.task_start_date)}
-                    </td>
-                    <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap bg-yellow-50 dark:bg-yellow-900/10">
                       {activeTab === "pending"
                         ? formatDate(task.planned_date)
                         : formatDate(task.submission_date)}
@@ -824,26 +852,10 @@ export default function MainChecklist() {
                           <option value="">Select</option>
                           <option value="yes">Done</option>
                           <option value="no">Not Done</option>
-                          <option value="Extend date">Extend</option>
                         </select>
                       </td>
                     )}
-                    {activeTab === "pending" && (
-                      <td className="px-3 py-3 bg-indigo-50 dark:bg-indigo-900/10">
-                        <input
-                          type="date"
-                          disabled={
-                            !selectedTasks.has(task.task_id) ||
-                            taskStatuses[task.task_id] !== "Extend date"
-                          }
-                          value={nextTargetDates[task.task_id] || ""}
-                          onChange={(e) => {
-                            updateNextTargetDate(task.task_id, e.target.value);
-                          }}
-                          className="border border-gray-300 dark:border-neutral-600 rounded-md px-2 py-1 w-full disabled:bg-gray-100 dark:disabled:bg-neutral-800 disabled:cursor-not-allowed text-xs sm:text-sm bg-white dark:bg-neutral-700 text-gray-900 dark:text-white"
-                        />
-                      </td>
-                    )}
+
                     <td className="px-3 py-3 whitespace-nowrap">
                       <span
                         className={`px-2 py-0.5 rounded-full text-xs font-medium ${getFrequencyBadge(

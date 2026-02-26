@@ -61,6 +61,8 @@ export function useMaintenanceDashboard(
   // ---- Filter State ----
   const [activeTab, setActiveTab] = useState<MaintenanceTab>("pending");
   const [searchTerm, setSearchTerm] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [selectedMachines, setSelectedMachines] = useState<string[]>([]);
   const [showMachineDropdown, setShowMachineDropdown] = useState(false);
   const machineDropdownRef = useRef<HTMLDivElement>(null);
@@ -72,14 +74,26 @@ export function useMaintenanceDashboard(
     isLoading: pendingLoading,
     error: pendingError,
     refetch: refetchPending,
-  } = useMaintenancePendingQuery(searchTerm, role, username);
+  } = useMaintenancePendingQuery(
+    searchTerm,
+    role,
+    username,
+    startDate || undefined,
+    endDate || undefined,
+  );
 
   const {
     data: historyTasks = [],
     isLoading: historyLoading,
     error: historyError,
     refetch: refetchHistory,
-  } = useMaintenanceHistoryQuery(searchTerm, role, username);
+  } = useMaintenanceHistoryQuery(
+    searchTerm,
+    role,
+    username,
+    startDate || undefined,
+    endDate || undefined,
+  );
 
   // Full data query for Dashboard charts/stats (no user/date filter)
   const {
@@ -279,6 +293,10 @@ export function useMaintenanceDashboard(
     setActiveTab,
     searchTerm,
     setSearchTerm,
+    startDate,
+    setStartDate,
+    endDate,
+    setEndDate,
     selectedMachines,
     setSelectedMachines,
     showMachineDropdown,

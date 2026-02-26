@@ -15,6 +15,8 @@ export const fetchPendingMaintenance = async (
   searchTerm = "",
   role: string | null = null,
   username: string | null = null,
+  startDate?: string,
+  endDate?: string,
 ): Promise<MaintenanceFetchResponse> => {
   try {
     const endOfToday = new Date();
@@ -31,6 +33,14 @@ export const fetchPendingMaintenance = async (
       .is("actual_date", null)
       .order("task_start_date", { ascending: true })
       .range(from, to);
+
+    // Apply date filter
+    if (startDate) {
+      query = query.gte("task_start_date", `${startDate}T00:00:00.000Z`);
+    }
+    if (endDate) {
+      query = query.lte("task_start_date", `${endDate}T23:59:59.999Z`);
+    }
 
     // Apply search filter
     if (searchTerm && searchTerm.trim() !== "") {
@@ -68,6 +78,8 @@ export const fetchMaintenanceHistory = async (
   searchTerm = "",
   role: string | null = null,
   username: string | null = null,
+  startDate?: string,
+  endDate?: string,
 ): Promise<MaintenanceFetchResponse> => {
   try {
     const from = (page - 1) * limit;
@@ -79,6 +91,14 @@ export const fetchMaintenanceHistory = async (
       .not("actual_date", "is", null)
       .order("actual_date", { ascending: false })
       .range(from, to);
+
+    // Apply date filter (for history, filter by task_start_date or actual_date? Let's use actual_date as it marks when it was completed, or task_start_date for planned date. Usually task_start_date is more consistent)
+    if (startDate) {
+      query = query.gte("task_start_date", `${startDate}T00:00:00.000Z`);
+    }
+    if (endDate) {
+      query = query.lte("task_start_date", `${endDate}T23:59:59.999Z`);
+    }
 
     // Apply search filter
     if (searchTerm && searchTerm.trim() !== "") {

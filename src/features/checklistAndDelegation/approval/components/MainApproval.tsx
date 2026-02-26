@@ -22,6 +22,41 @@ import {
 } from "../server/tanstackQuery/useApproval";
 import { ApprovalTask, ConfirmationModalProps } from "../types/types";
 
+// Image Preview Modal Component
+function ImagePreviewModal({
+  isOpen,
+  imageUrl,
+  onClose,
+}: {
+  isOpen: boolean;
+  imageUrl: string | null;
+  onClose: () => void;
+}) {
+  if (!isOpen || !imageUrl) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+      <div className="relative bg-white dark:bg-neutral-800 rounded-lg shadow-xl max-w-4xl max-h-[90vh] flex flex-col">
+        <div className="flex justify-end p-2 border-b border-gray-100 dark:border-neutral-700">
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700 text-muted-foreground"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="p-4 overflow-auto flex-1 flex items-center justify-center">
+          <img
+            src={imageUrl}
+            alt="Task Attachment Full Size"
+            className="max-w-full max-h-full object-contain"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Confirmation Modal Component
 function ConfirmationModal({
   isOpen,
@@ -122,6 +157,8 @@ export default function MainApproval() {
     isOpen: false,
     itemCount: 0,
   });
+
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -627,8 +664,8 @@ export default function MainApproval() {
           </div>
         ) : (
           <div
-            className="overflow-x-auto"
-            style={{ maxHeight: "calc(100vh - 400px)" }}
+            className="overflow-auto"
+            style={{ maxHeight: "calc(100vh - 250px)" }}
           >
             <table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
               <thead className="bg-gray-50 dark:bg-neutral-900/50 sticky top-0 z-10">
@@ -675,6 +712,9 @@ export default function MainApproval() {
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase bg-blue-50 dark:bg-blue-900/20 min-w-20">
                     Status
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase min-w-20">
+                    Attachment
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase min-w-37.5">
                     Remarks
@@ -888,6 +928,24 @@ export default function MainApproval() {
                           {item.status || "—"}
                         </span>
                       </td>
+                      <td className="px-3 py-3 text-sm text-foreground dark:text-gray-300 min-w-20">
+                        {item.image ? (
+                          <div
+                            className="w-10 h-10 rounded border border-gray-300 dark:border-neutral-600 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() =>
+                              setImagePreviewUrl(item.image as string)
+                            }
+                          >
+                            <img
+                              src={item.image}
+                              alt="Attachment Thumbnail"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
                       <td
                         className="px-3 py-3 text-sm text-foreground dark:text-gray-300 min-w-37.5"
                         title={item.remark || ""}
@@ -937,6 +995,13 @@ export default function MainApproval() {
         itemCount={confirmationModal.itemCount}
         onConfirm={confirmMarkDone}
         onCancel={() => setConfirmationModal({ isOpen: false, itemCount: 0 })}
+      />
+
+      {/* Image Preview Modal */}
+      <ImagePreviewModal
+        isOpen={!!imagePreviewUrl}
+        imageUrl={imagePreviewUrl}
+        onClose={() => setImagePreviewUrl(null)}
       />
     </div>
   );

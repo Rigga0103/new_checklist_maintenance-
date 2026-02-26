@@ -25,11 +25,13 @@ export const repairingKeys = {
     searchTerm: string,
     role: string | null,
     username: string | null,
+    startDate?: string,
+    endDate?: string,
   ) =>
     [
       ...repairingKeys.all,
       "pending",
-      { page, limit, searchTerm, role, username },
+      { page, limit, searchTerm, role, username, startDate, endDate },
     ] as const,
   history: (
     page: number,
@@ -37,7 +39,14 @@ export const repairingKeys = {
     searchTerm: string,
     role: string | null,
     username: string | null,
-  ) => [...repairingKeys.all, "history"] as const,
+    startDate?: string,
+    endDate?: string,
+  ) =>
+    [
+      ...repairingKeys.all,
+      "history",
+      { page, limit, searchTerm, role, username, startDate, endDate },
+    ] as const,
   filters: () => [...repairingKeys.all, "filters"] as const,
   partsAndVendors: (
     page: number,
@@ -71,10 +80,29 @@ export const usePendingRepairsQuery = (
   searchTerm: string,
   role: string | null,
   username: string | null,
+  startDate?: string,
+  endDate?: string,
 ) => {
   return useQuery({
-    queryKey: repairingKeys.pending(page, limit, searchTerm, role, username),
-    queryFn: () => fetchPendingRepairs(page, limit, searchTerm, role, username),
+    queryKey: repairingKeys.pending(
+      page,
+      limit,
+      searchTerm,
+      role,
+      username,
+      startDate,
+      endDate,
+    ),
+    queryFn: () =>
+      fetchPendingRepairs(
+        page,
+        limit,
+        searchTerm,
+        role,
+        username,
+        startDate,
+        endDate,
+      ),
     placeholderData: (previousData) => previousData, // Keep previous data while fetching new page
   });
 };
@@ -85,10 +113,29 @@ export const useRepairHistoryQuery = (
   searchTerm: string,
   role: string | null,
   username: string | null,
+  startDate?: string,
+  endDate?: string,
 ) => {
   return useQuery({
-    queryKey: repairingKeys.history(page, limit, searchTerm, role, username),
-    queryFn: () => fetchRepairHistory(page, limit, searchTerm, role, username),
+    queryKey: repairingKeys.history(
+      page,
+      limit,
+      searchTerm,
+      role,
+      username,
+      startDate,
+      endDate,
+    ),
+    queryFn: () =>
+      fetchRepairHistory(
+        page,
+        limit,
+        searchTerm,
+        role,
+        username,
+        startDate,
+        endDate,
+      ),
     placeholderData: (previousData) => previousData,
   });
 };

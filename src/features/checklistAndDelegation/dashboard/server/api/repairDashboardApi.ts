@@ -93,17 +93,23 @@ export const fetchMaintenancePending = async (
   searchTerm = "",
   role: string | null = null,
   username: string | null = null,
+  startDate?: string,
+  endDate?: string,
 ): Promise<MachineMaintenanceTask[]> => {
   try {
     const today = new Date().toISOString().split("T")[0];
-    const startOfToday = `${today}T00:00:00`;
-    const endOfToday = `${today}T23:59:59`;
+    const defaultStart = startDate
+      ? `${startDate}T00:00:00.000Z`
+      : `${today}T00:00:00.000Z`;
+    const defaultEnd = endDate
+      ? `${endDate}T23:59:59.999Z`
+      : `${today}T23:59:59.999Z`;
 
     let query = supabase
       .from("machine_maintenance")
       .select("*")
-      .gte("task_start_date", startOfToday)
-      .lte("task_start_date", endOfToday)
+      .gte("task_start_date", defaultStart)
+      .lte("task_start_date", defaultEnd)
       .is("actual_date", null)
       .order("task_start_date", { ascending: true });
 
@@ -139,6 +145,8 @@ export const fetchMaintenanceHistory = async (
   searchTerm = "",
   role: string | null = null,
   username: string | null = null,
+  startDate?: string,
+  endDate?: string,
 ): Promise<MachineMaintenanceTask[]> => {
   try {
     let query = supabase
@@ -146,6 +154,14 @@ export const fetchMaintenanceHistory = async (
       .select("*")
       .not("actual_date", "is", null)
       .order("actual_date", { ascending: false });
+
+    // Apply date filters targeting actual completion date or planned date
+    if (startDate) {
+      query = query.gte("task_start_date", `${startDate}T00:00:00.000Z`);
+    }
+    if (endDate) {
+      query = query.lte("task_start_date", `${endDate}T23:59:59.999Z`);
+    }
 
     // Search filter
     if (searchTerm && searchTerm.trim() !== "") {

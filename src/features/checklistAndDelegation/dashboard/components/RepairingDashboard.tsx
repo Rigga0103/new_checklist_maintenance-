@@ -21,6 +21,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
+  Download,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -134,6 +135,59 @@ export default function RepairingDashboard() {
     resetFilters,
   } = useRepairingDashboard();
 
+  const exportToExcel = () => {
+    if (filteredData.length === 0) {
+      // Assuming toast is imported or available, otherwise native alert
+      alert("No data to export");
+      return;
+    }
+
+    const headers = [
+      "Task ID",
+      "Date",
+      "Machine Name",
+      "Issue Detail",
+      "Part Replaced",
+      "Assigned To",
+      "Vendor",
+      "Warranty",
+      "Bill Amount",
+      "Status",
+      "Remarks",
+    ];
+
+    const csvRows = [headers.join(",")];
+
+    filteredData.forEach((task) => {
+      const row = [
+        task.task_id || task.id,
+        formatDate(task.created_at),
+        `"${task.machine_name || ""}"`,
+        `"${(task.issue_detail || "").replace(/"/g, '""')}"`,
+        `"${task.part_replaced || ""}"`,
+        `"${task.assigned_to || ""}"`,
+        `"${task.vendor_name || ""}"`,
+        `"${task.warranty || ""}"`,
+        task.bill_amount || "",
+        `"${task.status || ""}"`,
+        `"${(task.remarks || "").replace(/"/g, '""')}"`,
+      ];
+      csvRows.push(row.join(","));
+    });
+
+    const csvContent = csvRows.join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    const dateStr = new Date().toISOString().split("T")[0];
+    const fileName = `repairing_dashboard_export_${dateStr}.csv`;
+    link.setAttribute("download", fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // ---- Initial loading: show full skeleton ----
   if (repairLoading && !repairData.length) {
     return <RepairingDashboardPageSkeleton />;
@@ -166,8 +220,7 @@ export default function RepairingDashboard() {
             Repair Dashboard
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Complete overview of repair requests 
-            activities
+            Complete overview of repair requests activities
           </p>
         </div>
         <div className="relative w-full md:w-72">
@@ -382,6 +435,15 @@ export default function RepairingDashboard() {
               Clear
             </button>
           )}
+
+          {/* Export to CSV */}
+          <button
+            onClick={exportToExcel}
+            className="flex items-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors ml-auto md:ml-0"
+          >
+            <Download className="w-4 h-4" />
+            Export CSV
+          </button>
         </div>
 
         {/* Selected Machine Tags */}
