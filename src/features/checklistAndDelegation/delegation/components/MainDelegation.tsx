@@ -190,7 +190,7 @@ export default function MainDelegation() {
       "Name",
       "Description",
       "Plan Date",
-      activeTab === "pending" ? "Planned Date" : "Submission Date",
+      "Actual Date",
       "Status",
       "Freq",
       "Remarks",
@@ -592,9 +592,7 @@ export default function MainDelegation() {
                     Task Description
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase bg-yellow-50 dark:bg-yellow-900/20">
-                    {activeTab === "pending"
-                      ? "Planned Date"
-                      : "Submission Date"}
+                    Actual Date
                   </th>
                   {activeTab === "pending" && (
                     <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase bg-blue-50 dark:bg-blue-900/20">

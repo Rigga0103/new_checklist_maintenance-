@@ -412,7 +412,7 @@ export default function MainChecklist() {
       "Name",
       "Description",
       "Plan Date",
-      activeTab === "pending" ? "End Date" : "Submitted Date",
+      ...(activeTab === "history" ? ["Submitted Date"] : []),
       "Status",
       "Freq",
       "Remarks",
@@ -426,9 +426,7 @@ export default function MainChecklist() {
       t.name || "",
       `"${(t.task_description || "").replace(/"/g, '""')}"`,
       formatDate(t.task_start_date),
-      activeTab === "pending"
-        ? formatDate(t.planned_date)
-        : formatDate(t.submission_date),
+      ...(activeTab === "history" ? [formatDate(t.submission_date)] : []),
       t.status || "Pending",
       t.frequency || "One-time",
       `"${(t.remark || "").replace(/"/g, '""')}"`,
@@ -746,9 +744,11 @@ export default function MainChecklist() {
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase min-w-50">
                     Description
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase bg-yellow-50 dark:bg-yellow-900/20">
-                    {activeTab === "pending" ? "End Date" : "Submitted Date"}
-                  </th>
+                  {activeTab === "history" && (
+                    <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase bg-yellow-50 dark:bg-yellow-900/20">
+                      Submitted Date
+                    </th>
+                  )}
                   {activeTab === "pending" && (
                     <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase bg-blue-50 dark:bg-blue-900/20">
                       Status
@@ -834,11 +834,11 @@ export default function MainChecklist() {
                         {task.task_description || "—"}
                       </div>
                     </td>
-                    <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap bg-yellow-50 dark:bg-yellow-900/10">
-                      {activeTab === "pending"
-                        ? formatDate(task.planned_date)
-                        : formatDate(task.submission_date)}
-                    </td>
+                    {activeTab === "history" && (
+                      <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap bg-yellow-50 dark:bg-yellow-900/10">
+                        {formatDate(task.submission_date)}
+                      </td>
+                    )}
                     {activeTab === "pending" && (
                       <td className="px-3 py-3 bg-blue-50 dark:bg-blue-900/10">
                         <select
