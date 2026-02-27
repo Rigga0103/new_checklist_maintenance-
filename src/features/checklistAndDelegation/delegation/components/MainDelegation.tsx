@@ -88,38 +88,9 @@ export default function MainDelegation() {
   const { data: usersData } = useUsers();
   const allNames = useMemo(() => {
     if (!usersData) return [];
-    const activeUsers = [
-      "Sumeet Kukreja",
-      "Botivet",
-      "Amit Kukreja",
-      "Shivcharan Satnami",
-      "Pratap Kumar Rout",
-      "Chandrakant Kurre",
-      "Mohan Chandrakar",
-      "Vinod Kumar Sahu",
-      "Guddu Kumar",
-      "Rakesh Kumar Rout",
-      "Mansi Verma",
-      "Gayatri Nishad",
-      "Hemlata Verma",
-      "Lokesh Verma",
-      "Sandhya Dhruw",
-      "Mukul Verma",
-      "Divya Nayak",
-      "Sanjay Kurre",
-      "Dinesh Driver",
-      "Lalita Nishad",
-      "Daya Garden",
-      "Kamal Sharma 65-18",
-      "Santosh Das 52-18",
-      "Ritu Sahu",
-      "Rakesh Walecha",
-      "Tokeshwari Sahu",
-    ];
-
     const validNames = usersData
-      .map((u) => u.user_name)
-      .filter((name) => name && activeUsers.includes(name));
+      .filter((u) => u.user_name && u.status === "active")
+      .map((u) => u.user_name);
 
     return Array.from(new Set(validNames)).sort();
   }, [usersData]);
@@ -690,17 +661,33 @@ export default function MainDelegation() {
                     </td>
                     {activeTab === "pending" && (
                       <td className="px-3 py-3 bg-blue-50 dark:bg-blue-900/10">
-                        <select
-                          disabled={!selectedTasks.has(task.task_id)}
-                          value={taskStatuses[task.task_id] || ""}
-                          onChange={(e) =>
-                            updateTaskStatus(task.task_id, e.target.value)
-                          }
-                          className="min-w-32 border border-gray-300 dark:border-neutral-600 rounded-md px-2 py-1 w-full disabled:bg-gray-100 dark:disabled:bg-neutral-800 disabled:cursor-not-allowed text-xs sm:text-sm bg-white dark:bg-neutral-700 text-gray-900 dark:text-white"
-                        >
-                          <option value="">Select</option>
-                          <option value="Done">Done</option>
-                        </select>
+                        <div className="flex flex-col gap-2">
+                          <select
+                            disabled={!selectedTasks.has(task.task_id)}
+                            value={taskStatuses[task.task_id] || ""}
+                            onChange={(e) =>
+                              updateTaskStatus(task.task_id, e.target.value)
+                            }
+                            className="min-w-32 border border-gray-300 dark:border-neutral-600 rounded-md px-2 py-1 w-full disabled:bg-gray-100 dark:disabled:bg-neutral-800 disabled:cursor-not-allowed text-xs sm:text-sm bg-white dark:bg-neutral-700 text-gray-900 dark:text-white"
+                          >
+                            <option value="">Select</option>
+                            <option value="Done">Done</option>
+                            <option value="Extend date">Extend date</option>
+                          </select>
+                          {taskStatuses[task.task_id] === "Extend date" && (
+                            <input
+                              type="date"
+                              value={nextTargetDates[task.task_id] || ""}
+                              onChange={(e) =>
+                                updateNextTargetDate(
+                                  task.task_id,
+                                  e.target.value,
+                                )
+                              }
+                              className="min-w-32 border border-gray-300 dark:border-neutral-600 rounded-md px-2 py-1 w-full text-xs sm:text-sm bg-white dark:bg-neutral-700 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                            />
+                          )}
+                        </div>
                       </td>
                     )}
 

@@ -89,38 +89,9 @@ export default function MainChecklist() {
   const { data: usersData } = useUsers();
   const allNames = useMemo(() => {
     if (!usersData) return [];
-    const activeUsers = [
-      "Sumeet Kukreja",
-      "Botivet",
-      "Amit Kukreja",
-      "Shivcharan Satnami",
-      "Pratap Kumar Rout",
-      "Chandrakant Kurre",
-      "Mohan Chandrakar",
-      "Vinod Kumar Sahu",
-      "Guddu Kumar",
-      "Rakesh Kumar Rout",
-      "Mansi Verma",
-      "Gayatri Nishad",
-      "Hemlata Verma",
-      "Lokesh Verma",
-      "Sandhya Dhruw",
-      "Mukul Verma",
-      "Divya Nayak",
-      "Sanjay Kurre",
-      "Dinesh Driver",
-      "Lalita Nishad",
-      "Daya Garden",
-      "Kamal Sharma 65-18",
-      "Santosh Das 52-18",
-      "Ritu Sahu",
-      "Rakesh Walecha",
-      "Tokeshwari Sahu",
-    ];
-
     const validNames = usersData
-      .map((u) => u.user_name)
-      .filter((name) => name && activeUsers.includes(name));
+      .filter((u) => u.user_name && u.status === "active")
+      .map((u) => u.user_name);
 
     return Array.from(new Set(validNames)).sort();
   }, [usersData]);
@@ -322,6 +293,21 @@ export default function MainChecklist() {
 
     if (uploadingTasks.length > 0) {
       toast.error("Please wait for all images to finish uploading");
+      return;
+    }
+
+    // Check if tasks requiring attachment have an image uploaded
+    const missingImage = Array.from(selectedTasks).some((taskId) => {
+      const task = activeTasks.find((t) => t.task_id === taskId);
+      if (task?.require_attachment?.toLowerCase() === "yes") {
+        // Check if image was uploaded in this session OR already exists in DB
+        return !taskImages[taskId]?.uploadedUrl && !task.image;
+      }
+      return false;
+    });
+
+    if (missingImage) {
+      toast.error("Please upload an image for tasks that require attachment");
       return;
     }
 

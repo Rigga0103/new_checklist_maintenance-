@@ -83,6 +83,7 @@ export interface DelegationTask {
 
 export interface User {
   user_name: string;
+  status: string | null;
 }
 
 // ============ API Response Types ============

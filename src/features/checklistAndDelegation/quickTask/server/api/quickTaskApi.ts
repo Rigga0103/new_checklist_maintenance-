@@ -110,7 +110,7 @@ export const fetchUsersData = async (): Promise<User[]> => {
   try {
     const { data, error } = await supabase
       .from("users")
-      .select("user_name")
+      .select("user_name, status")
       .not("user_name", "is", null);
 
     if (error) {
