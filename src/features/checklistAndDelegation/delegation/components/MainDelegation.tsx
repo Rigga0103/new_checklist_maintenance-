@@ -48,6 +48,7 @@ export default function MainDelegation() {
   const {
     pendingTasks,
     historyTasks,
+    last7DaysTasks,
     activeTab,
     isLoading,
     isSubmitting,
@@ -100,7 +101,8 @@ export default function MainDelegation() {
   console.log(pendingTasks, "pending taks ");
 
   const rawHistoryTasks =
-    activeTab === "history" && (historyFromDate || historyToDate)
+    (activeTab === "history" || activeTab === "last7days") &&
+    (historyFromDate || historyToDate)
       ? historyTasks.filter((t) => {
           const dateStr = t.submission_date || t.created_at || null;
           if (!dateStr) return false;
@@ -119,7 +121,12 @@ export default function MainDelegation() {
         })
       : historyTasks;
 
-  const tasks = activeTab === "pending" ? pendingTasks : rawHistoryTasks;
+  const tasks =
+    activeTab === "pending"
+      ? pendingTasks
+      : activeTab === "history"
+        ? rawHistoryTasks
+        : last7DaysTasks;
   const totalPages = Math.ceil(totalCount / 50);
 
   // Format frequency display
@@ -162,6 +169,9 @@ export default function MainDelegation() {
       "Description",
       "Plan Date",
       "Actual Date",
+      ...(activeTab === "history" || activeTab === "last7days"
+        ? ["Submitted Date"]
+        : []),
       "Status",
       "Freq",
       "Remarks",
@@ -175,9 +185,10 @@ export default function MainDelegation() {
       t.name || "",
       `"${(t.task_description || "").replace(/"/g, '""')}"`,
       formatDate(t.task_start_date),
-      activeTab === "pending"
-        ? formatDate(t.planned_date)
-        : formatDate(t.submission_date),
+      formatDate(t.planned_date),
+      ...(activeTab === "history" || activeTab === "last7days"
+        ? [formatDate(t.submission_date)]
+        : []),
       t.status || "Pending",
       t.frequency || "One-time",
       `"${(t.remark || "").replace(/"/g, '""')}"`,
@@ -319,7 +330,7 @@ export default function MainDelegation() {
                 : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
             }`}
           >
-            Pending
+            Today Pending
           </button>
           <button
             onClick={() => handleTabChange("history")}
@@ -330,6 +341,16 @@ export default function MainDelegation() {
             }`}
           >
             History
+          </button>
+          <button
+            onClick={() => handleTabChange("last7days")}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === "last7days"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
+            }`}
+          >
+            Last 7 Days
           </button>
         </div>
 
@@ -565,8 +586,18 @@ export default function MainDelegation() {
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase bg-yellow-50 dark:bg-yellow-900/20">
                     Actual Date
                   </th>
+                  {(activeTab === "history" || activeTab === "last7days") && (
+                    <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase bg-yellow-50 dark:bg-yellow-900/20">
+                      Submitted Date
+                    </th>
+                  )}
                   {activeTab === "pending" && (
                     <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase bg-blue-50 dark:bg-blue-900/20">
+                      Status
+                    </th>
+                  )}
+                  {(activeTab === "history" || activeTab === "last7days") && (
+                    <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase">
                       Status
                     </th>
                   )}
@@ -646,19 +677,20 @@ export default function MainDelegation() {
                       </div>
                     </td>
                     <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap bg-yellow-50 dark:bg-yellow-900/10">
-                      {activeTab === "pending" ? (
-                        <span className="flex flex-col gap-0.5">
-                          <span>{formatDate(task.planned_date) || "—"}</span>
-                          {isOverdue(task) && (
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400">
-                              ⚠ Overdue
-                            </span>
-                          )}
-                        </span>
-                      ) : (
-                        formatDate(task.submission_date)
-                      )}
+                      <span className="flex flex-col gap-0.5">
+                        <span>{formatDate(task.planned_date) || "—"}</span>
+                        {isOverdue(task) && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400">
+                            ⚠ Overdue
+                          </span>
+                        )}
+                      </span>
                     </td>
+                    {(activeTab === "history" || activeTab === "last7days") && (
+                      <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap bg-yellow-50 dark:bg-yellow-900/10">
+                        {formatDate(task.submission_date)}
+                      </td>
+                    )}
                     {activeTab === "pending" && (
                       <td className="px-3 py-3 bg-blue-50 dark:bg-blue-900/10">
                         <div className="flex flex-col gap-2">
@@ -691,6 +723,33 @@ export default function MainDelegation() {
                       </td>
                     )}
 
+                    {/* History & Last 7 Days Status Badge */}
+                    {(activeTab === "history" || activeTab === "last7days") && (
+                      <td className="px-3 py-3">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                            task.status === "done" ||
+                            task.status === "completed"
+                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                              : task.status === "extend"
+                                ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                                : task.status === "no" || isOverdue(task)
+                                  ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                                  : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                          }`}
+                        >
+                          {task.status === "done" || task.status === "completed"
+                            ? "Done"
+                            : task.status === "extend"
+                              ? "Extended"
+                              : task.status === "no"
+                                ? "Not Done"
+                                : isOverdue(task)
+                                  ? "Overdue"
+                                  : "Pending"}
+                        </span>
+                      </td>
+                    )}
                     <td className="px-3 py-3 whitespace-nowrap">
                       <span
                         className={`px-2 py-0.5 rounded-full text-xs font-medium ${getFrequencyBadge(task.frequency)}`}

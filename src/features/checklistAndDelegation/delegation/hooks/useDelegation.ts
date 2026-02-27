@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import {
   fetchDelegationDataSortByDate,
   fetchDelegationDataForHistory,
+  fetchDelegationLast7Days,
   updateDelegationData,
   editDelegationTaskApi,
 } from "../server/api/delegationApi";
@@ -24,14 +25,18 @@ const initialFilters: DelegationFilters = {
 export function useDelegation(roleOverride?: string | null) {
   const [pendingTasks, setPendingTasks] = useState<DelegationTask[]>([]);
   const [historyTasks, setHistoryTasks] = useState<DelegationTask[]>([]);
+  const [last7DaysTasks, setLast7DaysTasks] = useState<DelegationTask[]>([]);
   const [filters, setFilters] = useState<DelegationFilters>(initialFilters);
-  const [activeTab, setActiveTab] = useState<"pending" | "history">("pending");
+  const [activeTab, setActiveTab] = useState<
+    "pending" | "history" | "last7days"
+  >("pending");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedTasks, setSelectedTasks] = useState<Set<number>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [historyTotalCount, setHistoryTotalCount] = useState(0);
+  const [last7DaysTotalCount, setLast7DaysTotalCount] = useState(0);
 
   // Task actions state
   const [taskRemarks, setTaskRemarks] = useState<Record<number, string>>({});
@@ -90,14 +95,37 @@ export function useDelegation(roleOverride?: string | null) {
     }
   }, [currentPage, filters.search, filters.name, roleOverride]);
 
+  // Load last 7 days tasks
+  const loadLast7DaysTasks = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const result = await fetchDelegationLast7Days(
+        1, // Fetching all effectively due to limit mapping
+        1000,
+        filters.search,
+        roleOverride,
+        filters.name,
+      );
+      setLast7DaysTasks(result.data);
+      setLast7DaysTotalCount(result.totalCount);
+    } catch (error) {
+      console.error("Error loading last 7 days tasks:", error);
+      toast.error("Failed to load last 7 days tasks");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [filters.search, filters.name, roleOverride]);
+
   // Load data based on active tab
   useEffect(() => {
     if (activeTab === "pending") {
       loadPendingTasks();
-    } else {
+    } else if (activeTab === "history") {
       loadHistoryTasks();
+    } else if (activeTab === "last7days") {
+      loadLast7DaysTasks();
     }
-  }, [activeTab, loadPendingTasks, loadHistoryTasks]);
+  }, [activeTab, loadPendingTasks, loadHistoryTasks, loadLast7DaysTasks]);
 
   // Handle search
   const handleSearch = useCallback((value: string) => {
@@ -118,11 +146,14 @@ export function useDelegation(roleOverride?: string | null) {
   }, []);
 
   // Handle tab change
-  const handleTabChange = useCallback((tab: "pending" | "history") => {
-    setActiveTab(tab);
-    setCurrentPage(1);
-    setSelectedTasks(new Set());
-  }, []);
+  const handleTabChange = useCallback(
+    (tab: "pending" | "history" | "last7days") => {
+      setActiveTab(tab);
+      setCurrentPage(1);
+      setSelectedTasks(new Set());
+    },
+    [],
+  );
 
   // Toggle task selection
   const toggleTaskSelection = useCallback((taskId: number) => {
@@ -439,13 +470,19 @@ export function useDelegation(roleOverride?: string | null) {
     // Data
     pendingTasks,
     historyTasks,
+    last7DaysTasks,
     filters,
     activeTab,
     isLoading,
     isSubmitting,
     selectedTasks,
     currentPage,
-    totalCount: activeTab === "pending" ? totalCount : historyTotalCount,
+    totalCount:
+      activeTab === "pending"
+        ? totalCount
+        : activeTab === "history"
+          ? historyTotalCount
+          : last7DaysTotalCount,
     taskRemarks,
     taskStatuses,
 
@@ -461,7 +498,12 @@ export function useDelegation(roleOverride?: string | null) {
     updateTaskStatus,
     submitSelectedTasks,
     setCurrentPage,
-    refresh: activeTab === "pending" ? loadPendingTasks : loadHistoryTasks,
+    refresh:
+      activeTab === "pending"
+        ? loadPendingTasks
+        : activeTab === "history"
+          ? loadHistoryTasks
+          : loadLast7DaysTasks,
 
     // Utilities
     formatDate,
@@ -479,5 +521,9 @@ export function useDelegation(roleOverride?: string | null) {
     handleCancelEdit,
     handleEditFieldChange,
     handleSaveEdit,
+
+    loadPendingTasks,
+    loadHistoryTasks,
+    loadLast7DaysTasks,
   };
 }

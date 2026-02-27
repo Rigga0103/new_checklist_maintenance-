@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useQuery,
   useInfiniteQuery,
   useMutation,
   useQueryClient,
@@ -8,6 +9,7 @@ import {
 import {
   fetchChecklistDataSortByDate,
   fetchChecklistDataForHistory,
+  fetchChecklistLast7Days,
   updateChecklistData,
   postChecklistAdminDone,
 } from "../api/checklistApi";
@@ -21,6 +23,20 @@ export const checklistKeys = {
     [...checklistKeys.all, "active", searchTerm, role, username] as const,
   history: (searchTerm: string, role: string | null, username: string | null) =>
     [...checklistKeys.all, "history", searchTerm, role, username] as const,
+  last7days: (
+    searchTerm: string,
+    role: string | null,
+    username: string | null,
+    nameFilter: string,
+  ) =>
+    [
+      ...checklistKeys.all,
+      "last7days",
+      searchTerm,
+      role,
+      username,
+      nameFilter,
+    ] as const,
 };
 
 // ============ Active Checklist Query ============
@@ -93,6 +109,33 @@ export function useChecklistHistory(
       return lastPage.page + 1;
     },
     initialPageParam: 1,
+  });
+}
+
+// ============ Last 7 Days Query ============
+
+/**
+ * Query for checklist tasks from the most recent Monday-Saturday
+ */
+export function useChecklistLast7Days(
+  searchTerm = "",
+  role: string | null = null,
+  username: string | null = null,
+  nameFilter = "",
+) {
+  return useQuery({
+    queryKey: checklistKeys.last7days(searchTerm, role, username, nameFilter),
+    queryFn: async () => {
+      const result = await fetchChecklistLast7Days(
+        1,
+        1000,
+        searchTerm,
+        role,
+        username,
+        nameFilter,
+      );
+      return result;
+    },
   });
 }
 

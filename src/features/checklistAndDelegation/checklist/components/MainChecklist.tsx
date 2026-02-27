@@ -24,6 +24,7 @@ import {
   useChecklistHistory,
   useSubmitChecklist,
   flattenChecklistPages,
+  useChecklistLast7Days,
 } from "../server/tanstackQuery/useChecklist";
 import { useUsers } from "../../quickTask/server/tanstackQuery/useQuickTask";
 import { useUploadChecklistImage } from "../server/tanstackQuery/useChecklistUpload";
@@ -33,7 +34,9 @@ import { toast } from "sonner";
 const ITEMS_PER_PAGE = 50;
 
 export default function MainChecklist() {
-  const [activeTab, setActiveTab] = useState<"pending" | "history">("pending");
+  const [activeTab, setActiveTab] = useState<
+    "pending" | "history" | "last7days"
+  >("pending");
   const [searchTerm, setSearchTerm] = useState("");
   const [nameFilter, setNameFilter] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -86,6 +89,12 @@ export default function MainChecklist() {
     refetch: refetchHistory,
   } = useChecklistHistory(searchTerm, effectiveRole, username);
 
+  const {
+    data: last7DaysData,
+    isFetching: isFetchingLast7Days,
+    refetch: refetchLast7Days,
+  } = useChecklistLast7Days(searchTerm, effectiveRole, username, nameFilter);
+
   const { data: usersData } = useUsers();
   const allNames = useMemo(() => {
     if (!usersData) return [];
@@ -101,8 +110,14 @@ export default function MainChecklist() {
 
   const activeTasks = flattenChecklistPages(activeData);
   const historyTasks = historyData?.pages.flatMap((page) => page.data) || [];
+  const last7DaysTasks = last7DaysData?.data || [];
 
-  const rawTasks = activeTab === "pending" ? activeTasks : historyTasks;
+  const rawTasks =
+    activeTab === "pending"
+      ? activeTasks
+      : activeTab === "history"
+        ? historyTasks
+        : last7DaysTasks;
 
   // Apply date-range filter on history tab (filters by submission_date)
   const dateFilteredTasks =
@@ -128,7 +143,8 @@ export default function MainChecklist() {
     ? dateFilteredTasks.filter((t) => t.name === nameFilter)
     : dateFilteredTasks;
 
-  const isLoading = isFetchingActive || isFetchingHistory;
+  const isLoading =
+    isFetchingActive || isFetchingHistory || isFetchingLast7Days;
 
   // Pagination
   const totalPages = Math.ceil(tasks.length / ITEMS_PER_PAGE);
@@ -356,6 +372,7 @@ export default function MainChecklist() {
   const refresh = () => {
     refetchActive();
     refetchHistory();
+    refetchLast7Days();
   };
 
   const formatDate = (dateString: string | null) => {
@@ -398,7 +415,9 @@ export default function MainChecklist() {
       "Name",
       "Description",
       "Plan Date",
-      ...(activeTab === "history" ? ["Submitted Date"] : []),
+      ...(activeTab === "history" || activeTab === "last7days"
+        ? ["Submitted Date"]
+        : []),
       "Status",
       "Freq",
       "Remarks",
@@ -412,7 +431,9 @@ export default function MainChecklist() {
       t.name || "",
       `"${(t.task_description || "").replace(/"/g, '""')}"`,
       formatDate(t.task_start_date),
-      ...(activeTab === "history" ? [formatDate(t.submission_date)] : []),
+      ...(activeTab === "history" || activeTab === "last7days"
+        ? [formatDate(t.submission_date)]
+        : []),
       t.status || "Pending",
       t.frequency || "One-time",
       `"${(t.remark || "").replace(/"/g, '""')}"`,
@@ -507,7 +528,7 @@ export default function MainChecklist() {
                 : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
             }`}
           >
-            Pending
+            Today Pending
           </button>
           <button
             onClick={() => {
@@ -521,6 +542,19 @@ export default function MainChecklist() {
             }`}
           >
             History
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab("last7days");
+              setCurrentPage(1);
+            }}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === "last7days"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
+            }`}
+          >
+            Last 7 Days
           </button>
         </div>
 
@@ -730,11 +764,11 @@ export default function MainChecklist() {
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase min-w-50">
                     Description
                   </th>
-                  {activeTab === "history" && (
+                  {activeTab === "history" || activeTab === "last7days" ? (
                     <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase bg-yellow-50 dark:bg-yellow-900/20">
                       Submitted Date
                     </th>
-                  )}
+                  ) : null}
                   {activeTab === "pending" && (
                     <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase bg-blue-50 dark:bg-blue-900/20">
                       Status
@@ -820,7 +854,7 @@ export default function MainChecklist() {
                         {task.task_description || "—"}
                       </div>
                     </td>
-                    {activeTab === "history" && (
+                    {(activeTab === "history" || activeTab === "last7days") && (
                       <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap bg-yellow-50 dark:bg-yellow-900/10">
                         {formatDate(task.submission_date)}
                       </td>
@@ -910,8 +944,8 @@ export default function MainChecklist() {
                       </>
                     )}
 
-                    {/* History Tab Info */}
-                    {activeTab === "history" && (
+                    {/* History & Last 7 Days Tab Info */}
+                    {(activeTab === "history" || activeTab === "last7days") && (
                       <>
                         <td className="px-3 py-3">
                           <span
@@ -920,14 +954,29 @@ export default function MainChecklist() {
                                 ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
                                 : task.status === "Extend date"
                                   ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                                  : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                                  : task.status === "no" ||
+                                      (task.task_start_date &&
+                                        new Date(task.task_start_date) <
+                                          new Date(
+                                            new Date().setHours(0, 0, 0, 0),
+                                          ))
+                                    ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                                    : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
                             }`}
                           >
                             {task.status === "yes" || task.status === "Done"
                               ? "Done"
                               : task.status === "Extend date"
                                 ? "Extended"
-                                : "Not Done"}
+                                : task.status === "no"
+                                  ? "Not Done"
+                                  : task.task_start_date &&
+                                      new Date(task.task_start_date) <
+                                        new Date(
+                                          new Date().setHours(0, 0, 0, 0),
+                                        )
+                                    ? "Overdue"
+                                    : "Pending"}
                           </span>
                         </td>
                         <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground max-w-37.5 truncate">
