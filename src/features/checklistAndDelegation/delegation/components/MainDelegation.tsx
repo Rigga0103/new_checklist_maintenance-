@@ -537,7 +537,7 @@ export default function MainDelegation() {
           </div>
         ) : (
           <div
-            className="overflow-x-auto"
+            className="overflow-x-auto overflow-y-auto"
             style={{ maxHeight: "calc(100vh - 320px)" }}
           >
             <table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">

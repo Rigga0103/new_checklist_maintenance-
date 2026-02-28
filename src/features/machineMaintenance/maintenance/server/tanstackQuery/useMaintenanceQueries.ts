@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   fetchPendingMaintenance,
   fetchMaintenanceHistory,
+  fetchMaintenanceLast7Days,
   fetchAllMaintenance,
   completeMaintenance,
   bulkCompleteMaintenance,
@@ -42,6 +43,16 @@ export const maintenanceKeys = {
     ] as const,
   filters: () => [...maintenanceKeys.all, "filters"] as const,
   allTasks: () => [...maintenanceKeys.all, "allTasks"] as const,
+  last7days: (
+    searchTerm: string,
+    role: string | null,
+    username: string | null,
+  ) =>
+    [
+      ...maintenanceKeys.all,
+      "last7days",
+      { searchTerm, role, username },
+    ] as const,
 };
 
 // --- Queries ---
@@ -108,6 +119,19 @@ export const useMaintenanceHistoryQuery = (
         startDate,
         endDate,
       ),
+    placeholderData: (previousData) => previousData,
+  });
+};
+
+export const useMaintenanceLast7DaysQuery = (
+  searchTerm: string,
+  role: string | null,
+  username: string | null,
+) => {
+  return useQuery({
+    queryKey: maintenanceKeys.last7days(searchTerm, role, username),
+    queryFn: () =>
+      fetchMaintenanceLast7Days(1, 1000, searchTerm, role, username),
     placeholderData: (previousData) => previousData,
   });
 };

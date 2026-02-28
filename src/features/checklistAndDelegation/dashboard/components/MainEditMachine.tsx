@@ -307,6 +307,8 @@ export default function MainEditMachine() {
           task_description: maintenanceEditForm.task_description,
           frequency: maintenanceEditForm.frequency,
           doer_name: maintenanceEditForm.doer_name,
+          enable_reminder: maintenanceEditForm.enable_reminder,
+          require_attachment: maintenanceEditForm.require_attachment,
         },
       });
       setEditingMaintenanceId(null);
@@ -498,6 +500,12 @@ export default function MainEditMachine() {
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">
             Count
           </th>
+          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">
+            Reminders
+          </th>
+          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">
+            Attachment
+          </th>
           {isAdmin && (
             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">
               Actions
@@ -631,6 +639,66 @@ export default function MainEditMachine() {
                   <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
                     {(task as any).task_count || 1}
                   </span>
+                </td>
+                <td className="px-3 py-3 text-sm whitespace-nowrap">
+                  {isEditing ? (
+                    <select
+                      value={maintenanceEditForm.enable_reminder || ""}
+                      onChange={(e) =>
+                        handleMaintenanceFieldChange(
+                          "enable_reminder",
+                          e.target.value,
+                        )
+                      }
+                      className={inputClass}
+                    >
+                      <option value="">Select</option>
+                      <option value="yes">Yes</option>
+                      <option value="no">No</option>
+                    </select>
+                  ) : (
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                        task.enable_reminder?.toLowerCase() === "yes"
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                          : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                      }`}
+                    >
+                      {task.enable_reminder?.toLowerCase() === "yes"
+                        ? "Yes"
+                        : "No"}
+                    </span>
+                  )}
+                </td>
+                <td className="px-3 py-3 text-sm whitespace-nowrap">
+                  {isEditing ? (
+                    <select
+                      value={maintenanceEditForm.require_attachment || ""}
+                      onChange={(e) =>
+                        handleMaintenanceFieldChange(
+                          "require_attachment",
+                          e.target.value,
+                        )
+                      }
+                      className={inputClass}
+                    >
+                      <option value="">Select</option>
+                      <option value="yes">Yes</option>
+                      <option value="no">No</option>
+                    </select>
+                  ) : (
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                        task.require_attachment?.toLowerCase() === "yes"
+                          ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                          : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                      }`}
+                    >
+                      {task.require_attachment?.toLowerCase() === "yes"
+                        ? "Yes"
+                        : "No"}
+                    </span>
+                  )}
                 </td>
                 {isAdmin && (
                   <td className="px-3 py-3 text-sm whitespace-nowrap">

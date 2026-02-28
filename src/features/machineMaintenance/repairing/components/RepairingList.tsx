@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   RefreshCw,
   Search,
@@ -13,17 +13,21 @@ import {
   Upload,
   Save,
   Download,
+  IndianRupee,
+  FileText,
 } from "lucide-react";
 import Image from "next/image";
+import { toast } from "sonner";
+import { useRBAC } from "@/hooks/useRBAC";
 import {
   usePendingRepairsQuery,
+  useRepairHistoryQuery,
+  useRepairLast7DaysQuery,
   useProcessRepairMutation,
 } from "../server/tanstackQuery/useRepairingQueries";
 import type { MachineRepair, RepairProcessFormData } from "../../types/types";
-import { toast } from "sonner";
-import { useRBAC } from "@/hooks/useRBAC";
 
-// Predefined Work Done options (English / Hindi)
+// Predefined Work Done options
 const WORK_DONE_OPTIONS: { value: string; label: string }[] = [
   { value: "Cleaning", label: "Cleaning / सफाई" },
   { value: "Lubrication", label: "Lubrication / ग्रीसिंग" },
@@ -40,29 +44,74 @@ const WORK_DONE_OPTIONS: { value: string; label: string }[] = [
   { value: "Inspection", label: "Inspection / निरीक्षण" },
 ];
 
-export default function MainRepairingPending() {
+interface RepairingListProps {
+  initialTab?: "pending" | "history" | "last7days";
+  showTabs?: boolean;
+}
+
+export default function RepairingList({
+  initialTab = "pending",
+  showTabs = true,
+}: RepairingListProps) {
+  const [activeTab, setActiveTab] = useState<
+    "pending" | "history" | "last7days"
+  >(initialTab);
   const [searchTerm, setSearchTerm] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [page, setPage] = useState(1);
+  const limit = 20;
+
+  // Modals state
   const [selectedRepair, setSelectedRepair] = useState<MachineRepair | null>(
     null,
   );
+  const [viewDetailRepair, setViewDetailRepair] =
+    useState<MachineRepair | null>(null);
 
-  const limit = 20;
-
-  const role =
-    typeof window !== "undefined" ? localStorage.getItem("role") : null;
-  const username =
-    typeof window !== "undefined" ? localStorage.getItem("user-name") : null;
-
-  // All Tasks / My Tasks toggle
+  // User state
+  const [role, setRole] = useState<string | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
   const [viewMyTasksOnly, setViewMyTasksOnly] = useState(false);
 
-  // Derive effective role for query: when "My Tasks" is active, force user filter
-  const effectiveRole = viewMyTasksOnly ? "user" : role;
+  useEffect(() => {
+    setRole(localStorage.getItem("role"));
+    setUsername(localStorage.getItem("user-name"));
+  }, []);
 
-  const { data, isLoading, refetch } = usePendingRepairsQuery(
+  const effectiveRole = viewMyTasksOnly
+    ? "user"
+    : role === "admin"
+      ? "admin"
+      : "user";
+  const {
+    canRead: canReadPending,
+    canEdit: canEditPending,
+    isLoading: isRbacPendingLoading,
+  } = useRBAC("repairing");
+  const { canRead: canReadHistory, isLoading: isRbacHistoryLoading } =
+    useRBAC("repair_history");
+
+  // Queries
+  const pendingQuery = usePendingRepairsQuery(
+    page,
+    limit,
+    searchTerm,
+    effectiveRole,
+    username,
+    startDate || undefined,
+    endDate || undefined,
+  );
+  const historyQuery = useRepairHistoryQuery(
+    page,
+    limit,
+    searchTerm,
+    effectiveRole,
+    username,
+    startDate || undefined,
+    endDate || undefined,
+  );
+  const last7DaysQuery = useRepairLast7DaysQuery(
     page,
     limit,
     searchTerm,
@@ -72,13 +121,25 @@ export default function MainRepairingPending() {
     endDate || undefined,
   );
 
-  const { canRead, canEdit, isLoading: isRbacLoading } = useRBAC("repairing");
-
-  const repairs = data?.data || [];
-  const totalCount = data?.totalCount || 0;
-
   const processMutation = useProcessRepairMutation();
-  const isProcessing = processMutation.isPending;
+
+  const getActiveQuery = () => {
+    switch (activeTab) {
+      case "pending":
+        return pendingQuery;
+      case "history":
+        return historyQuery;
+      case "last7days":
+        return last7DaysQuery;
+    }
+  };
+
+  const activeQuery = getActiveQuery();
+  const repairs = activeQuery.data?.data || [];
+  const totalCount = activeQuery.data?.totalCount || 0;
+  const isLoading =
+    activeQuery.isLoading || isRbacPendingLoading || isRbacHistoryLoading;
+  const totalPages = Math.ceil(totalCount / limit);
 
   // Process form state
   const [processForm, setProcessForm] = useState<RepairProcessFormData>({
@@ -93,6 +154,11 @@ export default function MainRepairingPending() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [billFile, setBillFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
+  const handleTabChange = (tab: "pending" | "history" | "last7days") => {
+    setActiveTab(tab);
+    setPage(1);
+  };
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
@@ -139,7 +205,6 @@ export default function MainRepairingPending() {
 
   const handleProcessSubmit = async () => {
     if (!selectedRepair) return;
-
     try {
       await processMutation.mutateAsync({
         taskId: selectedRepair.task_id,
@@ -147,7 +212,6 @@ export default function MainRepairingPending() {
         photoFile: photoFile || undefined,
         billFile: billFile || undefined,
       });
-
       toast.success("Repair processed successfully");
       closeProcessModal();
     } catch (error) {
@@ -165,6 +229,15 @@ export default function MainRepairingPending() {
     });
   };
 
+  const formatCurrency = (amount: number | null) => {
+    if (!amount) return "-";
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
   const getStatusBadge = (status: string | null) => {
     switch (status) {
       case "pending":
@@ -177,6 +250,12 @@ export default function MainRepairingPending() {
         return (
           <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
             In Progress
+          </span>
+        );
+      case "completed":
+        return (
+          <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+            Completed
           </span>
         );
       case "cancelled":
@@ -194,9 +273,11 @@ export default function MainRepairingPending() {
     }
   };
 
-  const totalPages = Math.ceil(totalCount / limit);
-
   const exportToExcel = () => {
+    if (repairs.length === 0) {
+      toast.error("No data to export");
+      return;
+    }
     const headers = [
       "Task ID",
       "Machine Name",
@@ -204,46 +285,72 @@ export default function MainRepairingPending() {
       "Requested By",
       "Assigned To",
       "Vendor",
-      "Date",
-      "Status",
     ];
+    if (activeTab === "pending") {
+      headers.push("Date", "Status");
+    } else if (activeTab === "history") {
+      headers.splice(3, 0, "Part Replaced", "Warranty", "Work Done");
+      headers.push("Bill Amount", "Request Date", "Completion Date", "Status");
+    } else {
+      headers.push("Request Date", "Completion Date", "Status", "Remarks");
+    }
 
-    const rows = repairs.map((t) => [
-      t.task_id,
-      t.machine_name || "",
-      t.issue_detail || "",
-      t.form_filled_by || "",
-      t.assigned_to || "",
-      t.vendor_name || "",
-      formatDate(t.created_at),
-      t.status || "",
-    ]);
+    const rows = repairs.map((t) => {
+      const base = [
+        t.task_id,
+        t.machine_name || "",
+        t.issue_detail || "",
+        t.form_filled_by || "",
+        t.assigned_to || "",
+        t.vendor_name || "",
+      ];
+      if (activeTab === "pending") {
+        return [...base, formatDate(t.created_at), t.status || ""];
+      } else if (activeTab === "history") {
+        return [
+          t.task_id,
+          t.machine_name || "",
+          t.issue_detail || "",
+          t.part_replaced || "",
+          t.warranty || "",
+          t.work_done || "",
+          t.form_filled_by || "",
+          t.assigned_to || "",
+          t.vendor_name || "",
+          t.bill_amount || "",
+          formatDate(t.created_at),
+          formatDate(t.actual_date),
+          t.status || "",
+        ];
+      } else {
+        return [
+          ...base,
+          formatDate(t.created_at),
+          formatDate(t.actual_date),
+          t.status || "",
+          t.remarks || "",
+        ];
+      }
+    });
 
     const csvContent = [
       headers.join(","),
       ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
     ].join("\n");
-
     const blob = new Blob([csvContent], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `repairing_pending_${new Date().toISOString().split("T")[0]}.csv`;
+    a.download = `repairing_${activeTab}_${new Date().toISOString().split("T")[0]}.csv`;
     a.click();
+    toast.success("Exported successfully");
   };
 
-  if (isLoading || isRbacLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-100">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (!canRead) {
+  const canRead = activeTab === "pending" ? canReadPending : canReadHistory;
+  if (!canRead && role) {
     return (
       <div className="flex items-center justify-center h-96 text-muted-foreground">
-        Access Denied. You do not have permission to view Pending Repairs.
+        Access Denied.
       </div>
     );
   }
@@ -254,7 +361,11 @@ export default function MainRepairingPending() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">
-            Pending Repairs
+            {activeTab === "pending"
+              ? "Pending Repairs"
+              : activeTab === "history"
+                ? "Repair History"
+                : "Repairing Last 7 Days"}
           </h1>
           <p className="text-muted-foreground">
             {viewMyTasksOnly && username
@@ -262,102 +373,123 @@ export default function MainRepairingPending() {
               : "Process and manage repair requests"}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          {/* All Tasks / My Tasks toggle */}
-          <div className="flex items-center gap-1 bg-gray-100 dark:bg-neutral-700 rounded-lg p-1">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-1 bg-gray-100 dark:bg-neutral-700/50 p-1 rounded-xl shadow-inner border border-gray-200 dark:border-neutral-700">
             <button
               onClick={() => setViewMyTasksOnly(false)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                !viewMyTasksOnly
-                  ? "bg-white dark:bg-neutral-600 text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${!viewMyTasksOnly ? "bg-white dark:bg-neutral-600 text-gray-900 dark:text-white shadow-sm ring-1 ring-gray-200 dark:ring-neutral-500" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-neutral-600/50"}`}
             >
               ✨ All Tasks
             </button>
             <button
               onClick={() => setViewMyTasksOnly(true)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                viewMyTasksOnly
-                  ? "bg-white dark:bg-neutral-600 text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${viewMyTasksOnly ? "bg-white dark:bg-neutral-600 text-gray-900 dark:text-white shadow-sm ring-1 ring-gray-200 dark:ring-neutral-500" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-neutral-600/50"}`}
             >
               👤 My Tasks
             </button>
           </div>
           <button
-            onClick={() => refetch()}
+            onClick={() => activeQuery.refetch()}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-foreground bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
             Refresh
-          </button>{" "}
-          <button
-            onClick={exportToExcel}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-foreground bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors"
-          >
-            <Download className="w-4 h-4" />
-            Export
           </button>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-4">
-        {/* Search */}
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search by machine, task, or person..."
-            value={searchTerm}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground focus:ring-2 focus:ring-green-500 focus:border-green-500"
-          />
+      {/* Tabs & Filters */}
+      <div className="flex flex-col xl:flex-row gap-4 items-start xl:items-center justify-between bg-white dark:bg-neutral-800 p-2 pl-3 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-700">
+        <div className="flex items-center overflow-x-auto no-scrollbar w-full xl:w-auto pr-2 xl:pr-0 border-b xl:border-b-0 border-gray-100 dark:border-neutral-800 pb-2 xl:pb-0">
+          {showTabs && (
+            <div className="flex gap-1 bg-gray-100/80 dark:bg-neutral-900/50 p-1 rounded-lg border border-gray-200/50 dark:border-neutral-700/50">
+              <button
+                onClick={() => handleTabChange("pending")}
+                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all whitespace-nowrap ${activeTab === "pending" ? "bg-blue-600 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-neutral-800/50"}`}
+              >
+                Pending
+              </button>
+              <button
+                onClick={() => handleTabChange("history")}
+                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all whitespace-nowrap ${activeTab === "history" ? "bg-gray-700 dark:bg-neutral-600 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-neutral-800/50"}`}
+              >
+                History
+              </button>
+              <button
+                onClick={() => handleTabChange("last7days")}
+                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all whitespace-nowrap ${activeTab === "last7days" ? "bg-gray-600 dark:bg-neutral-500 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-neutral-800/50"}`}
+              >
+                Last 7 Days
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Date Filters */}
-        <div className="flex flex-col sm:flex-row items-center gap-2">
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => {
-              setStartDate(e.target.value);
-              setPage(1);
-            }}
-            className="w-full sm:w-auto px-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground xl:min-w-37.5 focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            title="Start Date"
-          />
-          <span className="text-muted-foreground hidden sm:inline">to</span>
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => {
-              setEndDate(e.target.value);
-              setPage(1);
-            }}
-            className="w-full sm:w-auto px-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground xl:min-w-37.5 focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            title="End Date"
-          />
+        <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto pt-2 xl:pt-0">
+          <div className="relative flex-1 min-w-50">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search machine, issue..."
+              value={searchTerm}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 text-sm bg-gray-50 dark:bg-neutral-900/50 border border-gray-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-gray-400 text-foreground"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={startDate}
+              max={new Date().toISOString().split("T")[0]}
+              onChange={(e) => {
+                setStartDate(e.target.value);
+                setPage(1);
+              }}
+              className="px-2 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              title="From Date"
+            />
+            <span className="text-gray-500 dark:text-gray-400 text-sm">-</span>
+            <input
+              type="date"
+              value={endDate}
+              max={new Date().toISOString().split("T")[0]}
+              onChange={(e) => {
+                setEndDate(e.target.value);
+                setPage(1);
+              }}
+              className="px-2 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              title="To Date"
+            />
+            <button
+              onClick={exportToExcel}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Export CSV
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Table */}
+      {/* Table Content */}
       <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-700 overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ) : repairs.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            No pending repairs found
+          <div className="text-center py-12 text-muted-foreground flex flex-col items-center">
+            <FileText className="w-12 h-12 text-neutral-300 dark:text-neutral-600 mb-4" />
+            <p>No {activeTab} repairs found</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div
+            className="overflow-x-auto overflow-y-auto"
+            style={{ maxHeight: "calc(100vh - 320px)" }}
+          >
             <table className="w-full">
-              <thead>
-                <tr className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">
+              <thead className="bg-neutral-50 dark:bg-neutral-900 sticky top-0 z-10">
+                <tr className="border-b border-neutral-200 dark:border-neutral-700">
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                     ID
                   </th>
@@ -367,6 +499,19 @@ export default function MainRepairingPending() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                     Issue
                   </th>
+                  {activeTab === "history" && (
+                    <>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                        Work Done
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                        Part Replaced
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                        Cost
+                      </th>
+                    </>
+                  )}
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                     Requested By
                   </th>
@@ -377,11 +522,21 @@ export default function MainRepairingPending() {
                     Vendor
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                    Date
+                    Request Date
                   </th>
+                  {(activeTab === "history" || activeTab === "last7days") && (
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                      Completed Date
+                    </th>
+                  )}
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                     Status
                   </th>
+                  {activeTab === "last7days" && (
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                      Remarks
+                    </th>
+                  )}
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                     Action
                   </th>
@@ -399,32 +554,75 @@ export default function MainRepairingPending() {
                     <td className="px-4 py-3 text-sm text-foreground">
                       {repair.machine_name || "-"}
                     </td>
-                    <td className="px-4 py-3 text-sm text-foreground max-w-xs truncate">
+                    <td
+                      className="px-4 py-3 text-sm text-foreground max-w-37.5 truncate"
+                      title={repair.issue_detail || undefined}
+                    >
                       {repair.issue_detail || "-"}
                     </td>
+                    {activeTab === "history" && (
+                      <>
+                        <td className="px-4 py-3 text-sm text-foreground max-w-37.5 truncate">
+                          {repair.work_done || "-"}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-foreground">
+                          {repair.part_replaced || "-"}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-medium text-foreground">
+                          {formatCurrency(repair.bill_amount)}
+                        </td>
+                      </>
+                    )}
                     <td className="px-4 py-3 text-sm text-foreground">
                       {repair.form_filled_by || "-"}
                     </td>
                     <td className="px-4 py-3 text-sm text-foreground">
                       {repair.assigned_to || "-"}
                     </td>
-                    <td className="px-4 py-3 text-sm text-foreground">
+                    <td className="px-4 py-3 text-sm text-foreground truncate max-w-30">
                       {repair.vendor_name || "-"}
                     </td>
                     <td className="px-4 py-3 text-sm text-muted-foreground">
                       {formatDate(repair.created_at)}
                     </td>
+                    {(activeTab === "history" || activeTab === "last7days") && (
+                      <td className="px-4 py-3 text-sm text-muted-foreground">
+                        {formatDate(repair.actual_date)}
+                      </td>
+                    )}
                     <td className="px-4 py-3">
                       {getStatusBadge(repair.status)}
                     </td>
+                    {activeTab === "last7days" && (
+                      <td
+                        className="px-4 py-3 text-sm text-muted-foreground max-w-37.5 truncate"
+                        title={repair.remarks || ""}
+                      >
+                        {repair.remarks || "-"}
+                      </td>
+                    )}
                     <td className="px-4 py-3">
-                      {canEdit && (
+                      {activeTab === "pending" ? (
+                        canEditPending ? (
+                          <button
+                            onClick={() => openProcessModal(repair)}
+                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                            Process
+                          </button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            No Access
+                          </span>
+                        )
+                      ) : (
                         <button
-                          onClick={() => openProcessModal(repair)}
-                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                          onClick={() => setViewDetailRepair(repair)}
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-foreground bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 rounded-lg transition-colors"
                         >
-                          <Edit className="w-3.5 h-3.5" />
-                          Process
+                          <Eye className="w-3.5 h-3.5" />
+                          View
                         </button>
                       )}
                     </td>
@@ -437,35 +635,48 @@ export default function MainRepairingPending() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-neutral-200 dark:border-neutral-700">
-            <span className="text-sm text-muted-foreground">
-              Showing {(page - 1) * limit + 1} to{" "}
-              {Math.min(page * limit, totalCount)} of {totalCount}
-            </span>
+          <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 border-t border-gray-100 dark:border-neutral-700/50 bg-gray-50/50 dark:bg-neutral-900/20 gap-4">
+            <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+              Showing{" "}
+              <span className="text-gray-900 dark:text-white">
+                {(page - 1) * limit + 1}
+              </span>{" "}
+              to{" "}
+              <span className="text-gray-900 dark:text-white">
+                {Math.min(page * limit, totalCount)}
+              </span>{" "}
+              of{" "}
+              <span className="text-gray-900 dark:text-white">
+                {totalCount}
+              </span>{" "}
+              entries
+            </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-2 rounded-lg border border-gray-200 dark:border-neutral-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <ChevronLeft className="w-5 h-5" />
+                <ChevronLeft className="w-4 h-4" />
               </button>
-              <span className="text-sm font-medium text-foreground">
-                Page {page} of {totalPages}
-              </span>
+              <div className="flex items-center gap-1">
+                <span className="px-4 py-2 text-sm font-medium rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800/30">
+                  {page}
+                </span>
+              </div>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-2 rounded-lg border border-gray-200 dark:border-neutral-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <ChevronRight className="w-5 h-5" />
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>
         )}
       </div>
 
-      {/* Process Modal */}
+      {/* Process Modal (Same as before) */}
       {selectedRepair && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
@@ -482,7 +693,6 @@ export default function MainRepairingPending() {
             </div>
 
             <div className="p-6 space-y-5">
-              {/* Read-only info */}
               <div className="p-4 bg-neutral-50 dark:bg-neutral-900 rounded-lg space-y-2">
                 <p>
                   <span className="text-muted-foreground">Machine:</span>{" "}
@@ -504,7 +714,6 @@ export default function MainRepairingPending() {
                 </p>
               </div>
 
-              {/* Status */}
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1.5">
                   Status
@@ -526,7 +735,6 @@ export default function MainRepairingPending() {
                 </select>
               </div>
 
-              {/* In Progress: Remarks only */}
               {processForm.status === "in_progress" && (
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1.5">
@@ -547,10 +755,8 @@ export default function MainRepairingPending() {
                 </div>
               )}
 
-              {/* Completed: All fields */}
               {processForm.status === "completed" && (
                 <>
-                  {/* Part Replaced */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-foreground mb-1.5">
@@ -565,12 +771,10 @@ export default function MainRepairingPending() {
                             partReplaced: e.target.value,
                           }))
                         }
-                        placeholder="e.g., Motor, Belt, Bearing"
+                        placeholder="e.g., Motor, Belt"
                         className="w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground"
                       />
                     </div>
-
-                    {/* Warranty */}
                     <div>
                       <label className="block text-sm font-medium text-foreground mb-1.5">
                         Warranty Details
@@ -584,13 +788,11 @@ export default function MainRepairingPending() {
                             warranty: e.target.value,
                           }))
                         }
-                        placeholder="e.g., 1 Year, 6 Months"
+                        placeholder="e.g., 1 Year"
                         className="w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground"
                       />
                     </div>
                   </div>
-
-                  {/* Work Done */}
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-1.5">
                       Work Done
@@ -637,8 +839,6 @@ export default function MainRepairingPending() {
                       />
                     )}
                   </div>
-
-                  {/* Vendor & Cost */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-foreground mb-1.5">
@@ -677,8 +877,6 @@ export default function MainRepairingPending() {
                       />
                     </div>
                   </div>
-
-                  {/* Photo Upload */}
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-1.5">
                       Work Photo
@@ -706,8 +904,6 @@ export default function MainRepairingPending() {
                       )}
                     </div>
                   </div>
-
-                  {/* Bill Upload */}
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-1.5">
                       Bill Copy
@@ -725,8 +921,6 @@ export default function MainRepairingPending() {
                       />
                     </label>
                   </div>
-
-                  {/* Remarks (completed) */}
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-1.5">
                       Remarks
@@ -747,7 +941,6 @@ export default function MainRepairingPending() {
                 </>
               )}
             </div>
-
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-neutral-200 dark:border-neutral-700">
               <button
                 onClick={closeProcessModal}
@@ -757,10 +950,10 @@ export default function MainRepairingPending() {
               </button>
               <button
                 onClick={handleProcessSubmit}
-                disabled={isProcessing}
+                disabled={processMutation.isPending}
                 className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed rounded-lg transition-colors"
               >
-                {isProcessing ? (
+                {processMutation.isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Saving...
@@ -771,6 +964,140 @@ export default function MainRepairingPending() {
                     Save Changes
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Detail Modal */}
+      {viewDetailRepair && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-700">
+              <h2 className="text-lg font-semibold text-foreground">
+                Repair Details #{viewDetailRepair.task_id}
+              </h2>
+              <button
+                onClick={() => setViewDetailRepair(null)}
+                className="p-1 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Machine</p>
+                  <p className="font-medium text-foreground">
+                    {viewDetailRepair.machine_name || "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Status</p>
+                  {getStatusBadge(viewDetailRepair.status)}
+                </div>
+                <div className="col-span-2">
+                  <p className="text-sm text-muted-foreground">Issue Detail</p>
+                  <p className="font-medium text-foreground">
+                    {viewDetailRepair.issue_detail || "-"}
+                  </p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-sm text-muted-foreground">Work Done</p>
+                  <p className="font-medium text-foreground">
+                    {viewDetailRepair.work_done || "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Part Replaced</p>
+                  <p className="font-medium text-foreground">
+                    {viewDetailRepair.part_replaced || "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Warranty</p>
+                  <p className="font-medium text-foreground">
+                    {viewDetailRepair.warranty || "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Vendor</p>
+                  <p className="font-medium text-foreground">
+                    {viewDetailRepair.vendor_name || "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Bill Amount</p>
+                  <p className="font-medium text-foreground">
+                    {formatCurrency(viewDetailRepair.bill_amount)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Completed On</p>
+                  <p className="font-medium text-foreground">
+                    {formatDate(viewDetailRepair.actual_date)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Requested By</p>
+                  <p className="font-medium text-foreground">
+                    {viewDetailRepair.form_filled_by || "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Assigned To</p>
+                  <p className="font-medium text-foreground">
+                    {viewDetailRepair.assigned_to || "-"}
+                  </p>
+                </div>
+                {viewDetailRepair.remarks && (
+                  <div className="col-span-2">
+                    <p className="text-sm text-muted-foreground">Remarks</p>
+                    <p className="font-medium text-foreground">
+                      {viewDetailRepair.remarks}
+                    </p>
+                  </div>
+                )}
+              </div>
+              {viewDetailRepair.photo_url && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Work Photo
+                  </p>
+                  <div className="relative w-full h-48">
+                    <Image
+                      src={viewDetailRepair.photo_url}
+                      alt="Work photo"
+                      fill
+                      className="object-contain rounded-lg"
+                    />
+                  </div>
+                </div>
+              )}
+              {viewDetailRepair.bill_copy_url && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Bill Copy
+                  </p>
+                  <a
+                    href={viewDetailRepair.bill_copy_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+                  >
+                    <FileText className="w-4 h-4" />
+                    View Bill
+                  </a>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center justify-end px-6 py-4 border-t border-neutral-200 dark:border-neutral-700">
+              <button
+                onClick={() => setViewDetailRepair(null)}
+                className="px-4 py-2 text-sm font-medium text-foreground bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 rounded-lg transition-colors"
+              >
+                Close
               </button>
             </div>
           </div>

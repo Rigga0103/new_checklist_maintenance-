@@ -127,6 +127,72 @@ export const fetchMaintenanceHistory = async (
   }
 };
 
+// ============ Helper for Week Range ============
+function getWeekRange() {
+  const current = new Date();
+  const day = current.getDay();
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+
+  const monday = new Date(current);
+  monday.setDate(current.getDate() + diffToMonday);
+  monday.setHours(0, 0, 0, 0);
+
+  const saturday = new Date(monday);
+  saturday.setDate(monday.getDate() + 5);
+  saturday.setHours(23, 59, 59, 999);
+
+  return { start: monday.toISOString(), end: saturday.toISOString() };
+}
+
+/**
+ * Fetch maintenance tasks for the last 7 days (Monday to Saturday)
+ * Shows all tasks regardless of completion status
+ */
+export const fetchMaintenanceLast7Days = async (
+  page = 1,
+  limit = 1000,
+  searchTerm = "",
+  role: string | null = null,
+  username: string | null = null,
+): Promise<MaintenanceFetchResponse> => {
+  try {
+    const { start: startOfWeek, end: endOfWeek } = getWeekRange();
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    let query = supabase
+      .from("machine_maintenance")
+      .select("*", { count: "exact" })
+      .gte("task_start_date", startOfWeek)
+      .lte("task_start_date", endOfWeek)
+      .order("task_start_date", { ascending: true })
+      .range(from, to);
+
+    if (searchTerm && searchTerm.trim() !== "") {
+      const searchValue = searchTerm.trim();
+      query = query.or(
+        `task_id::text.ilike.%${searchValue}%,machine_name.ilike.%${searchValue}%,doer_name.ilike.%${searchValue}%,task_description.ilike.%${searchValue}%`,
+      );
+    }
+
+    if (role === "user" && username) {
+      query = query.eq("doer_name", username);
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error("Error fetching last 7 days maintenance:", error);
+      return { data: [], totalCount: 0 };
+    }
+
+    return { data: data as MachineMaintenance[], totalCount: count || 0 };
+  } catch (error) {
+    console.error("Error from Supabase:", error);
+    return { data: [], totalCount: 0 };
+  }
+};
+
 /**
  * Fetch all maintenance tasks for dashboard/calendar
  */

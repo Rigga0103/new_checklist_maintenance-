@@ -5,6 +5,7 @@ import {
   useMaintenanceDataQuery,
   useMaintenancePendingQuery,
   useMaintenanceHistoryQuery,
+  useMaintenanceLast7DaysQuery,
   useUpdateMaintenanceTask,
 } from "../server/tanstackQuery/useRepairDashboardQuery";
 import { useUploadMaintenanceImage } from "../server/tanstackQuery/useMaintenanceUpload";
@@ -46,7 +47,7 @@ export interface FrequencyChartItem {
 
 // ============ Main Hook ============
 
-export type MaintenanceTab = "pending" | "history";
+export type MaintenanceTab = "pending" | "history" | "last7days";
 
 interface UseMaintenanceDashboardOptions {
   role?: string | null;
@@ -95,6 +96,13 @@ export function useMaintenanceDashboard(
     endDate || undefined,
   );
 
+  const {
+    data: last7DaysTasks = [],
+    isLoading: last7DaysLoading,
+    error: last7DaysError,
+    refetch: refetchLast7Days,
+  } = useMaintenanceLast7DaysQuery(searchTerm, role, username);
+
   // Full data query for Dashboard charts/stats (no user/date filter)
   const {
     data: allMaintenanceTasks = [],
@@ -107,14 +115,19 @@ export function useMaintenanceDashboard(
 
   // ---- Loading & Error (based on active tab) ----
   const maintenanceLoading =
-    activeTab === "pending" ? pendingLoading : historyLoading;
-  const maintenanceError = pendingError || historyError;
+    activeTab === "pending"
+      ? pendingLoading
+      : activeTab === "history"
+        ? historyLoading
+        : last7DaysLoading;
+  const maintenanceError = pendingError || historyError || last7DaysError;
 
   const refetchMaintenance = useCallback(() => {
     refetchPending();
     refetchHistory();
+    refetchLast7Days();
     refetchAllMaintenance();
-  }, [refetchPending, refetchHistory, refetchAllMaintenance]);
+  }, [refetchPending, refetchHistory, refetchLast7Days, refetchAllMaintenance]);
 
   // ---- Click-away handler for machine dropdown ----
   useEffect(() => {
@@ -132,8 +145,10 @@ export function useMaintenanceDashboard(
 
   // ---- Active data based on tab ----
   const currentTabData = useMemo(() => {
-    return activeTab === "pending" ? pendingTasks : historyTasks;
-  }, [activeTab, pendingTasks, historyTasks]);
+    if (activeTab === "pending") return pendingTasks;
+    if (activeTab === "history") return historyTasks;
+    return last7DaysTasks;
+  }, [activeTab, pendingTasks, historyTasks, last7DaysTasks]);
 
   // ---- Derived filter lists (from current tab data) ----
   const machinesList = useMemo(() => {

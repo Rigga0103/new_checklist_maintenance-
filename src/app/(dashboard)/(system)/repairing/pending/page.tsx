@@ -1,5 +1,5 @@
-import MainRepairingPending from "@/features/machineMaintenance/repairing/components/MainRepairingPending";
+import RepairingList from "@/features/machineMaintenance/repairing/components/RepairingList";
 
 export default function RepairingPendingPage() {
-  return <MainRepairingPending />;
+  return <RepairingList initialTab="pending" showTabs={true} />;
 }

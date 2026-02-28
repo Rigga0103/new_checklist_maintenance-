@@ -625,7 +625,10 @@ export function useAssignTask(): UseAssignTaskReturn {
     departments,
     givenByList,
     doerNames,
-    frequencies: FREQUENCIES,
+    frequencies:
+      selectedSection === "checklist"
+        ? FREQUENCIES
+        : FREQUENCIES.filter((f) => f.value !== "one-time"),
 
     // Section toggle
     selectedSection,

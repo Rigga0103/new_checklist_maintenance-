@@ -10,6 +10,7 @@ import {
   fetchPartsAndVendors,
   getUniqueVendors,
   getUniqueParts,
+  fetchRepairLast7Days,
 } from "../api/repairingApi";
 import type {
   RepairProcessFormData,
@@ -45,6 +46,20 @@ export const repairingKeys = {
     [
       ...repairingKeys.all,
       "history",
+      { page, limit, searchTerm, role, username, startDate, endDate },
+    ] as const,
+  last7days: (
+    page: number,
+    limit: number,
+    searchTerm: string,
+    role: string | null,
+    username: string | null,
+    startDate?: string,
+    endDate?: string,
+  ) =>
+    [
+      ...repairingKeys.all,
+      "last7days",
       { page, limit, searchTerm, role, username, startDate, endDate },
     ] as const,
   filters: () => [...repairingKeys.all, "filters"] as const,
@@ -136,6 +151,34 @@ export const useRepairHistoryQuery = (
         startDate,
         endDate,
       ),
+    placeholderData: (previousData) => previousData,
+  });
+};
+
+export const useRepairLast7DaysQuery = (
+  page: number,
+  limit: number,
+  searchTerm: string,
+  role: string | null,
+  username: string | null,
+  startDate?: string,
+  endDate?: string,
+) => {
+  return useQuery({
+    queryKey: repairingKeys.last7days(
+      page,
+      limit,
+      searchTerm,
+      role,
+      username,
+      startDate,
+      endDate,
+    ),
+    queryFn: () =>
+      fetchRepairLast7Days(page, limit, searchTerm, role, username, {
+        startDate,
+        endDate,
+      }),
     placeholderData: (previousData) => previousData,
   });
 };

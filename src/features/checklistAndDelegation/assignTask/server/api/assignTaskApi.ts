@@ -228,7 +228,8 @@ export const pushAssignTaskApi = async (
         frequency: task.frequency,
         status: "pending",
         created_at: new Date().toISOString(),
-        // Note: machine_maintenance table does not have verified given_by, enable_reminder, etc.
+        enable_reminder: task.enableReminders ? "yes" : "no",
+        require_attachment: task.requireAttachment ? "yes" : "no",
       }));
     } else {
       tasksData = generatedTasks.map((task, index) => ({

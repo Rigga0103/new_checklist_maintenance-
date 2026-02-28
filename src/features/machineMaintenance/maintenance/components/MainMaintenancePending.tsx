@@ -16,6 +16,7 @@ import Image from "next/image";
 import {
   usePendingMaintenanceQuery,
   useCompleteMaintenanceMutation,
+  useMaintenanceLast7DaysQuery,
 } from "../server/tanstackQuery/useMaintenanceQueries";
 import type { MachineMaintenance } from "../../types/types";
 import { toast } from "sonner";
@@ -26,6 +27,9 @@ export default function MainMaintenancePending() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [page, setPage] = useState(1);
+  const [activeTab, setActiveTab] = useState<"pending" | "last7days">(
+    "pending",
+  );
   const [selectedTask, setSelectedTask] = useState<MachineMaintenance | null>(
     null,
   );
@@ -47,10 +51,18 @@ export default function MainMaintenancePending() {
     endDate || undefined,
   );
 
+  const { data: last7DaysData, isLoading: isLast7DaysLoading } =
+    useMaintenanceLast7DaysQuery(searchTerm, role, username);
+
   const { canRead, canEdit, isLoading: isRbacLoading } = useRBAC("maintenance");
 
-  const tasks = data?.data || [];
-  const totalCount = data?.totalCount || 0;
+  const pendingTasks = data?.data || [];
+  const pendingTotalCount = data?.totalCount || 0;
+  const last7DaysTasks = last7DaysData?.data || [];
+
+  const tasks = activeTab === "pending" ? pendingTasks : last7DaysTasks;
+  const totalCount =
+    activeTab === "pending" ? pendingTotalCount : last7DaysTasks.length;
 
   const completeMutation = useCompleteMaintenanceMutation();
   const isProcessing = completeMutation.isPending;
@@ -65,6 +77,11 @@ export default function MainMaintenancePending() {
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
+    setPage(1);
+  };
+
+  const handleTabChange = (tab: "pending" | "last7days") => {
+    setActiveTab(tab);
     setPage(1);
   };
 
@@ -155,6 +172,7 @@ export default function MainMaintenancePending() {
       "Frequency",
       "Doer",
       "Planned Date",
+      ...(activeTab === "last7days" ? ["Completed Date", "Status"] : []),
     ];
 
     const rows = tasks.map((t) => [
@@ -164,6 +182,16 @@ export default function MainMaintenancePending() {
       t.frequency || "",
       t.doer_name || "",
       formatDate(t.task_start_date),
+      ...(activeTab === "last7days"
+        ? [
+            formatDate(t.actual_date),
+            t.actual_date
+              ? "Completed"
+              : new Date(t.task_start_date || "") < new Date()
+                ? "Overdue"
+                : "Pending",
+          ]
+        : []),
     ]);
 
     const csvContent = [
@@ -175,11 +203,15 @@ export default function MainMaintenancePending() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `maintenance_pending_${new Date().toISOString().split("T")[0]}.csv`;
+    a.download = `maintenance_${activeTab}_${new Date().toISOString().split("T")[0]}.csv`;
     a.click();
   };
 
-  if (isLoading || isRbacLoading) {
+  if (
+    (activeTab === "pending" && isLoading) ||
+    (activeTab === "last7days" && isLast7DaysLoading) ||
+    isRbacLoading
+  ) {
     return (
       <div className="flex items-center justify-center min-h-100">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -204,7 +236,9 @@ export default function MainMaintenancePending() {
             Pending Maintenance
           </h1>
           <p className="text-muted-foreground">
-            Complete maintenance tasks for today
+            {activeTab === "pending"
+              ? "Complete maintenance tasks for today"
+              : "All maintenance tasks from Monday to Saturday"}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -218,45 +252,85 @@ export default function MainMaintenancePending() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-4">
-        {/* Search */}
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search by machine, task, or doer..."
-            value={searchTerm}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground focus:ring-2 focus:ring-green-500 focus:border-green-500"
-          />
-        </div>
-
-        {/* Date Filters */}
-        <div className="flex flex-col sm:flex-row items-center gap-2">
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => {
-              setStartDate(e.target.value);
-              setPage(1);
-            }}
-            className="w-full sm:w-auto px-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground xl:min-w-37.5 focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            title="Start Date"
-          />
-          <span className="text-muted-foreground hidden sm:inline">to</span>
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => {
-              setEndDate(e.target.value);
-              setPage(1);
-            }}
-            className="w-full sm:w-auto px-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground xl:min-w-37.5 focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            title="End Date"
-          />
-        </div>
+      {/* Tabs */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => handleTabChange("pending")}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            activeTab === "pending"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
+          }`}
+        >
+          Pending
+        </button>
+        <button
+          onClick={() => handleTabChange("last7days")}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            activeTab === "last7days"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
+          }`}
+        >
+          Last 7 Days
+        </button>
       </div>
+
+      {/* Filters */}
+      {activeTab === "pending" && (
+        <div className="flex flex-col sm:flex-row gap-4 mb-4">
+          {/* Search */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search by machine, task, or doer..."
+              value={searchTerm}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            />
+          </div>
+
+          {/* Date Filters */}
+          <div className="flex flex-col sm:flex-row items-center gap-2">
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                setStartDate(e.target.value);
+                setPage(1);
+              }}
+              className="w-full sm:w-auto px-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground xl:min-w-37.5 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              title="Start Date"
+            />
+            <span className="text-muted-foreground hidden sm:inline">to</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => {
+                setEndDate(e.target.value);
+                setPage(1);
+              }}
+              className="w-full sm:w-auto px-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground xl:min-w-37.5 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              title="End Date"
+            />
+          </div>
+        </div>
+      )}
+      {activeTab === "last7days" && (
+        <div className="flex flex-col sm:flex-row gap-4 mb-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search by machine, task, or doer..."
+              value={searchTerm}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Table */}
       <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-700 overflow-hidden">
@@ -291,9 +365,21 @@ export default function MainMaintenancePending() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                     Planned
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                    Action
-                  </th>
+                  {activeTab === "last7days" && (
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                      Completed
+                    </th>
+                  )}
+                  {activeTab === "last7days" && (
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                      Status
+                    </th>
+                  )}
+                  {activeTab === "pending" && (
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                      Action
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
@@ -320,17 +406,45 @@ export default function MainMaintenancePending() {
                     <td className="px-4 py-3 text-sm text-muted-foreground">
                       {formatDate(task.task_start_date)}
                     </td>
-                    <td className="px-4 py-3">
-                      {canEdit && (
-                        <button
-                          onClick={() => openProcessModal(task)}
-                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                    {activeTab === "last7days" && (
+                      <td className="px-4 py-3 text-sm text-muted-foreground">
+                        {formatDate(task.actual_date)}
+                      </td>
+                    )}
+                    {activeTab === "last7days" && (
+                      <td className="px-4 py-3">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                            task.actual_date
+                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                              : task.task_start_date &&
+                                  new Date(task.task_start_date) < new Date()
+                                ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                                : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                          }`}
                         >
-                          <Edit className="w-3.5 h-3.5" />
-                          Process
-                        </button>
-                      )}
-                    </td>
+                          {task.actual_date
+                            ? "Completed"
+                            : task.task_start_date &&
+                                new Date(task.task_start_date) < new Date()
+                              ? "Overdue"
+                              : "Pending"}
+                        </span>
+                      </td>
+                    )}
+                    {activeTab === "pending" && (
+                      <td className="px-4 py-3">
+                        {canEdit && (
+                          <button
+                            onClick={() => openProcessModal(task)}
+                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                            Process
+                          </button>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

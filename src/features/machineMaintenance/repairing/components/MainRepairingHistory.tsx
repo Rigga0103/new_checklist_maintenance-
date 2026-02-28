@@ -13,8 +13,10 @@ import {
   IndianRupee,
   X,
 } from "lucide-react";
+import { toast } from "sonner";
 import Image from "next/image";
 import { useRepairHistoryQuery } from "../server/tanstackQuery/useRepairingQueries";
+import { fetchAllRepairHistory } from "../server/api/repairingApi";
 import type { MachineRepair } from "../../types/types";
 import { useRBAC } from "@/hooks/useRBAC";
 
@@ -72,51 +74,76 @@ export default function MainRepairingHistory() {
     }).format(amount);
   };
 
-  const exportToExcel = () => {
-    // Simple CSV export
-    const headers = [
-      "Task ID",
-      "Machine Name",
-      "Issue Detail",
-      "Part Replaced",
-      "Warranty",
-      "Work Done",
-      "Requested By",
-      "Assigned To",
-      "Vendor",
-      "Bill Amount",
-      "Request Date",
-      "Completion Date",
-      "Status",
-    ];
+  const exportToExcel = async () => {
+    try {
+      toast.loading("Preparing CSV export...", { id: "export" });
 
-    const rows = repairs.map((r) => [
-      r.task_id,
-      r.machine_name || "",
-      r.issue_detail || "",
-      r.part_replaced || "",
-      r.warranty || "",
-      r.work_done || "",
-      r.form_filled_by || "",
-      r.assigned_to || "",
-      r.vendor_name || "",
-      r.bill_amount || "",
-      formatDate(r.created_at),
-      formatDate(r.actual_date),
-      r.status || "",
-    ]);
+      // Fetch all records without pagination, using current filters
+      const allData = await fetchAllRepairHistory(
+        searchTerm,
+        role,
+        username,
+        startDate || undefined,
+        endDate || undefined,
+      );
 
-    const csvContent = [
-      headers.join(","),
-      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
-    ].join("\n");
+      if (!allData || allData.length === 0) {
+        toast.error("No data available to export", { id: "export" });
+        return;
+      }
 
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `repair_history_${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
+      const headers = [
+        "Task ID",
+        "Machine Name",
+        "Issue Detail",
+        "Part Replaced",
+        "Warranty",
+        "Work Done",
+        "Requested By",
+        "Assigned To",
+        "Vendor",
+        "Bill Amount",
+        "Request Date",
+        "Completion Date",
+        "Status",
+      ];
+
+      const rows = allData.map((r) => [
+        r.task_id,
+        r.machine_name || "",
+        r.issue_detail || "",
+        r.part_replaced || "",
+        r.warranty || "",
+        r.work_done || "",
+        r.form_filled_by || "",
+        r.assigned_to || "",
+        r.vendor_name || "",
+        r.bill_amount || "",
+        formatDate(r.created_at),
+        formatDate(r.actual_date),
+        r.status || "",
+      ]);
+
+      const csvContent = [
+        headers.join(","),
+        ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
+      ].join("\n");
+
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `repair_history_${new Date().toISOString().split("T")[0]}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Successfully exported all history records", {
+        id: "export",
+      });
+    } catch (err) {
+      console.error("Export error:", err);
+      toast.error("Failed to export data", { id: "export" });
+    }
   };
 
   const totalPages = Math.ceil(totalCount / limit);
@@ -153,7 +180,7 @@ export default function MainRepairingHistory() {
         <div className="flex items-center gap-3">
           <button
             onClick={exportToExcel}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-foreground bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors cursor-pointer"
           >
             <Download className="w-4 h-4" />
             Export
@@ -238,10 +265,13 @@ export default function MainRepairingHistory() {
             No repair history found
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div
+            className="overflow-x-auto overflow-y-auto"
+            style={{ maxHeight: "calc(100vh - 320px)" }}
+          >
             <table className="w-full">
-              <thead>
-                <tr className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">
+              <thead className="bg-neutral-50 dark:bg-neutral-900 sticky top-0 z-10">
+                <tr className="border-b border-neutral-200 dark:border-neutral-700">
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                     ID
                   </th>

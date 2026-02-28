@@ -39,6 +39,8 @@ export interface MachineMaintenanceTask {
   maintenance_cost?: number;
   delay?: string;
   doer_name?: string;
+  require_attachment?: string; // e.g. "yes", "no"
+  enable_reminder?: string; // e.g. "yes", "no"
 }
 
 export interface RepairDashboardData {
@@ -186,6 +188,64 @@ export const fetchMaintenanceHistory = async (
     return data || [];
   } catch (error) {
     console.error("Unexpected error in fetchMaintenanceHistory:", error);
+    return [];
+  }
+};
+
+// Helper: get Monday–Saturday week range
+function getWeekRange() {
+  const current = new Date();
+  const day = current.getDay();
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+
+  const monday = new Date(current);
+  monday.setDate(current.getDate() + diffToMonday);
+  monday.setHours(0, 0, 0, 0);
+
+  const saturday = new Date(monday);
+  saturday.setDate(monday.getDate() + 5);
+  saturday.setHours(23, 59, 59, 999);
+
+  return { start: monday.toISOString(), end: saturday.toISOString() };
+}
+
+// Fetch maintenance tasks for the last 7 days (Monday to Saturday, all statuses)
+export const fetchMaintenanceLast7Days = async (
+  searchTerm = "",
+  role: string | null = null,
+  username: string | null = null,
+): Promise<MachineMaintenanceTask[]> => {
+  try {
+    const { start: startOfWeek, end: endOfWeek } = getWeekRange();
+
+    let query = supabase
+      .from("machine_maintenance")
+      .select("*")
+      .gte("task_start_date", startOfWeek)
+      .lte("task_start_date", endOfWeek)
+      .order("task_start_date", { ascending: true });
+
+    if (searchTerm && searchTerm.trim() !== "") {
+      const sv = searchTerm.trim();
+      query = query.or(
+        `machine_name.ilike.%${sv}%,task_description.ilike.%${sv}%,doer_name.ilike.%${sv}%,frequency.ilike.%${sv}%`,
+      );
+    }
+
+    if (role === "user" && username) {
+      query = query.eq("doer_name", username);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("Error fetching last 7 days maintenance:", error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error("Unexpected error in fetchMaintenanceLast7Days:", error);
     return [];
   }
 };
@@ -366,6 +426,25 @@ export const updateMaintenanceTaskCascade = async (
     if (error) {
       console.error("Error in updateMaintenanceTaskCascade:", error);
       throw error;
+    }
+
+    // Attempt to also update maintenance_schedules if applicable
+    try {
+      let scheduleQuery = supabase
+        .from("maintenance_schedules")
+        .update(cleanUpdates)
+        .eq("machine_name", oldMachineName)
+        .eq("task_description", oldTaskDescription || "");
+
+      if (oldDoerName) {
+        scheduleQuery = scheduleQuery.eq("doer_name", oldDoerName);
+      } else {
+        scheduleQuery = scheduleQuery.is("doer_name", null);
+      }
+
+      await scheduleQuery; // Fire and forget or await, depending on if we need strict consistency
+    } catch (schedErr) {
+      console.warn("Could not update maintenance_schedules cascade:", schedErr);
     }
 
     return data;

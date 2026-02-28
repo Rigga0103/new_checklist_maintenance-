@@ -4,6 +4,7 @@ import {
   fetchMaintenanceData,
   fetchMaintenancePending,
   fetchMaintenanceHistory,
+  fetchMaintenanceLast7Days,
   updateMaintenanceTask,
   fetchMaintenanceTasksForEdit,
   fetchUniqueMaintenanceTasksForEdit,
@@ -100,6 +101,18 @@ export const repairDashboardKeys = {
       startDate,
       endDate,
     ] as const,
+  maintenanceLast7Days: (
+    searchTerm: string,
+    role: string | null,
+    username: string | null,
+  ) =>
+    [
+      ...repairDashboardKeys.all,
+      "maintenanceLast7Days",
+      searchTerm,
+      role,
+      username,
+    ] as const,
 };
 
 /**
@@ -168,6 +181,25 @@ export function useMaintenanceHistoryQuery(
     ),
     queryFn: () =>
       fetchMaintenanceHistory(searchTerm, role, username, startDate, endDate),
+    staleTime: 1000 * 60 * 2,
+  });
+}
+
+/**
+ * Fetch last 7 days maintenance tasks (Mon-Sat, all statuses)
+ */
+export function useMaintenanceLast7DaysQuery(
+  searchTerm = "",
+  role: string | null = null,
+  username: string | null = null,
+) {
+  return useQuery({
+    queryKey: repairDashboardKeys.maintenanceLast7Days(
+      searchTerm,
+      role,
+      username,
+    ),
+    queryFn: () => fetchMaintenanceLast7Days(searchTerm, role, username),
     staleTime: 1000 * 60 * 2,
   });
 }

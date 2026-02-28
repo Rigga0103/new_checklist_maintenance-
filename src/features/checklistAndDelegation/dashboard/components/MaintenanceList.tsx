@@ -23,7 +23,7 @@ import { formatDate } from "../hooks/useMaintenanceDashboard";
 const ITEMS_PER_PAGE = 50;
 
 interface MaintenanceListProps {
-  initialTab?: "pending" | "history";
+  initialTab?: "pending" | "history" | "last7days";
   showTabs?: boolean;
 }
 
@@ -110,7 +110,7 @@ export default function MaintenanceList({
         ];
         csvRows.push(row.join(","));
       });
-    } else {
+    } else if (activeTab === "history") {
       const headers = [
         "Task ID",
         "Machine Name",
@@ -139,6 +139,40 @@ export default function MaintenanceList({
           `"${task.status || ""}"`,
           `"${(task.remarks || "").replace(/"/g, '""')}"`,
           task.maintenance_cost || "",
+        ];
+        csvRows.push(row.join(","));
+      });
+    } else if (activeTab === "last7days") {
+      const headers = [
+        "Task ID",
+        "Machine Name",
+        "Task Description",
+        "Assigned To",
+        "Frequency",
+        "Planned Date",
+        "Completed Date",
+        "Status",
+        "Remarks",
+      ];
+      csvRows.push(headers.join(","));
+
+      filteredMaintenanceData.forEach((task) => {
+        const today = new Date();
+        const statusVal = task.actual_date
+          ? "Completed"
+          : task.task_start_date && new Date(task.task_start_date) < today
+            ? "Overdue"
+            : "Pending";
+        const row = [
+          task.task_id,
+          `"${task.machine_name || ""}"`,
+          `"${task.task_description || ""}"`,
+          `"${task.doer_name || ""}"`,
+          `"${task.frequency || ""}"`,
+          task.task_start_date ? formatDate(task.task_start_date) : "",
+          task.actual_date ? formatDate(task.actual_date) : "",
+          statusVal,
+          `"${(task.remarks || "").replace(/"/g, '""')}"`,
         ];
         csvRows.push(row.join(","));
       });
@@ -304,6 +338,19 @@ export default function MaintenanceList({
       return;
     }
 
+    const missingImages = Array.from(selectedTasks).some((taskId) => {
+      const task = filteredMaintenanceData.find((t) => t.task_id === taskId);
+      return (
+        task?.require_attachment?.toLowerCase() === "yes" &&
+        !taskImages[taskId]?.uploadedUrl
+      );
+    });
+
+    if (missingImages) {
+      toast.error("Please upload photo first for tasks requiring an image");
+      return;
+    }
+
     try {
       const promises = Array.from(selectedTasks).map((taskId) => {
         const updates: Partial<
@@ -374,9 +421,11 @@ export default function MaintenanceList({
           <p className="text-sm text-muted-foreground dark:text-muted-foreground">
             {viewMyTasksOnly && username
               ? `Showing your tasks only (${username})`
-              : initialTab === "pending"
+              : activeTab === "pending"
                 ? "Manage pending maintenance tasks"
-                : "View maintenance history"}
+                : activeTab === "last7days"
+                  ? "All tasks from Monday to Saturday"
+                  : "View maintenance history"}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -444,6 +493,16 @@ export default function MaintenanceList({
             >
               History
             </button>
+            <button
+              onClick={() => setActiveTab("last7days")}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === "last7days"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
+              }`}
+            >
+              Last 7 Days
+            </button>
           </div>
         )}
 
@@ -463,6 +522,7 @@ export default function MaintenanceList({
           <input
             type="date"
             value={startDate}
+            max={new Date().toISOString().split("T")[0]}
             onChange={(e) => setStartDate(e.target.value)}
             className="px-2 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"
             title="From Date"
@@ -471,6 +531,7 @@ export default function MaintenanceList({
           <input
             type="date"
             value={endDate}
+            max={new Date().toISOString().split("T")[0]}
             onChange={(e) => setEndDate(e.target.value)}
             className="px-2 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"
             title="To Date"
@@ -651,6 +712,12 @@ export default function MaintenanceList({
                         Status
                       </th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
+                        Reminders
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
+                        Attachment
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
                         Upload
                       </th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
@@ -668,6 +735,16 @@ export default function MaintenanceList({
                       </th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
                         Attachment
+                      </th>
+                    </>
+                  )}
+                  {activeTab === "last7days" && (
+                    <>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
+                        Status
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
+                        Remark
                       </th>
                     </>
                   )}
@@ -743,25 +820,53 @@ export default function MaintenanceList({
                             <option value="Pending">Pending</option>
                           </select>
                         </td>
+                        <td className="px-3 py-3 whitespace-nowrap">
+                          {task.enable_reminder?.toLowerCase() === "yes" ? (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                              Yes
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                              No
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 whitespace-nowrap">
+                          {task.require_attachment?.toLowerCase() === "yes" ? (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
+                              Yes
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                              No
+                            </span>
+                          )}
+                        </td>
                         <td className="px-3 py-3">
-                          <label className="cursor-pointer">
-                            <input
-                              type="file"
-                              accept="image/jpeg,image/png,image/webp"
-                              className="hidden"
-                              onChange={(e) =>
-                                handleImageUpload(task.task_id, e)
-                              }
-                              disabled={taskImages[task.task_id]?.uploading}
-                            />
-                            {taskImages[task.task_id]?.uploading ? (
-                              <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-                            ) : taskImages[task.task_id]?.uploadedUrl ? (
-                              <Check className="w-4 h-4 text-green-600" />
-                            ) : (
-                              <Upload className="w-4 h-4 text-blue-600 hover:text-blue-700" />
-                            )}
-                          </label>
+                          {task.require_attachment?.toLowerCase() === "yes" ? (
+                            <label className="cursor-pointer">
+                              <input
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                className="hidden"
+                                onChange={(e) =>
+                                  handleImageUpload(task.task_id, e)
+                                }
+                                disabled={taskImages[task.task_id]?.uploading}
+                              />
+                              {taskImages[task.task_id]?.uploading ? (
+                                <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                              ) : taskImages[task.task_id]?.uploadedUrl ? (
+                                <Check className="w-4 h-4 text-green-600" />
+                              ) : (
+                                <Upload className="w-4 h-4 text-blue-600 hover:text-blue-700" />
+                              )}
+                            </label>
+                          ) : (
+                            <span className="text-gray-400 dark:text-neutral-500 text-xs">
+                              —
+                            </span>
+                          )}
                         </td>
                         <td className="px-3 py-3">
                           <input
@@ -810,6 +915,34 @@ export default function MaintenanceList({
                               —
                             </span>
                           )}
+                        </td>
+                      </>
+                    )}
+
+                    {/* Last 7 Days columns */}
+                    {activeTab === "last7days" && (
+                      <>
+                        <td className="px-3 py-3">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                              task.actual_date
+                                ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                                : task.task_start_date &&
+                                    new Date(task.task_start_date) < new Date()
+                                  ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                                  : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                            }`}
+                          >
+                            {task.actual_date
+                              ? "Completed"
+                              : task.task_start_date &&
+                                  new Date(task.task_start_date) < new Date()
+                                ? "Overdue"
+                                : "Pending"}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground max-w-37.5 truncate">
+                          {task.remarks || "—"}
                         </td>
                       </>
                     )}

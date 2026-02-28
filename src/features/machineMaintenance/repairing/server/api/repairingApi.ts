@@ -125,6 +125,137 @@ export const fetchRepairHistory = async (
 };
 
 /**
+ * Fetch ALL completed repair history for export
+ */
+export const fetchAllRepairHistory = async (
+  searchTerm = "",
+  role: string | null = null,
+  username: string | null = null,
+  startDate?: string,
+  endDate?: string,
+): Promise<MachineRepair[]> => {
+  try {
+    let query = supabase
+      .from("machine_repair")
+      .select("*")
+      .eq("status", "completed")
+      .order("actual_date", { ascending: false });
+
+    // Apply date filter
+    if (startDate) {
+      query = query.gte("created_at", `${startDate}T00:00:00.000Z`);
+    }
+    if (endDate) {
+      query = query.lte("created_at", `${endDate}T23:59:59.999Z`);
+    }
+
+    // Apply search filter
+    if (searchTerm && searchTerm.trim() !== "") {
+      const searchValue = searchTerm.trim();
+      query = query.or(
+        `task_id::text.ilike.%${searchValue}%,machine_name.ilike.%${searchValue}%,form_filled_by.ilike.%${searchValue}%,issue_detail.ilike.%${searchValue}%`,
+      );
+    }
+
+    // Apply role filter
+    if (role === "user" && username) {
+      query = query.eq("assigned_to", username);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("Error fetching all repair history:", error);
+      return [];
+    }
+
+    return data as MachineRepair[];
+  } catch (error) {
+    console.error("Error from Supabase:", error);
+    return [];
+  }
+};
+
+// ============ Helper for Week Range ============
+function getWeekRange() {
+  const current = new Date();
+  const day = current.getDay();
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+
+  const monday = new Date(current);
+  monday.setDate(current.getDate() + diffToMonday);
+  monday.setHours(0, 0, 0, 0);
+
+  const saturday = new Date(monday);
+  saturday.setDate(monday.getDate() + 5);
+  saturday.setHours(23, 59, 59, 999);
+
+  return { start: monday, end: saturday };
+}
+
+/**
+ * Fetch Last 7 Days (Monday to Saturday) repairs for the tab
+ */
+export const fetchRepairLast7Days = async (
+  page = 1,
+  limit = 50,
+  searchTerm = "",
+  role: string | null = null,
+  username: string | null = null,
+  options?: {
+    startDate?: string;
+    endDate?: string;
+  },
+): Promise<RepairFetchResponse> => {
+  try {
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    // Use specific date range if provided, else use the default week range
+    const range = getWeekRange();
+    let startDateStr = options?.startDate
+      ? `${options.startDate}T00:00:00.000Z`
+      : range.start.toISOString();
+    let endDateStr = options?.endDate
+      ? `${options.endDate}T23:59:59.999Z`
+      : range.end.toISOString();
+
+    let query = supabase
+      .from("machine_repair")
+      .select("*", { count: "exact" })
+      .gte("created_at", startDateStr)
+      .lte("created_at", endDateStr)
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    // Apply search filter
+    if (searchTerm && searchTerm.trim() !== "") {
+      const searchValue = searchTerm.trim();
+      query = query.or(
+        `task_id::text.ilike.%${searchValue}%,machine_name.ilike.%${searchValue}%,form_filled_by.ilike.%${searchValue}%,issue_detail.ilike.%${searchValue}%,assigned_to.ilike.%${searchValue}%`,
+      );
+    }
+
+    // Apply role filter - users only see their assigned tasks
+    if (role === "user" && username) {
+      query = query.eq("assigned_to", username);
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error("Error fetching last 7 days repairs:", error);
+      return { data: [], totalCount: 0 };
+    }
+
+    return { data: data as MachineRepair[], totalCount: count || 0 };
+  } catch (error) {
+    console.error("Error from Supabase:", error);
+    return { data: [], totalCount: 0 };
+  }
+};
+
+/**
  * Fetch Parts and Vendors History (where part_replaced or vendor_name is not null)
  */
 export const fetchPartsAndVendors = async (
