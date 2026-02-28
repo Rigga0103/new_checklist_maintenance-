@@ -397,6 +397,7 @@ export const createRepairRequest = async (
       .insert({
         form_filled_by: formData.formFilledBy,
         assigned_to: formData.assignedTo,
+        machine_type: formData.machineType,
         machine_name: formData.machineName,
         issue_detail: formData.issueDetail,
         motor_name: formData.motorName || null,

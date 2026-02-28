@@ -14,6 +14,7 @@ export interface MachineRepair {
   work_done: string | null;
   photo_url: string | null;
   status: string | null;
+  machine_type?: string | null;
   vendor_name: string | null;
   bill_copy_url: string | null;
   bill_amount: number | null;
@@ -53,6 +54,7 @@ export interface MaintenanceFetchResponse {
 export interface RepairRequestFormData {
   formFilledBy: string;
   assignedTo: string;
+  machineType?: string;
   machineName: string;
   motorName?: string;
   issueDetail: string;

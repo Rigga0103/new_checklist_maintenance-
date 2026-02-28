@@ -74,13 +74,7 @@ const routes: Route[] = [
         showFor: ["admin", "user"] as const,
         permissionResource: "repair_request",
       },
-      {
-        href: "/repairing/part-and-vendor",
-        label: "Part And Vendor",
-        icon: "Package",
-        showFor: ["admin", "user"] as const,
-        permissionResource: "repair_part_vendor", // Ensure backend has this permission or relies on role
-      },
+      
       {
         href: "/repairing/pending",
         label: "Pending",
@@ -89,11 +83,25 @@ const routes: Route[] = [
         permissionResource: "repairing",
       },
       {
+        href: "/repairing/part-and-vendor",
+        label: "Part And Vendor",
+        icon: "Package",
+        showFor: ["admin", "user"] as const,
+        permissionResource: "repair_part_vendor", // Ensure backend has this permission or relies on role
+      },
+      {
         href: "/repairing/history",
         label: "History",
         icon: "Clock",
         showFor: ["admin", "user"] as const,
         permissionResource: "repair_history",
+      },
+      {
+        href: "/repairing/settings",
+        label: "Settings",
+        icon: "Settings",
+        showFor: ["admin"] as const,
+        permissionResource: "settings",
       },
     ],
   },

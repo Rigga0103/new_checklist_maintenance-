@@ -93,6 +93,7 @@ export default function MainRepairingPending() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [billFile, setBillFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [hasWarranty, setHasWarranty] = useState(false);
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
@@ -113,6 +114,7 @@ export default function MainRepairingPending() {
     setPhotoFile(null);
     setBillFile(null);
     setPhotoPreview(repair.photo_url || null);
+    setHasWarranty(!!repair.warranty);
   };
 
   const closeProcessModal = () => {
@@ -120,6 +122,7 @@ export default function MainRepairingPending() {
     setPhotoFile(null);
     setBillFile(null);
     setPhotoPreview(null);
+    setHasWarranty(false);
   };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -572,21 +575,43 @@ export default function MainRepairingPending() {
 
                     {/* Warranty */}
                     <div>
-                      <label className="block text-sm font-medium text-foreground mb-1.5">
-                        Warranty Details
-                      </label>
-                      <input
-                        type="text"
-                        value={processForm.warranty || ""}
-                        onChange={(e) =>
-                          setProcessForm((prev) => ({
-                            ...prev,
-                            warranty: e.target.value,
-                          }))
-                        }
-                        placeholder="e.g., 1 Year, 6 Months"
-                        className="w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground"
-                      />
+                      <div className="flex items-center gap-2 mb-1.5 h-5">
+                        <input
+                          type="checkbox"
+                          id="warranty-checkbox"
+                          checked={hasWarranty}
+                          onChange={(e) => {
+                            setHasWarranty(e.target.checked);
+                            if (!e.target.checked) {
+                              setProcessForm((prev) => ({
+                                ...prev,
+                                warranty: "",
+                              }));
+                            }
+                          }}
+                          className="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
+                        />
+                        <label
+                          htmlFor="warranty-checkbox"
+                          className="block text-sm font-medium text-foreground cursor-pointer select-none"
+                        >
+                          Warranty & Guarantee
+                        </label>
+                      </div>
+                      {hasWarranty && (
+                        <input
+                          type="text"
+                          value={processForm.warranty || ""}
+                          onChange={(e) =>
+                            setProcessForm((prev) => ({
+                              ...prev,
+                              warranty: e.target.value,
+                            }))
+                          }
+                          placeholder="e.g., 1 Year, 6 Months"
+                          className="w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground"
+                        />
+                      )}
                     </div>
                   </div>
 

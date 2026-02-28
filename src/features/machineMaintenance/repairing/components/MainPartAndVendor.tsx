@@ -21,11 +21,13 @@ import {
 } from "../server/tanstackQuery/useRepairingQueries";
 import type { MachineRepair } from "../../types/types";
 import { useRBAC } from "@/hooks/useRBAC";
+import { useMachineTypesQuery } from "../server/tanstackQuery/useMachineTypes";
 
 export default function MainPartAndVendor() {
   const [searchTerm, setSearchTerm] = useState("");
   const [vendorFilter, setVendorFilter] = useState("");
   const [partFilter, setPartFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
   const [page, setPage] = useState(1);
   const [selectedRepair, setSelectedRepair] = useState<MachineRepair | null>(
     null,
@@ -43,10 +45,18 @@ export default function MainPartAndVendor() {
   );
 
   const { data: filtersData } = usePartsAndVendorsFiltersQuery();
+  const { data: dbMachineTypes = [] } = useMachineTypesQuery();
 
   const { canRead, isLoading: isRbacLoading } = useRBAC("repair_part_vendor");
 
-  const repairs = data?.data || [];
+  let repairs = data?.data || [];
+
+  if (typeFilter) {
+    repairs = repairs.filter(
+      (r) => r.machine_type?.toLowerCase() === typeFilter.toLowerCase(),
+    );
+  }
+
   const totalCount = data?.totalCount || 0;
 
   const handleSearch = (term: string) => {
@@ -57,6 +67,7 @@ export default function MainPartAndVendor() {
   const clearFilters = () => {
     setVendorFilter("");
     setPartFilter("");
+    setTypeFilter("");
     setSearchTerm("");
     setPage(1);
   };
@@ -82,6 +93,7 @@ export default function MainPartAndVendor() {
   const exportToExcel = () => {
     const headers = [
       "Task ID",
+      "Type",
       "Machine Name",
       "Part Replaced",
       "Vendor",
@@ -95,6 +107,7 @@ export default function MainPartAndVendor() {
 
     const rows = repairs.map((r) => [
       r.task_id,
+      r.machine_type || "",
       r.machine_name || "",
       r.part_replaced || "",
       r.vendor_name || "",
@@ -162,9 +175,11 @@ export default function MainPartAndVendor() {
             }`}
           >
             <Filter className="w-4 h-4" />
-            {(vendorFilter || partFilter) && (
+            {(vendorFilter || partFilter || typeFilter) && (
               <span className="flex items-center justify-center w-5 h-5 ml-1 text-xs text-white bg-green-600 rounded-full">
-                {(vendorFilter ? 1 : 0) + (partFilter ? 1 : 0)}
+                {(vendorFilter ? 1 : 0) +
+                  (partFilter ? 1 : 0) +
+                  (typeFilter ? 1 : 0)}
               </span>
             )}
             Filters
@@ -181,7 +196,7 @@ export default function MainPartAndVendor() {
 
       {/* Summary Card */}
       <div className="p-4 bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-700 flex flex-wrap items-center gap-6 justify-between lg:justify-start">
-        <div className="flex items-center gap-3 min-w-[200px]">
+        <div className="flex items-center gap-3 min-w-50">
           <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
             <Package className="w-5 h-5 text-blue-600 dark:text-blue-400" />
           </div>
@@ -190,7 +205,7 @@ export default function MainPartAndVendor() {
             <p className="text-xl font-bold text-foreground">{totalCount}</p>
           </div>
         </div>
-        <div className="flex items-center gap-3 min-w-[200px]">
+        <div className="flex items-center gap-3 min-w-50">
           <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
             <IndianRupee className="w-5 h-5 text-green-600 dark:text-green-400" />
           </div>
@@ -219,7 +234,29 @@ export default function MainPartAndVendor() {
 
         {/* Filters Panel */}
         {isFilterOpen && (
-          <div className="p-4 bg-neutral-50 dark:bg-neutral-900/50 rounded-lg border border-neutral-200 dark:border-neutral-700 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-4 bg-neutral-50 dark:bg-neutral-900/50 rounded-lg border border-neutral-200 dark:border-neutral-700 grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Machine Type Filter */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">
+                Machine Type
+              </label>
+              <select
+                value={typeFilter}
+                onChange={(e) => {
+                  setTypeFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="w-full px-3 py-2 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500"
+              >
+                <option value="">All Types</option>
+                {dbMachineTypes.map((typeObj) => (
+                  <option key={typeObj.type_name} value={typeObj.type_name}>
+                    {typeObj.type_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {/* Vendor Filter */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-foreground">
@@ -265,8 +302,10 @@ export default function MainPartAndVendor() {
             </div>
 
             {/* Clear Filters */}
-            {(vendorFilter !== "" || partFilter !== "") && (
-              <div className="col-span-1 md:col-span-2 flex justify-end">
+            {(vendorFilter !== "" ||
+              partFilter !== "" ||
+              typeFilter !== "") && (
+              <div className="col-span-1 md:col-span-3 flex justify-end mt-2">
                 <button
                   onClick={clearFilters}
                   className="text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-medium px-2 py-1"
@@ -296,6 +335,9 @@ export default function MainPartAndVendor() {
                 <tr className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                     ID
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Type
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                     Machine
@@ -328,6 +370,9 @@ export default function MainPartAndVendor() {
                   >
                     <td className="px-4 py-3 text-sm font-medium text-foreground">
                       #{repair.task_id}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-foreground">
+                      {repair.machine_type || "-"}
                     </td>
                     <td className="px-4 py-3 text-sm text-foreground">
                       {repair.machine_name || "-"}
@@ -397,7 +442,7 @@ export default function MainPartAndVendor() {
       {selectedRepair && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-xl max-w-2xl w-full mx-auto max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-700 flex-shrink-0">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-700 shrink-0">
               <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
                 <Package className="w-5 h-5 text-blue-500" />
                 Part & Vendor Info #{selectedRepair.task_id}
@@ -532,7 +577,7 @@ export default function MainPartAndVendor() {
               )}
             </div>
 
-            <div className="flex items-center justify-end px-6 py-4 border-t border-neutral-200 dark:border-neutral-700 flex-shrink-0 bg-neutral-50 dark:bg-neutral-900/50">
+            <div className="flex items-center justify-end px-6 py-4 border-t border-neutral-200 dark:border-neutral-700 shrink-0 bg-neutral-50 dark:bg-neutral-900/50">
               <button
                 onClick={() => setSelectedRepair(null)}
                 className="px-6 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors shadow-sm"

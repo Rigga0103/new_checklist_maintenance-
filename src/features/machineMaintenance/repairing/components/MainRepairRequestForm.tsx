@@ -29,13 +29,13 @@ export default function MainRepairRequestForm({
     formData,
     requestByUsers,
     assignToUsers,
-    machines,
+    machineTypes,
+    filteredMachines,
     isLoading,
     isSubmitting,
     handleChange,
     handleSubmit,
     handleReset,
-    availableMotors,
   } = useRepairRequestForm();
 
   const {
@@ -132,6 +132,26 @@ export default function MainRepairRequestForm({
 
             {/* Row 2: Machine & Motor Selection */}
             <div className="grid gap-3 sm:grid-cols-2 mb-3">
+              {/* Custom Machine Type Dropdown */}
+              <div>
+                <label className={labelClass}>Machine Type *</label>
+                <select
+                  name="machineType"
+                  value={formData.machineType}
+                  onChange={handleChange}
+                  required
+                  className={selectClass}
+                >
+                  <option value="">Select Type</option>
+                  {machineTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Machine Name Dropdown */}
               <div>
                 <label className={labelClass}>Machine Name *</label>
                 <select
@@ -139,10 +159,15 @@ export default function MainRepairRequestForm({
                   value={formData.machineName}
                   onChange={handleChange}
                   required={!formData.customMachine}
+                  disabled={!formData.machineType}
                   className={selectClass}
                 >
-                  <option value="">Select Machine</option>
-                  {[...machines]
+                  <option value="">
+                    {!formData.machineType
+                      ? "Select Type First"
+                      : "Select Machine"}
+                  </option>
+                  {[...filteredMachines]
                     .sort((a, b) => {
                       const aIsLetter = a.trim().length === 1;
                       const bIsLetter = b.trim().length === 1;
@@ -158,51 +183,6 @@ export default function MainRepairRequestForm({
                   <option value="other">Other (Enter manually)</option>
                 </select>
               </div>
-
-              {/* Conditional: Motor Name (if available) - Visual Grid */}
-              {availableMotors.length > 0 &&
-                formData.machineName !== "other" && (
-                  <div className="sm:col-span-2 mt-1">
-                    <label className={labelClass}>
-                      Select Motor / Part ({availableMotors.length}) *
-                    </label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-1.5 p-1 max-h-60 overflow-y-auto custom-scrollbar">
-                      {availableMotors.map((motor) => {
-                        const isSelected = formData.motorName === motor;
-                        return (
-                          <button
-                            key={motor}
-                            type="button"
-                            onClick={() =>
-                              handleChange({
-                                target: { name: "motorName", value: motor },
-                              } as any)
-                            }
-                            className={`
-                            relative text-left px-3 py-2.5 text-xs sm:text-sm rounded-lg border transition-all duration-200
-                            flex flex-col gap-0.5
-                            ${
-                              isSelected
-                                ? "bg-orange-50 border-orange-500 text-orange-900 shadow-sm ring-1 ring-orange-500 dark:bg-orange-900/20 dark:border-orange-500 dark:text-orange-100"
-                                : "bg-white border-gray-200 text-gray-700 hover:border-orange-300 hover:bg-orange-50/50 dark:bg-neutral-900 dark:border-neutral-700 dark:text-gray-300 dark:hover:border-orange-700"
-                            }
-                          `}
-                          >
-                            <span className="font-medium line-clamp-2">
-                              {motor}
-                            </span>
-                            {isSelected && (
-                              <span className="absolute top-1 right-1 flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
-                              </span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
             </div>
 
             {/* Conditional: Custom Machine Name */}

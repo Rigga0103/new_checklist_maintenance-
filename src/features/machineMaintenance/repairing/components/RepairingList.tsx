@@ -26,6 +26,7 @@ import {
   useProcessRepairMutation,
 } from "../server/tanstackQuery/useRepairingQueries";
 import type { MachineRepair, RepairProcessFormData } from "../../types/types";
+import { useMachineTypesQuery } from "../server/tanstackQuery/useMachineTypes";
 
 // Predefined Work Done options
 const WORK_DONE_OPTIONS: { value: string; label: string }[] = [
@@ -57,6 +58,7 @@ export default function RepairingList({
     "pending" | "history" | "last7days"
   >(initialTab);
   const [searchTerm, setSearchTerm] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [page, setPage] = useState(1);
@@ -135,7 +137,17 @@ export default function RepairingList({
   };
 
   const activeQuery = getActiveQuery();
-  const repairs = activeQuery.data?.data || [];
+  let repairs = activeQuery.data?.data || [];
+
+  const { data: dbMachineTypes = [] } = useMachineTypesQuery();
+
+  // Client-side filtering for machineType since it might not be indexed perfectly in all tabs yet
+  if (typeFilter) {
+    repairs = repairs.filter(
+      (r) => r.machine_type?.toLowerCase() === typeFilter.toLowerCase(),
+    );
+  }
+
   const totalCount = activeQuery.data?.totalCount || 0;
   const isLoading =
     activeQuery.isLoading || isRbacPendingLoading || isRbacHistoryLoading;
@@ -154,6 +166,7 @@ export default function RepairingList({
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [billFile, setBillFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [hasWarranty, setHasWarranty] = useState(false);
 
   const handleTabChange = (tab: "pending" | "history" | "last7days") => {
     setActiveTab(tab);
@@ -179,6 +192,7 @@ export default function RepairingList({
     setPhotoFile(null);
     setBillFile(null);
     setPhotoPreview(repair.photo_url || null);
+    setHasWarranty(!!repair.warranty);
   };
 
   const closeProcessModal = () => {
@@ -186,6 +200,7 @@ export default function RepairingList({
     setPhotoFile(null);
     setBillFile(null);
     setPhotoPreview(null);
+    setHasWarranty(false);
   };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -280,6 +295,7 @@ export default function RepairingList({
     }
     const headers = [
       "Task ID",
+      "Type",
       "Machine Name",
       "Issue Detail",
       "Requested By",
@@ -298,6 +314,7 @@ export default function RepairingList({
     const rows = repairs.map((t) => {
       const base = [
         t.task_id,
+        t.machine_type || "",
         t.machine_name || "",
         t.issue_detail || "",
         t.form_filled_by || "",
@@ -309,6 +326,7 @@ export default function RepairingList({
       } else if (activeTab === "history") {
         return [
           t.task_id,
+          t.machine_type || "",
           t.machine_name || "",
           t.issue_detail || "",
           t.part_replaced || "",
@@ -426,6 +444,22 @@ export default function RepairingList({
         </div>
 
         <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto pt-2 xl:pt-0">
+          <select
+            value={typeFilter}
+            onChange={(e) => {
+              setTypeFilter(e.target.value);
+              setPage(1);
+            }}
+            className="px-3 py-2 text-sm bg-gray-50 dark:bg-neutral-900/50 border border-gray-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+          >
+            <option value="">All Types</option>
+            {dbMachineTypes.map((typeObj) => (
+              <option key={typeObj.type_name} value={typeObj.type_name}>
+                {typeObj.type_name}
+              </option>
+            ))}
+          </select>
+
           <div className="relative flex-1 min-w-50">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
@@ -494,6 +528,9 @@ export default function RepairingList({
                     ID
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Type
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                     Machine
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
@@ -550,6 +587,9 @@ export default function RepairingList({
                   >
                     <td className="px-4 py-3 text-sm font-medium text-foreground">
                       #{repair.task_id}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-foreground">
+                      {repair.machine_type || "-"}
                     </td>
                     <td className="px-4 py-3 text-sm text-foreground">
                       {repair.machine_name || "-"}
@@ -776,21 +816,43 @@ export default function RepairingList({
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-foreground mb-1.5">
-                        Warranty Details
-                      </label>
-                      <input
-                        type="text"
-                        value={processForm.warranty || ""}
-                        onChange={(e) =>
-                          setProcessForm((prev) => ({
-                            ...prev,
-                            warranty: e.target.value,
-                          }))
-                        }
-                        placeholder="e.g., 1 Year"
-                        className="w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground"
-                      />
+                      <div className="flex items-center gap-2 mb-1.5 h-5">
+                        <input
+                          type="checkbox"
+                          id="warranty-checkbox-list"
+                          checked={hasWarranty}
+                          onChange={(e) => {
+                            setHasWarranty(e.target.checked);
+                            if (!e.target.checked) {
+                              setProcessForm((prev) => ({
+                                ...prev,
+                                warranty: "",
+                              }));
+                            }
+                          }}
+                          className="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
+                        />
+                        <label
+                          htmlFor="warranty-checkbox-list"
+                          className="block text-sm font-medium text-foreground cursor-pointer select-none"
+                        >
+                          Warranty & Guarantee
+                        </label>
+                      </div>
+                      {hasWarranty && (
+                        <input
+                          type="text"
+                          value={processForm.warranty || ""}
+                          onChange={(e) =>
+                            setProcessForm((prev) => ({
+                              ...prev,
+                              warranty: e.target.value,
+                            }))
+                          }
+                          placeholder="e.g., 1 Year"
+                          className="w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground"
+                        />
+                      )}
                     </div>
                   </div>
                   <div>
