@@ -138,7 +138,7 @@ export function useMaintenanceDataQuery() {
 }
 
 /**
- * Fetch today's pending maintenance tasks (filtered by date + user)
+ * Fetch current week's pending maintenance tasks (filtered by date + user)
  */
 export function useMaintenancePendingQuery(
   searchTerm = "",

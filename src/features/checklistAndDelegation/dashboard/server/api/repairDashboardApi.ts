@@ -90,7 +90,7 @@ export const fetchMaintenanceData = async (): Promise<
   }
 };
 
-// Fetch today's pending maintenance tasks (mirrors checklist pattern)
+// Fetch current week's pending maintenance tasks (mirrors checklist pattern)
 export const fetchMaintenancePending = async (
   searchTerm = "",
   role: string | null = null,
@@ -99,13 +99,14 @@ export const fetchMaintenancePending = async (
   endDate?: string,
 ): Promise<MachineMaintenanceTask[]> => {
   try {
-    const today = new Date().toISOString().split("T")[0];
+    const { start: startOfWeek, end: endOfWeek } = getWeekRange();
+
     const defaultStart = startDate
       ? `${startDate}T00:00:00.000Z`
-      : `${today}T00:00:00.000Z`;
+      : `${startOfWeek}T00:00:00.000Z`;
     const defaultEnd = endDate
       ? `${endDate}T23:59:59.999Z`
-      : `${today}T23:59:59.999Z`;
+      : `${endOfWeek}T23:59:59.999Z`;
 
     let query = supabase
       .from("machine_maintenance")
@@ -200,13 +201,18 @@ function getWeekRange() {
 
   const monday = new Date(current);
   monday.setDate(current.getDate() + diffToMonday);
-  monday.setHours(0, 0, 0, 0);
 
   const saturday = new Date(monday);
   saturday.setDate(monday.getDate() + 5);
-  saturday.setHours(23, 59, 59, 999);
 
-  return { start: monday.toISOString(), end: saturday.toISOString() };
+  const format = (date: Date) => {
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  return { start: format(monday), end: format(saturday) };
 }
 
 // Fetch maintenance tasks for the last 7 days (Monday to Saturday, all statuses)
@@ -221,8 +227,8 @@ export const fetchMaintenanceLast7Days = async (
     let query = supabase
       .from("machine_maintenance")
       .select("*")
-      .gte("task_start_date", startOfWeek)
-      .lte("task_start_date", endOfWeek)
+      .gte("task_start_date", `${startOfWeek}T00:00:00.000Z`)
+      .lte("task_start_date", `${endOfWeek}T23:59:59.999Z`)
       .order("task_start_date", { ascending: true });
 
     if (searchTerm && searchTerm.trim() !== "") {

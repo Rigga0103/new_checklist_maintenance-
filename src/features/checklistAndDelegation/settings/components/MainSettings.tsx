@@ -44,11 +44,12 @@ import { SettingsTableSkeleton } from "./SettingsSkeleton";
 import supabase from "@/utils/supabaseClient";
 import PermissionsModal from "./PermissionsModal";
 import CsvImportHub from "./CsvImportHub";
+import HolidayAndWorkingDays from "./HolidayAndWorkingDays";
 
 const SETTINGS_ITEMS_PER_PAGE = 20;
 
 // Tab types
-type TabType = "users" | "departments" | "leave" | "import";
+type TabType = "users" | "departments" | "leave" | "import" | "holiday";
 type DeptSubTab = "departments" | "givenBy";
 
 // Initial form states
@@ -509,48 +510,54 @@ export default function MainSettings() {
           {/* Tabs */}
           <div className="flex border border-gray-200 dark:border-neutral-600 rounded-lg overflow-hidden">
             <button
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors ${
-                activeTab === "users"
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors ${activeTab === "users"
                   ? "bg-green-600 text-white"
                   : "bg-white dark:bg-neutral-800 text-foreground hover:bg-gray-100 dark:hover:bg-neutral-700"
-              }`}
+                }`}
               onClick={() => handleTabChange("users")}
             >
               <User size={16} />
               Users
             </button>
             <button
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors ${
-                activeTab === "departments"
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors ${activeTab === "departments"
                   ? "bg-green-600 text-white"
                   : "bg-white dark:bg-neutral-800 text-foreground hover:bg-gray-100 dark:hover:bg-neutral-700"
-              }`}
+                }`}
               onClick={() => handleTabChange("departments")}
             >
               <Building size={16} />
               Departments
             </button>
             <button
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors ${
-                activeTab === "leave"
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors ${activeTab === "leave"
                   ? "bg-green-600 text-white"
                   : "bg-white dark:bg-neutral-800 text-foreground hover:bg-gray-100 dark:hover:bg-neutral-700"
-              }`}
+                }`}
               onClick={() => handleTabChange("leave")}
             >
               <Calendar size={16} />
               Leave
             </button>
             <button
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors ${
-                activeTab === "import"
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors ${activeTab === "import"
                   ? "bg-green-600 text-white"
                   : "bg-white dark:bg-neutral-800 text-foreground hover:bg-gray-100 dark:hover:bg-neutral-700"
-              }`}
+                }`}
               onClick={() => handleTabChange("import")}
             >
               <Upload size={16} />
               Import
+            </button>
+            <button
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors ${activeTab === "holiday"
+                  ? "bg-green-600 text-white"
+                  : "bg-white dark:bg-neutral-800 text-foreground hover:bg-gray-100 dark:hover:bg-neutral-700"
+                }`}
+              onClick={() => handleTabChange("holiday")}
+            >
+              <Calendar size={16} />
+              Holiday List
             </button>
           </div>
 
@@ -564,7 +571,7 @@ export default function MainSettings() {
           </button>
 
           {/* Add Button - hide for leave and import tabs */}
-          {activeTab !== "leave" && activeTab !== "import" && canWrite && (
+          {activeTab !== "leave" && activeTab !== "import" && activeTab !== "holiday" && canWrite && (
             <button
               onClick={handleAddButtonClick}
               className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors dark:bg-black dark:border-gray-300 border"
@@ -624,11 +631,10 @@ export default function MainSettings() {
                   <div className="py-1">
                     <button
                       onClick={clearUsernameFilter}
-                      className={`block w-full text-left px-4 py-2 text-sm ${
-                        !usernameFilter
+                      className={`block w-full text-left px-4 py-2 text-sm ${!usernameFilter
                           ? "bg-muted dark:bg-muted text-foreground dark:text-foreground-muted"
                           : "text-foreground dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-700"
-                      }`}
+                        }`}
                     >
                       All Usernames
                     </button>
@@ -638,11 +644,10 @@ export default function MainSettings() {
                         onClick={() =>
                           handleUsernameFilterSelect(user.user_name)
                         }
-                        className={`block w-full text-left px-4 py-2 text-sm ${
-                          usernameFilter === user.user_name
+                        className={`block w-full text-left px-4 py-2 text-sm ${usernameFilter === user.user_name
                             ? "bg-muted dark:bg-muted text-foreground dark:text-foreground-muted"
                             : "text-foreground dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-700"
-                        }`}
+                          }`}
                       >
                         {user.user_name}
                       </button>
@@ -818,21 +823,19 @@ export default function MainSettings() {
             {/* Sub-tabs */}
             <div className="flex border border-border dark:border-muted-foreground rounded-lg overflow-hidden">
               <button
-                className={`px-4 py-2 text-sm font-medium ${
-                  activeDeptSubTab === "departments"
+                className={`px-4 py-2 text-sm font-medium ${activeDeptSubTab === "departments"
                     ? "bg-primary text-white"
                     : "bg-white dark:bg-neutral-700 text-primary dark:text-foreground hover:bg-secondary dark:hover:bg-neutral-600"
-                }`}
+                  }`}
                 onClick={() => setActiveDeptSubTab("departments")}
               >
                 Departments
               </button>
               <button
-                className={`px-4 py-2 text-sm font-medium ${
-                  activeDeptSubTab === "givenBy"
+                className={`px-4 py-2 text-sm font-medium ${activeDeptSubTab === "givenBy"
                     ? "bg-primary text-white"
                     : "bg-white dark:bg-neutral-700 text-primary dark:text-foreground hover:bg-secondary dark:hover:bg-neutral-600"
-                }`}
+                  }`}
                 onClick={() => setActiveDeptSubTab("givenBy")}
               >
                 Given By
@@ -1273,8 +1276,8 @@ export default function MainSettings() {
                   >
                     {(createUserMutation.isPending ||
                       updateUserMutation.isPending) && (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    )}
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      )}
                     {isEditing ? "Update Account" : "Create Account"}
                   </button>
                 </div>
@@ -1357,8 +1360,8 @@ export default function MainSettings() {
                   >
                     {(createDeptMutation.isPending ||
                       updateDeptMutation.isPending) && (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    )}
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      )}
                     {isEditing ? "Update" : "Create"}
                   </button>
                 </div>
@@ -1370,6 +1373,9 @@ export default function MainSettings() {
 
       {/* Import Tab */}
       {activeTab === "import" && <CsvImportHub />}
+
+      {/* Holiday Tab */}
+      {activeTab === "holiday" && <HolidayAndWorkingDays />}
 
       {/* Permissions Modal */}
       {permissionUser && (
