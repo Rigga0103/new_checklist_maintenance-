@@ -232,12 +232,14 @@ export const updateDelegationData = async (
     const results = await Promise.all(
       submissionData.map(async (item) => {
         const imageUrl = item.image?.previewUrl || null;
+        const hasNewImage = !!item.image?.previewUrl;
         const now = new Date().toISOString();
 
         console.log("Processing delegation submission:", {
           taskId: item.taskId,
           status: item.status,
           hasImage: !!item.image,
+          hasNewImage,
           imageUrl,
           nextExtendDate: item.nextExtendDate,
         });
@@ -253,7 +255,6 @@ export const updateDelegationData = async (
               : now,
             updated_at: now,
             remarks: item.remarks || null,
-            image: imageUrl,
           };
         } else {
           // For Done: set submission_date and status to 'done'
@@ -262,8 +263,12 @@ export const updateDelegationData = async (
             submission_date: now,
             updated_at: now,
             remarks: item.remarks || null,
-            image: imageUrl,
           };
+        }
+
+        // Only update image if a new one was uploaded, to preserve existing image
+        if (hasNewImage) {
+          cleanUpdate.image = imageUrl;
         }
 
         const { data, error } = await supabase
