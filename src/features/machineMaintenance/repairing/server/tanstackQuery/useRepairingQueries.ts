@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   fetchPendingRepairs,
+  fetchAllOverdueRepairing,
   fetchRepairHistory,
   processRepair,
   createRepairRequest,
@@ -20,6 +21,18 @@ import type {
 // Query Keys
 export const repairingKeys = {
   all: ["repairs"] as const,
+  overdue: (
+    page: number,
+    limit: number,
+    searchTerm: string,
+    role: string | null,
+    username: string | null,
+  ) =>
+    [
+      ...repairingKeys.all,
+      "overdue",
+      { page, limit, searchTerm, role, username },
+    ] as const,
   pending: (
     page: number,
     limit: number,
@@ -86,6 +99,21 @@ export const useActiveUserNamesQuery = () => {
     queryKey: [...repairingKeys.all, "activeUsers"] as const,
     queryFn: fetchActiveUserNames,
     staleTime: 1000 * 60 * 5,
+  });
+};
+
+export const useAllOverdueRepairingQuery = (
+  page: number,
+  limit: number,
+  searchTerm: string,
+  role: string | null,
+  username: string | null,
+) => {
+  return useQuery({
+    queryKey: repairingKeys.overdue(page, limit, searchTerm, role, username),
+    queryFn: () =>
+      fetchAllOverdueRepairing(page, limit, searchTerm, role, username),
+    placeholderData: (previousData) => previousData,
   });
 };
 

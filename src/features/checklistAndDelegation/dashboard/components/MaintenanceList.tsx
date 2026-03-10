@@ -23,7 +23,7 @@ import { formatDate } from "../hooks/useMaintenanceDashboard";
 const ITEMS_PER_PAGE = 50;
 
 interface MaintenanceListProps {
-  initialTab?: "pending" | "history" | "last7days";
+  initialTab?: "pending" | "history" | "last7days" | "overdue";
   showTabs?: boolean;
 }
 
@@ -173,6 +173,30 @@ export default function MaintenanceList({
           task.actual_date ? formatDate(task.actual_date) : "",
           statusVal,
           `"${(task.remarks || "").replace(/"/g, '""')}"`,
+        ];
+        csvRows.push(row.join(","));
+      });
+    } else if (activeTab === "overdue") {
+      const headers = [
+        "Task ID",
+        "Machine Name",
+        "Task Description",
+        "Assigned To",
+        "Frequency",
+        "Planned Date",
+        "Department",
+      ];
+      csvRows.push(headers.join(","));
+
+      filteredMaintenanceData.forEach((task) => {
+        const row = [
+          task.task_id,
+          `"${task.machine_name || ""}"`,
+          `"${task.task_description || ""}"`,
+          `"${task.doer_name || ""}"`,
+          `"${task.frequency || ""}"`,
+          task.task_start_date ? formatDate(task.task_start_date) : "",
+          `"${task.department || ""}"`,
         ];
         csvRows.push(row.join(","));
       });
@@ -503,6 +527,16 @@ export default function MaintenanceList({
             >
               Last 7 Days
             </button>
+            <button
+              onClick={() => setActiveTab("overdue")}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === "overdue"
+                  ? "bg-red-600 text-white"
+                  : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
+              }`}
+            >
+              All Overdue
+            </button>
           </div>
         )}
 
@@ -604,38 +638,39 @@ export default function MaintenanceList({
           )}
         </div>
 
-        {activeTab === "pending" && filteredMaintenanceData.length > 0 && (
-          <div className="flex items-center gap-2 ml-auto">
-            <button
-              onClick={selectAllTasks}
-              className="text-xs text-blue-600 hover:underline"
-            >
-              Select All
-            </button>
-            <button
-              onClick={markAllDone}
-              className="text-xs text-green-600 hover:underline font-medium"
-            >
-              All Done
-            </button>
-            <button
-              onClick={deselectAllTasks}
-              className="text-xs text-muted-foreground hover:underline"
-            >
-              Clear
-            </button>
-            {selectedTasks.size > 0 && (
+        {(activeTab === "pending" || activeTab === "overdue") &&
+          filteredMaintenanceData.length > 0 && (
+            <div className="flex items-center gap-2 ml-auto">
               <button
-                onClick={handleSubmit}
-                disabled={false} // Add loading state if needed
-                className="flex items-center gap-1 px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                onClick={selectAllTasks}
+                className="text-xs text-blue-600 hover:underline"
               >
-                <Check className="w-4 h-4" />
-                Submit ({selectedTasks.size})
+                Select All
               </button>
-            )}
-          </div>
-        )}
+              <button
+                onClick={markAllDone}
+                className="text-xs text-green-600 hover:underline font-medium"
+              >
+                All Done
+              </button>
+              <button
+                onClick={deselectAllTasks}
+                className="text-xs text-muted-foreground hover:underline"
+              >
+                Clear
+              </button>
+              {selectedTasks.size > 0 && (
+                <button
+                  onClick={handleSubmit}
+                  disabled={false} // Add loading state if needed
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                >
+                  <Check className="w-4 h-4" />
+                  Submit ({selectedTasks.size})
+                </button>
+              )}
+            </div>
+          )}
       </div>
 
       {/* Table */}
@@ -669,7 +704,7 @@ export default function MaintenanceList({
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase w-10">
                     Seq
                   </th>
-                  {activeTab === "pending" && (
+                  {(activeTab === "pending" || activeTab === "overdue") && (
                     <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase w-10">
                       <input
                         type="checkbox"
@@ -702,11 +737,11 @@ export default function MaintenanceList({
                     Start Date
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase bg-yellow-50 dark:bg-yellow-900/20">
-                    {activeTab === "pending"
+                    {activeTab === "pending" || activeTab === "overdue"
                       ? "End/Due Date"
                       : "Completed Date"}
                   </th>
-                  {activeTab === "pending" && (
+                  {(activeTab === "pending" || activeTab === "overdue") && (
                     <>
                       <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase bg-blue-50 dark:bg-blue-900/20">
                         Status
@@ -763,7 +798,7 @@ export default function MaintenanceList({
                     <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
                       {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
                     </td>
-                    {activeTab === "pending" && (
+                    {(activeTab === "pending" || activeTab === "overdue") && (
                       <td className="px-3 py-3">
                         <input
                           type="checkbox"
@@ -798,26 +833,31 @@ export default function MaintenanceList({
                       {formatDate(task.task_start_date)}
                     </td>
                     <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap bg-yellow-50 dark:bg-yellow-900/10">
-                      {activeTab === "pending"
+                      {activeTab === "pending" || activeTab === "overdue"
                         ? "—"
                         : formatDate(task.actual_date)}
                     </td>
 
                     {/* Pending Actions */}
-                    {activeTab === "pending" && (
+                    {(activeTab === "pending" || activeTab === "overdue") && (
                       <>
-                        <td className="px-3 py-3 bg-blue-50 dark:bg-blue-900/10">
+                        <td className="px-3 py-3 whitespace-nowrap bg-blue-50 dark:bg-blue-900/10">
                           <select
                             disabled={!selectedTasks.has(task.task_id)}
-                            value={taskStatuses[task.task_id] || ""}
+                            value={taskStatuses[task.task_id] || "Select"}
                             onChange={(e) =>
                               updateTaskStatus(task.task_id, e.target.value)
                             }
                             className="min-w-32 border border-gray-300 dark:border-neutral-600 rounded-md px-2 py-1 w-full disabled:bg-gray-100 dark:disabled:bg-neutral-800 disabled:cursor-not-allowed text-xs bg-white dark:bg-neutral-700 text-gray-900 dark:text-white"
                           >
-                            <option value="">Select</option>
+                            <option value="Select">Select</option>
                             <option value="Done">Done</option>
-                            <option value="Pending">Pending</option>
+                            <option value="Hold">Hold</option>
+                            <option value="Machine Breakdown">
+                              Machine Breakdown
+                            </option>
+                            <option value="Not Plan">Not Plan</option>
+                            <option value="Cancel">Cancel</option>
                           </select>
                         </td>
                         <td className="px-3 py-3 whitespace-nowrap">

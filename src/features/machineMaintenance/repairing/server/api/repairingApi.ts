@@ -67,6 +67,59 @@ export const fetchPendingRepairs = async (
 };
 
 /**
+ * Fetch all overdue repair requests (created before today and not completed/cancelled)
+ */
+export const fetchAllOverdueRepairing = async (
+  page = 1,
+  limit = 50,
+  searchTerm = "",
+  role: string | null = null,
+  username: string | null = null,
+): Promise<RepairFetchResponse> => {
+  try {
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayISO = today.toISOString();
+
+    let query = supabase
+      .from("machine_repair")
+      .select("*", { count: "exact" })
+      .or("status.eq.pending,status.eq.in_progress")
+      .lt("created_at", todayISO) // Before today
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    // Apply search filter
+    if (searchTerm && searchTerm.trim() !== "") {
+      const searchValue = searchTerm.trim();
+      query = query.or(
+        `task_id::text.ilike.%${searchValue}%,machine_name.ilike.%${searchValue}%,form_filled_by.ilike.%${searchValue}%,issue_detail.ilike.%${searchValue}%,assigned_to.ilike.%${searchValue}%`,
+      );
+    }
+
+    // Apply role filter - users only see their assigned tasks
+    if (role === "user" && username) {
+      query = query.eq("assigned_to", username);
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error("Error fetching overdue repairs:", error);
+      return { data: [], totalCount: 0 };
+    }
+
+    return { data: data as MachineRepair[], totalCount: count || 0 };
+  } catch (error) {
+    console.error("Error from Supabase:", error);
+    return { data: [], totalCount: 0 };
+  }
+};
+
+/**
  * Fetch completed repair history
  */
 export const fetchRepairHistory = async (

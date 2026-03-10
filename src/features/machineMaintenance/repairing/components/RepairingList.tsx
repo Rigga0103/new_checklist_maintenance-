@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { useRBAC } from "@/hooks/useRBAC";
 import {
   usePendingRepairsQuery,
+  useAllOverdueRepairingQuery,
   useRepairHistoryQuery,
   useRepairLast7DaysQuery,
   useProcessRepairMutation,
@@ -46,7 +47,7 @@ const WORK_DONE_OPTIONS: { value: string; label: string }[] = [
 ];
 
 interface RepairingListProps {
-  initialTab?: "pending" | "history" | "last7days";
+  initialTab?: "pending" | "history" | "last7days" | "overdue";
   showTabs?: boolean;
 }
 
@@ -55,7 +56,7 @@ export default function RepairingList({
   showTabs = true,
 }: RepairingListProps) {
   const [activeTab, setActiveTab] = useState<
-    "pending" | "history" | "last7days"
+    "pending" | "history" | "last7days" | "overdue"
   >(initialTab);
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
@@ -123,12 +124,22 @@ export default function RepairingList({
     endDate || undefined,
   );
 
+  const overdueQuery = useAllOverdueRepairingQuery(
+    page,
+    limit,
+    searchTerm,
+    effectiveRole,
+    username,
+  );
+
   const processMutation = useProcessRepairMutation();
 
   const getActiveQuery = () => {
     switch (activeTab) {
       case "pending":
         return pendingQuery;
+      case "overdue":
+        return overdueQuery;
       case "history":
         return historyQuery;
       case "last7days":
@@ -168,7 +179,9 @@ export default function RepairingList({
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [hasWarranty, setHasWarranty] = useState(false);
 
-  const handleTabChange = (tab: "pending" | "history" | "last7days") => {
+  const handleTabChange = (
+    tab: "pending" | "history" | "last7days" | "overdue",
+  ) => {
     setActiveTab(tab);
     setPage(1);
   };
@@ -302,7 +315,7 @@ export default function RepairingList({
       "Assigned To",
       "Vendor",
     ];
-    if (activeTab === "pending") {
+    if (activeTab === "pending" || activeTab === "overdue") {
       headers.push("Date", "Status");
     } else if (activeTab === "history") {
       headers.splice(3, 0, "Part Replaced", "Warranty", "Work Done");
@@ -321,7 +334,7 @@ export default function RepairingList({
         t.assigned_to || "",
         t.vendor_name || "",
       ];
-      if (activeTab === "pending") {
+      if (activeTab === "pending" || activeTab === "overdue") {
         return [...base, formatDate(t.created_at), t.status || ""];
       } else if (activeTab === "history") {
         return [
@@ -364,7 +377,10 @@ export default function RepairingList({
     toast.success("Exported successfully");
   };
 
-  const canRead = activeTab === "pending" ? canReadPending : canReadHistory;
+  const canRead =
+    activeTab === "pending" || activeTab === "overdue"
+      ? canReadPending
+      : canReadHistory;
   if (!canRead && role) {
     return (
       <div className="flex items-center justify-center h-96 text-muted-foreground">
@@ -381,76 +397,81 @@ export default function RepairingList({
           <h1 className="text-2xl font-bold text-foreground">
             {activeTab === "pending"
               ? "Pending Repairs"
-              : activeTab === "history"
-                ? "Repair History"
-                : "Repairing Last 7 Days"}
+              : activeTab === "overdue"
+                ? "All Overdue Repairs"
+                : activeTab === "history"
+                  ? "Repair History"
+                  : "Repairing Last 7 Days"}
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             {viewMyTasksOnly && username
               ? `Showing your tasks only (${username})`
               : "Process and manage repair requests"}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-1 bg-gray-100 dark:bg-neutral-700/50 p-1 rounded-xl shadow-inner border border-gray-200 dark:border-neutral-700">
+          <div className="flex items-center gap-1 bg-gray-100 dark:bg-neutral-800/50 p-1 rounded-xl border border-gray-200 dark:border-neutral-700">
             <button
               onClick={() => setViewMyTasksOnly(false)}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${!viewMyTasksOnly ? "bg-white dark:bg-neutral-600 text-gray-900 dark:text-white shadow-sm ring-1 ring-gray-200 dark:ring-neutral-500" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-neutral-600/50"}`}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${!viewMyTasksOnly ? "bg-white dark:bg-neutral-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"}`}
             >
               ✨ All Tasks
             </button>
             <button
               onClick={() => setViewMyTasksOnly(true)}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${viewMyTasksOnly ? "bg-white dark:bg-neutral-600 text-gray-900 dark:text-white shadow-sm ring-1 ring-gray-200 dark:ring-neutral-500" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-neutral-600/50"}`}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${viewMyTasksOnly ? "bg-white dark:bg-neutral-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"}`}
             >
               👤 My Tasks
             </button>
           </div>
           <button
             onClick={() => activeQuery.refetch()}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-foreground bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors"
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-foreground bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw
+              className={`w-4 h-4 ${activeQuery.isFetching ? "animate-spin" : ""}`}
+            />
             Refresh
           </button>
         </div>
       </div>
 
-      {/* Tabs & Filters */}
-      <div className="flex flex-col xl:flex-row gap-4 items-start xl:items-center justify-between bg-white dark:bg-neutral-800 p-2 pl-3 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-700">
-        <div className="flex items-center overflow-x-auto no-scrollbar w-full xl:w-auto pr-2 xl:pr-0 border-b xl:border-b-0 border-gray-100 dark:border-neutral-800 pb-2 xl:pb-0">
-          {showTabs && (
-            <div className="flex gap-1 bg-gray-100/80 dark:bg-neutral-900/50 p-1 rounded-lg border border-gray-200/50 dark:border-neutral-700/50">
-              <button
-                onClick={() => handleTabChange("pending")}
-                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all whitespace-nowrap ${activeTab === "pending" ? "bg-blue-600 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-neutral-800/50"}`}
-              >
-                Pending
-              </button>
-              <button
-                onClick={() => handleTabChange("history")}
-                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all whitespace-nowrap ${activeTab === "history" ? "bg-gray-700 dark:bg-neutral-600 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-neutral-800/50"}`}
-              >
-                History
-              </button>
-              <button
-                onClick={() => handleTabChange("last7days")}
-                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all whitespace-nowrap ${activeTab === "last7days" ? "bg-gray-600 dark:bg-neutral-500 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-neutral-800/50"}`}
-              >
-                Last 7 Days
-              </button>
-            </div>
-          )}
+      <div className="flex flex-wrap items-center gap-3 bg-white dark:bg-neutral-800 p-3 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-700">
+        <div className="flex items-center overflow-x-auto no-scrollbar gap-1 bg-gray-100/80 dark:bg-neutral-900/50 p-1 rounded-lg border border-gray-200/50 dark:border-neutral-700/50">
+          <button
+            onClick={() => handleTabChange("pending")}
+            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all whitespace-nowrap ${activeTab === "pending" ? "bg-blue-600 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"}`}
+          >
+            Pending
+          </button>
+          <button
+            onClick={() => handleTabChange("overdue")}
+            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all whitespace-nowrap ${activeTab === "overdue" ? "bg-red-600 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"}`}
+          >
+            All Overdue
+          </button>
+          <button
+            onClick={() => handleTabChange("history")}
+            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all whitespace-nowrap ${activeTab === "history" ? "bg-gray-700 dark:bg-neutral-600 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"}`}
+          >
+            History
+          </button>
+          <button
+            onClick={() => handleTabChange("last7days")}
+            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all whitespace-nowrap ${activeTab === "last7days" ? "bg-gray-600 dark:bg-neutral-500 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"}`}
+          >
+            Last 7 Days
+          </button>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto pt-2 xl:pt-0">
+        <div className="flex items-center gap-3 flex-1">
           <select
             value={typeFilter}
             onChange={(e) => {
               setTypeFilter(e.target.value);
               setPage(1);
             }}
-            className="px-3 py-2 text-sm bg-gray-50 dark:bg-neutral-900/50 border border-gray-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+            className="min-w-[120px] px-3 py-1.5 text-sm bg-gray-50 dark:bg-neutral-900/50 border border-gray-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-foreground"
           >
             <option value="">All Types</option>
             {dbMachineTypes.map((typeObj) => (
@@ -460,16 +481,17 @@ export default function RepairingList({
             ))}
           </select>
 
-          <div className="relative flex-1 min-w-50">
+          <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
               placeholder="Search machine, issue..."
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 text-sm bg-gray-50 dark:bg-neutral-900/50 border border-gray-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-gray-400 text-foreground"
+              className="w-full pl-9 pr-4 py-1.5 text-sm bg-gray-50 dark:bg-neutral-900/50 border border-gray-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-gray-400 text-foreground"
             />
           </div>
+
           <div className="flex items-center gap-2">
             <input
               type="date"
@@ -479,7 +501,7 @@ export default function RepairingList({
                 setStartDate(e.target.value);
                 setPage(1);
               }}
-              className="px-2 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="px-2 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 focus:ring-2 focus:ring-blue-500 focus:outline-none text-foreground"
               title="From Date"
             />
             <span className="text-gray-500 dark:text-gray-400 text-sm">-</span>
@@ -491,7 +513,7 @@ export default function RepairingList({
                 setEndDate(e.target.value);
                 setPage(1);
               }}
-              className="px-2 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="px-2 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 focus:ring-2 focus:ring-blue-500 focus:outline-none text-foreground"
               title="To Date"
             />
             <button
@@ -642,7 +664,7 @@ export default function RepairingList({
                       </td>
                     )}
                     <td className="px-4 py-3">
-                      {activeTab === "pending" ? (
+                      {activeTab === "pending" || activeTab === "overdue" ? (
                         canEditPending ? (
                           <button
                             onClick={() => openProcessModal(repair)}

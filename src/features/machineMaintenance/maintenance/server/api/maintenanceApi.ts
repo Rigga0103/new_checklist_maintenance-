@@ -145,6 +145,59 @@ function getWeekRange() {
 }
 
 /**
+ * Fetch all overdue maintenance tasks (task start date < today and actual date is null)
+ */
+export const fetchAllOverdueMaintenance = async (
+  page = 1,
+  limit = 50,
+  searchTerm = "",
+  role: string | null = null,
+  username: string | null = null,
+): Promise<MaintenanceFetchResponse> => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // start of today
+    const startOfTodayISO = today.toISOString();
+
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    let query = supabase
+      .from("machine_maintenance")
+      .select("*", { count: "exact" })
+      .lt("task_start_date", startOfTodayISO)
+      .is("actual_date", null)
+      .order("task_start_date", { ascending: true })
+      .range(from, to);
+
+    // Apply search filter
+    if (searchTerm && searchTerm.trim() !== "") {
+      const searchValue = searchTerm.trim();
+      query = query.or(
+        `task_id::text.ilike.%${searchValue}%,machine_name.ilike.%${searchValue}%,doer_name.ilike.%${searchValue}%,task_description.ilike.%${searchValue}%,department.ilike.%${searchValue}%`,
+      );
+    }
+
+    // Apply role filter - users only see their assigned tasks
+    if (role === "user" && username) {
+      query = query.eq("doer_name", username);
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error("Error fetching overdue maintenance:", error);
+      return { data: [], totalCount: 0 };
+    }
+
+    return { data: data as MachineMaintenance[], totalCount: count || 0 };
+  } catch (error) {
+    console.error("Error from Supabase:", error);
+    return { data: [], totalCount: 0 };
+  }
+};
+
+/**
  * Fetch maintenance tasks for the last 7 days (Monday to Saturday)
  * Shows all tasks regardless of completion status
  */

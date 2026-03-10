@@ -17,6 +17,7 @@ import {
 import Image from "next/image";
 import {
   usePendingRepairsQuery,
+  useAllOverdueRepairingQuery,
   useProcessRepairMutation,
 } from "../server/tanstackQuery/useRepairingQueries";
 import type { MachineRepair, RepairProcessFormData } from "../../types/types";
@@ -58,11 +59,12 @@ export default function MainRepairingPending() {
 
   // All Tasks / My Tasks toggle
   const [viewMyTasksOnly, setViewMyTasksOnly] = useState(false);
+  const [activeTab, setActiveTab] = useState<"pending" | "overdue">("pending");
 
   // Derive effective role for query: when "My Tasks" is active, force user filter
   const effectiveRole = viewMyTasksOnly ? "user" : role;
 
-  const { data, isLoading, refetch } = usePendingRepairsQuery(
+  const pendingQuery = usePendingRepairsQuery(
     page,
     limit,
     searchTerm,
@@ -71,6 +73,19 @@ export default function MainRepairingPending() {
     startDate || undefined,
     endDate || undefined,
   );
+
+  const overdueQuery = useAllOverdueRepairingQuery(
+    page,
+    limit,
+    searchTerm,
+    effectiveRole,
+    username,
+  );
+
+  const activeQuery = activeTab === "pending" ? pendingQuery : overdueQuery;
+  const data = activeQuery.data;
+  const isLoading = activeQuery.isLoading;
+  const refetch = activeQuery.refetch;
 
   const { canRead, canEdit, isLoading: isRbacLoading } = useRBAC("repairing");
 
@@ -306,6 +321,36 @@ export default function MainRepairingPending() {
         </div>
       </div>
 
+      {/* Sub-Tabs */}
+      <div className="flex items-center gap-4 mb-2 border-b border-neutral-200 dark:border-neutral-700">
+        <button
+          onClick={() => {
+            setActiveTab("pending");
+            setPage(1);
+          }}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "pending"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Pending
+        </button>
+        <button
+          onClick={() => {
+            setActiveTab("overdue");
+            setPage(1);
+          }}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "overdue"
+              ? "border-red-500 text-red-600 dark:text-red-400"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          All Overdue
+        </button>
+      </div>
+
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4 mb-4">
         {/* Search */}
@@ -354,7 +399,9 @@ export default function MainRepairingPending() {
           </div>
         ) : repairs.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
-            No pending repairs found
+            {activeTab === "pending"
+              ? "No pending repairs found"
+              : "No overdue repairs found"}
           </div>
         ) : (
           <div className="overflow-x-auto">

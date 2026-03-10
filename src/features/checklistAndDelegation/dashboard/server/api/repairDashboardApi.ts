@@ -256,6 +256,49 @@ export const fetchMaintenanceLast7Days = async (
   }
 };
 
+// Fetch overdue maintenance tasks (task start date < today and actual date is null)
+export const fetchMaintenanceOverdue = async (
+  searchTerm = "",
+  role: string | null = null,
+  username: string | null = null,
+): Promise<MachineMaintenanceTask[]> => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // start of today
+    const startOfTodayISO = today.toISOString();
+
+    let query = supabase
+      .from("machine_maintenance")
+      .select("*")
+      .lt("task_start_date", startOfTodayISO)
+      .is("actual_date", null)
+      .order("task_start_date", { ascending: true });
+
+    if (searchTerm && searchTerm.trim() !== "") {
+      const sv = searchTerm.trim();
+      query = query.or(
+        `machine_name.ilike.%${sv}%,task_description.ilike.%${sv}%,doer_name.ilike.%${sv}%,frequency.ilike.%${sv}%`,
+      );
+    }
+
+    if (role === "user" && username) {
+      query = query.eq("doer_name", username);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("Error fetching overdue maintenance:", error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error("Unexpected error in fetchMaintenanceOverdue:", error);
+    return [];
+  }
+};
+
 export const updateMaintenanceTask = async (
   id: number,
   updates: Partial<MachineMaintenanceTask>,

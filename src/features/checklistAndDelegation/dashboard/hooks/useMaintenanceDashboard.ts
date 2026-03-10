@@ -6,6 +6,7 @@ import {
   useMaintenancePendingQuery,
   useMaintenanceHistoryQuery,
   useMaintenanceLast7DaysQuery,
+  useMaintenanceOverdueQuery,
   useUpdateMaintenanceTask,
 } from "../server/tanstackQuery/useRepairDashboardQuery";
 import { useUploadMaintenanceImage } from "../server/tanstackQuery/useMaintenanceUpload";
@@ -47,7 +48,7 @@ export interface FrequencyChartItem {
 
 // ============ Main Hook ============
 
-export type MaintenanceTab = "pending" | "history" | "last7days";
+export type MaintenanceTab = "pending" | "history" | "last7days" | "overdue";
 
 interface UseMaintenanceDashboardOptions {
   role?: string | null;
@@ -103,6 +104,13 @@ export function useMaintenanceDashboard(
     refetch: refetchLast7Days,
   } = useMaintenanceLast7DaysQuery(searchTerm, role, username);
 
+  const {
+    data: overdueTasks = [],
+    isLoading: overdueLoading,
+    error: overdueError,
+    refetch: refetchOverdue,
+  } = useMaintenanceOverdueQuery(searchTerm, role, username);
+
   // Full data query for Dashboard charts/stats (no user/date filter)
   const {
     data: allMaintenanceTasks = [],
@@ -119,15 +127,25 @@ export function useMaintenanceDashboard(
       ? pendingLoading
       : activeTab === "history"
         ? historyLoading
-        : last7DaysLoading;
-  const maintenanceError = pendingError || historyError || last7DaysError;
+        : activeTab === "last7days"
+          ? last7DaysLoading
+          : overdueLoading;
+  const maintenanceError =
+    pendingError || historyError || last7DaysError || overdueError;
 
   const refetchMaintenance = useCallback(() => {
     refetchPending();
     refetchHistory();
     refetchLast7Days();
+    refetchOverdue();
     refetchAllMaintenance();
-  }, [refetchPending, refetchHistory, refetchLast7Days, refetchAllMaintenance]);
+  }, [
+    refetchPending,
+    refetchHistory,
+    refetchLast7Days,
+    refetchOverdue,
+    refetchAllMaintenance,
+  ]);
 
   // ---- Click-away handler for machine dropdown ----
   useEffect(() => {
@@ -147,8 +165,9 @@ export function useMaintenanceDashboard(
   const currentTabData = useMemo(() => {
     if (activeTab === "pending") return pendingTasks;
     if (activeTab === "history") return historyTasks;
-    return last7DaysTasks;
-  }, [activeTab, pendingTasks, historyTasks, last7DaysTasks]);
+    if (activeTab === "last7days") return last7DaysTasks;
+    return overdueTasks;
+  }, [activeTab, pendingTasks, historyTasks, last7DaysTasks, overdueTasks]);
 
   // ---- Derived filter lists (from current tab data) ----
   const machinesList = useMemo(() => {

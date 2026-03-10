@@ -17,6 +17,7 @@ import {
   usePendingMaintenanceQuery,
   useCompleteMaintenanceMutation,
   useMaintenanceLast7DaysQuery,
+  useAllOverdueMaintenanceQuery,
 } from "../server/tanstackQuery/useMaintenanceQueries";
 import type { MachineMaintenance } from "../../types/types";
 import { toast } from "sonner";
@@ -27,9 +28,9 @@ export default function MainMaintenancePending() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [page, setPage] = useState(1);
-  const [activeTab, setActiveTab] = useState<"pending" | "last7days">(
-    "pending",
-  );
+  const [activeTab, setActiveTab] = useState<
+    "pending" | "last7days" | "overdue"
+  >("pending");
   const [selectedTask, setSelectedTask] = useState<MachineMaintenance | null>(
     null,
   );
@@ -54,15 +55,29 @@ export default function MainMaintenancePending() {
   const { data: last7DaysData, isLoading: isLast7DaysLoading } =
     useMaintenanceLast7DaysQuery(searchTerm, role, username);
 
+  const { data: overdueData, isLoading: isOverdueLoading } =
+    useAllOverdueMaintenanceQuery(page, limit, searchTerm, role, username);
+
   const { canRead, canEdit, isLoading: isRbacLoading } = useRBAC("maintenance");
 
   const pendingTasks = data?.data || [];
   const pendingTotalCount = data?.totalCount || 0;
   const last7DaysTasks = last7DaysData?.data || [];
+  const overdueTasks = overdueData?.data || [];
+  const overdueTotalCount = overdueData?.totalCount || 0;
 
-  const tasks = activeTab === "pending" ? pendingTasks : last7DaysTasks;
+  const tasks =
+    activeTab === "pending"
+      ? pendingTasks
+      : activeTab === "last7days"
+        ? last7DaysTasks
+        : overdueTasks;
   const totalCount =
-    activeTab === "pending" ? pendingTotalCount : last7DaysTasks.length;
+    activeTab === "pending"
+      ? pendingTotalCount
+      : activeTab === "last7days"
+        ? last7DaysTasks.length
+        : overdueTotalCount;
 
   const completeMutation = useCompleteMaintenanceMutation();
   const isProcessing = completeMutation.isPending;
@@ -80,9 +95,12 @@ export default function MainMaintenancePending() {
     setPage(1);
   };
 
-  const handleTabChange = (tab: "pending" | "last7days") => {
+  const handleTabChange = (tab: "pending" | "last7days" | "overdue") => {
     setActiveTab(tab);
     setPage(1);
+    setSearchTerm("");
+    setStartDate("");
+    setEndDate("");
   };
 
   const openProcessModal = (task: MachineMaintenance) => {
@@ -210,6 +228,7 @@ export default function MainMaintenancePending() {
   if (
     (activeTab === "pending" && isLoading) ||
     (activeTab === "last7days" && isLast7DaysLoading) ||
+    (activeTab === "overdue" && isOverdueLoading) ||
     isRbacLoading
   ) {
     return (
@@ -238,7 +257,9 @@ export default function MainMaintenancePending() {
           <p className="text-muted-foreground">
             {activeTab === "pending"
               ? "Complete maintenance tasks for today"
-              : "All maintenance tasks from Monday to Saturday"}
+              : activeTab === "last7days"
+                ? "All maintenance tasks from Monday to Saturday"
+                : "Maintenance tasks that are overdue from past days"}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -273,6 +294,16 @@ export default function MainMaintenancePending() {
           }`}
         >
           Last 7 Days
+        </button>
+        <button
+          onClick={() => handleTabChange("overdue")}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            activeTab === "overdue"
+              ? "bg-red-600 text-white"
+              : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
+          }`}
+        >
+          All Overdue
         </button>
       </div>
 
@@ -317,7 +348,7 @@ export default function MainMaintenancePending() {
           </div>
         </div>
       )}
-      {activeTab === "last7days" && (
+      {(activeTab === "last7days" || activeTab === "overdue") && (
         <div className="flex flex-col sm:flex-row gap-4 mb-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -375,7 +406,7 @@ export default function MainMaintenancePending() {
                       Status
                     </th>
                   )}
-                  {activeTab === "pending" && (
+                  {(activeTab === "pending" || activeTab === "overdue") && (
                     <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                       Action
                     </th>
@@ -432,7 +463,7 @@ export default function MainMaintenancePending() {
                         </span>
                       </td>
                     )}
-                    {activeTab === "pending" && (
+                    {(activeTab === "pending" || activeTab === "overdue") && (
                       <td className="px-4 py-3">
                         {canEdit && (
                           <button
