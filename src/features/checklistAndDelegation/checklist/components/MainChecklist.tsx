@@ -25,6 +25,7 @@ import {
   useSubmitChecklist,
   flattenChecklistPages,
   useChecklistLast7Days,
+  useChecklistUpcoming7Days,
 } from "../server/tanstackQuery/useChecklist";
 import { useUsers } from "../../quickTask/server/tanstackQuery/useQuickTask";
 import { useUploadChecklistImage } from "../server/tanstackQuery/useChecklistUpload";
@@ -35,7 +36,7 @@ const ITEMS_PER_PAGE = 50;
 
 export default function MainChecklist() {
   const [activeTab, setActiveTab] = useState<
-    "pending" | "history" | "last7days"
+    "pending" | "history" | "last7days" | "upcoming7days"
   >("pending");
   const [searchTerm, setSearchTerm] = useState("");
   const [nameFilter, setNameFilter] = useState("");
@@ -95,6 +96,17 @@ export default function MainChecklist() {
     refetch: refetchLast7Days,
   } = useChecklistLast7Days(searchTerm, effectiveRole, username, nameFilter);
 
+  const {
+    data: upcoming7DaysData,
+    isFetching: isFetchingUpcoming7Days,
+    refetch: refetchUpcoming7Days,
+  } = useChecklistUpcoming7Days(
+    searchTerm,
+    effectiveRole,
+    username,
+    nameFilter,
+  );
+
   const { data: usersData } = useUsers();
   const allNames = useMemo(() => {
     if (!usersData) return [];
@@ -111,13 +123,16 @@ export default function MainChecklist() {
   const activeTasks = flattenChecklistPages(activeData);
   const historyTasks = historyData?.pages.flatMap((page) => page.data) || [];
   const last7DaysTasks = last7DaysData?.data || [];
+  const upcoming7DaysTasks = upcoming7DaysData?.data || [];
 
   const rawTasks =
     activeTab === "pending"
       ? activeTasks
       : activeTab === "history"
         ? historyTasks
-        : last7DaysTasks;
+        : activeTab === "last7days"
+          ? last7DaysTasks
+          : upcoming7DaysTasks;
 
   // Apply date-range filter on history tab (filters by submission_date)
   const dateFilteredTasks =
@@ -144,7 +159,10 @@ export default function MainChecklist() {
     : dateFilteredTasks;
 
   const isLoading =
-    isFetchingActive || isFetchingHistory || isFetchingLast7Days;
+    isFetchingActive ||
+    isFetchingHistory ||
+    isFetchingLast7Days ||
+    isFetchingUpcoming7Days;
 
   // Pagination
   const totalPages = Math.ceil(tasks.length / ITEMS_PER_PAGE);
@@ -373,6 +391,7 @@ export default function MainChecklist() {
     refetchActive();
     refetchHistory();
     refetchLast7Days();
+    refetchUpcoming7Days();
   };
 
   const formatDate = (dateString: string | null) => {
@@ -529,6 +548,19 @@ export default function MainChecklist() {
             }`}
           >
             Today Pending
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab("upcoming7days");
+              setCurrentPage(1);
+            }}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === "upcoming7days"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
+            }`}
+          >
+            Upcoming 7 Days Task
           </button>
           <button
             onClick={() => {
@@ -764,7 +796,9 @@ export default function MainChecklist() {
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase min-w-50">
                     Description
                   </th>
-                  {activeTab === "history" || activeTab === "last7days" ? (
+                  {activeTab === "history" ||
+                  activeTab === "last7days" ||
+                  activeTab === "upcoming7days" ? (
                     <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase bg-yellow-50 dark:bg-yellow-900/20">
                       Submitted Date
                     </th>
@@ -854,7 +888,9 @@ export default function MainChecklist() {
                         {task.task_description || "—"}
                       </div>
                     </td>
-                    {(activeTab === "history" || activeTab === "last7days") && (
+                    {(activeTab === "history" ||
+                      activeTab === "last7days" ||
+                      activeTab === "upcoming7days") && (
                       <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap bg-yellow-50 dark:bg-yellow-900/10">
                         {formatDate(task.submission_date)}
                       </td>
@@ -944,8 +980,10 @@ export default function MainChecklist() {
                       </>
                     )}
 
-                    {/* History & Last 7 Days Tab Info */}
-                    {(activeTab === "history" || activeTab === "last7days") && (
+                    {/* History, Last 7 Days & Upcoming 7 Days Tab Info */}
+                    {(activeTab === "history" ||
+                      activeTab === "last7days" ||
+                      activeTab === "upcoming7days") && (
                       <>
                         <td className="px-3 py-3">
                           <span

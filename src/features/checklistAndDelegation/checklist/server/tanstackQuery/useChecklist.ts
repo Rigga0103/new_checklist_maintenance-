@@ -10,6 +10,7 @@ import {
   fetchChecklistDataSortByDate,
   fetchChecklistDataForHistory,
   fetchChecklistLast7Days,
+  fetchChecklistUpcoming7Days,
   updateChecklistData,
   postChecklistAdminDone,
 } from "../api/checklistApi";
@@ -32,6 +33,20 @@ export const checklistKeys = {
     [
       ...checklistKeys.all,
       "last7days",
+      searchTerm,
+      role,
+      username,
+      nameFilter,
+    ] as const,
+  upcoming7days: (
+    searchTerm: string,
+    role: string | null,
+    username: string | null,
+    nameFilter: string,
+  ) =>
+    [
+      ...checklistKeys.all,
+      "upcoming7days",
       searchTerm,
       role,
       username,
@@ -127,6 +142,38 @@ export function useChecklistLast7Days(
     queryKey: checklistKeys.last7days(searchTerm, role, username, nameFilter),
     queryFn: async () => {
       const result = await fetchChecklistLast7Days(
+        1,
+        1000,
+        searchTerm,
+        role,
+        username,
+        nameFilter,
+      );
+      return result;
+    },
+  });
+}
+
+// ============ Upcoming 7 Days Query ============
+
+/**
+ * Query for checklist tasks scheduled for the next 7 days
+ */
+export function useChecklistUpcoming7Days(
+  searchTerm = "",
+  role: string | null = null,
+  username: string | null = null,
+  nameFilter = "",
+) {
+  return useQuery({
+    queryKey: checklistKeys.upcoming7days(
+      searchTerm,
+      role,
+      username,
+      nameFilter,
+    ),
+    queryFn: async () => {
+      const result = await fetchChecklistUpcoming7Days(
         1,
         1000,
         searchTerm,

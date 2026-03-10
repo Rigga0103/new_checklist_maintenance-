@@ -200,6 +200,75 @@ export const fetchChecklistLast7Days = async (
   }
 };
 
+// ============ Fetch Checklist Upcoming 7 Days ============
+
+/**
+ * Fetch all checklist tasks scheduled for the next 7 days (tomorrow to day 7).
+ * Returns pending tasks.
+ */
+export const fetchChecklistUpcoming7Days = async (
+  page = 1,
+  limit = 50,
+  searchTerm = "",
+  role: string | null = null,
+  username: string | null = null,
+  nameFilter = "",
+): Promise<ChecklistFetchResponse> => {
+  try {
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    const next7thDay = new Date(tomorrow);
+    next7thDay.setDate(tomorrow.getDate() + 6); // next 7 days
+
+    const startOfTomorrow = `${tomorrow.toISOString().split("T")[0]}T00:00:00`;
+    const endOfDay7 = `${next7thDay.toISOString().split("T")[0]}T23:59:59`;
+
+    let query = supabase
+      .from("checklist")
+      .select("*", { count: "exact" })
+      .gte("task_start_date", startOfTomorrow)
+      .lte("task_start_date", endOfDay7)
+      .is("submission_date", null)
+      .order("task_start_date", { ascending: true })
+      .range(from, to);
+
+    // Apply search filter
+    if (searchTerm && searchTerm.trim() !== "") {
+      const searchValue = searchTerm.trim();
+      query = query.or(
+        `task_id.ilike.%${searchValue}%,name.ilike.%${searchValue}%,given_by.ilike.%${searchValue}%,department.ilike.%${searchValue}%,task_description.ilike.%${searchValue}%`,
+      );
+    }
+
+    // Apply role filter
+    if (role === "user" && username) {
+      query = query.eq("name", username);
+    }
+
+    // Apply name filter (admin filtering by a specific user)
+    if (nameFilter && nameFilter.trim() !== "") {
+      query = query.eq("name", nameFilter.trim());
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error("Error fetching upcoming 7 days data", error);
+      return { data: [], totalCount: 0 };
+    }
+
+    return { data: data as ChecklistItem[], totalCount: count || 0 };
+  } catch (error) {
+    console.error("Error from Supabase (upcoming 7 days)", error);
+    return { data: [], totalCount: 0 };
+  }
+};
+
 // ============ Submit Checklist ============
 
 /**
