@@ -18,6 +18,7 @@ import {
   useCompleteMaintenanceMutation,
   useMaintenanceLast7DaysQuery,
   useAllOverdueMaintenanceQuery,
+  useUpcomingMaintenanceQuery,
 } from "../server/tanstackQuery/useMaintenanceQueries";
 import type { MachineMaintenance } from "../../types/types";
 import { toast } from "sonner";
@@ -29,7 +30,7 @@ export default function MainMaintenancePending() {
   const [endDate, setEndDate] = useState("");
   const [page, setPage] = useState(1);
   const [activeTab, setActiveTab] = useState<
-    "pending" | "last7days" | "overdue"
+    "pending" | "last7days" | "overdue" | "upcoming"
   >("pending");
   const [selectedTask, setSelectedTask] = useState<MachineMaintenance | null>(
     null,
@@ -58,6 +59,9 @@ export default function MainMaintenancePending() {
   const { data: overdueData, isLoading: isOverdueLoading } =
     useAllOverdueMaintenanceQuery(page, limit, searchTerm, role, username);
 
+  const { data: upcomingData, isLoading: isUpcomingLoading } =
+    useUpcomingMaintenanceQuery(page, limit, searchTerm, role, username);
+
   const { canRead, canEdit, isLoading: isRbacLoading } = useRBAC("maintenance");
 
   const pendingTasks = data?.data || [];
@@ -65,19 +69,25 @@ export default function MainMaintenancePending() {
   const last7DaysTasks = last7DaysData?.data || [];
   const overdueTasks = overdueData?.data || [];
   const overdueTotalCount = overdueData?.totalCount || 0;
+  const upcomingTasks = upcomingData?.data || [];
+  const upcomingTotalCount = upcomingData?.totalCount || 0;
 
   const tasks =
     activeTab === "pending"
       ? pendingTasks
       : activeTab === "last7days"
         ? last7DaysTasks
-        : overdueTasks;
+        : activeTab === "overdue"
+          ? overdueTasks
+          : upcomingTasks;
   const totalCount =
     activeTab === "pending"
       ? pendingTotalCount
       : activeTab === "last7days"
         ? last7DaysTasks.length
-        : overdueTotalCount;
+        : activeTab === "overdue"
+          ? overdueTotalCount
+          : upcomingTotalCount;
 
   const completeMutation = useCompleteMaintenanceMutation();
   const isProcessing = completeMutation.isPending;
@@ -95,7 +105,9 @@ export default function MainMaintenancePending() {
     setPage(1);
   };
 
-  const handleTabChange = (tab: "pending" | "last7days" | "overdue") => {
+  const handleTabChange = (
+    tab: "pending" | "last7days" | "overdue" | "upcoming",
+  ) => {
     setActiveTab(tab);
     setPage(1);
     setSearchTerm("");
@@ -193,7 +205,7 @@ export default function MainMaintenancePending() {
       ...(activeTab === "last7days" ? ["Completed Date", "Status"] : []),
     ];
 
-    const rows = tasks.map((t) => [
+    const rows = tasks.map((t: MachineMaintenance) => [
       t.task_id,
       t.machine_name || "",
       t.task_description || "",
@@ -214,7 +226,7 @@ export default function MainMaintenancePending() {
 
     const csvContent = [
       headers.join(","),
-      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
+      ...rows.map((row: any[]) => row.map((cell: any) => `"${cell}"`).join(",")),
     ].join("\n");
 
     const blob = new Blob([csvContent], { type: "text/csv" });
@@ -229,6 +241,7 @@ export default function MainMaintenancePending() {
     (activeTab === "pending" && isLoading) ||
     (activeTab === "last7days" && isLast7DaysLoading) ||
     (activeTab === "overdue" && isOverdueLoading) ||
+    (activeTab === "upcoming" && isUpcomingLoading) ||
     isRbacLoading
   ) {
     return (
@@ -259,7 +272,9 @@ export default function MainMaintenancePending() {
               ? "Complete maintenance tasks for today"
               : activeTab === "last7days"
                 ? "All maintenance tasks from Monday to Saturday"
-                : "Maintenance tasks that are overdue from past days"}
+                : activeTab === "overdue"
+                  ? "Maintenance tasks that are overdue from past days"
+                  : "Maintenance tasks scheduled for the next 7 days"}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -305,6 +320,16 @@ export default function MainMaintenancePending() {
         >
           All Overdue
         </button>
+        <button
+          onClick={() => handleTabChange("upcoming")}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            activeTab === "upcoming"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
+          }`}
+        >
+          Upcoming 7 Days Task
+        </button>
       </div>
 
       {/* Filters */}
@@ -348,7 +373,9 @@ export default function MainMaintenancePending() {
           </div>
         </div>
       )}
-      {(activeTab === "last7days" || activeTab === "overdue") && (
+      {(activeTab === "last7days" ||
+        activeTab === "overdue" ||
+        activeTab === "upcoming") && (
         <div className="flex flex-col sm:flex-row gap-4 mb-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -406,7 +433,9 @@ export default function MainMaintenancePending() {
                       Status
                     </th>
                   )}
-                  {(activeTab === "pending" || activeTab === "overdue") && (
+                  {(activeTab === "pending" ||
+                    activeTab === "overdue" ||
+                    activeTab === "upcoming") && (
                     <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                       Action
                     </th>
@@ -414,7 +443,7 @@ export default function MainMaintenancePending() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
-                {tasks.map((task) => (
+                {tasks.map((task: MachineMaintenance) => (
                   <tr
                     key={task.task_id}
                     className="hover:bg-neutral-50 dark:hover:bg-neutral-700/50 transition-colors"
@@ -463,7 +492,9 @@ export default function MainMaintenancePending() {
                         </span>
                       </td>
                     )}
-                    {(activeTab === "pending" || activeTab === "overdue") && (
+                    {(activeTab === "pending" ||
+                      activeTab === "overdue" ||
+                      activeTab === "upcoming") && (
                       <td className="px-4 py-3">
                         {canEdit && (
                           <button

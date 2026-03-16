@@ -277,6 +277,73 @@ export const fetchMaintenanceLast7Days = async (
 };
 
 /**
+ * Fetch upcoming maintenance tasks (task start date >= today and task start date <= 7 days from now)
+ */
+export const fetchUpcomingMaintenance = async (
+  page = 1,
+  limit = 50,
+  searchTerm = "",
+  role: string | null = null,
+  username: string | null = null,
+): Promise<MaintenanceFetchResponse> => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startOfTodayISO = today.toISOString();
+
+    const sevenDaysLater = new Date();
+    sevenDaysLater.setDate(today.getDate() + 7);
+    sevenDaysLater.setHours(23, 59, 59, 999);
+    const endOfSevenDaysISO = sevenDaysLater.toISOString();
+
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    let query = supabase
+      .from("machine_maintenance")
+      .select("*", { count: "exact" })
+      .gte("task_start_date", startOfTodayISO)
+      .lte("task_start_date", endOfSevenDaysISO)
+      .is("actual_date", null)
+      .order("task_start_date", { ascending: true })
+      .range(from, to);
+
+    // Apply search filter
+    if (searchTerm && searchTerm.trim() !== "") {
+      const searchValue = searchTerm.trim();
+      const isNumeric = /^\d+$/.test(searchValue);
+      let orConds = [
+        `machine_name.ilike.%${searchValue}%`,
+        `doer_name.ilike.%${searchValue}%`,
+        `task_description.ilike.%${searchValue}%`,
+        `department.ilike.%${searchValue}%`,
+      ];
+      if (isNumeric) {
+        orConds.push(`task_id.eq.${searchValue}`);
+      }
+      query = query.or(orConds.join(","));
+    }
+
+    // Apply role filter
+    if (role === "user" && username) {
+      query = query.eq("doer_name", username);
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error("Error fetching upcoming maintenance:", error);
+      return { data: [], totalCount: 0 };
+    }
+
+    return { data: data as MachineMaintenance[], totalCount: count || 0 };
+  } catch (error) {
+    console.error("Error from Supabase:", error);
+    return { data: [], totalCount: 0 };
+  }
+};
+
+/**
  * Fetch all maintenance tasks for dashboard/calendar
  */
 export const fetchAllMaintenance = async (): Promise<MachineMaintenance[]> => {

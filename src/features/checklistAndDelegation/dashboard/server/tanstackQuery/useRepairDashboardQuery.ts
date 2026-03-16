@@ -6,6 +6,7 @@ import {
   fetchMaintenanceHistory,
   fetchMaintenanceLast7Days,
   fetchMaintenanceOverdue,
+  fetchMaintenanceUpcoming,
   updateMaintenanceTask,
   fetchMaintenanceTasksForEdit,
   fetchUniqueMaintenanceTasksForEdit,
@@ -126,6 +127,18 @@ export const repairDashboardKeys = {
       role,
       username,
     ] as const,
+  maintenanceUpcoming: (
+    searchTerm: string,
+    role: string | null,
+    username: string | null,
+  ) =>
+    [
+      ...repairDashboardKeys.all,
+      "maintenanceUpcoming",
+      searchTerm,
+      role,
+      username,
+    ] as const,
 };
 
 /**
@@ -232,6 +245,25 @@ export function useMaintenanceOverdueQuery(
       username,
     ),
     queryFn: () => fetchMaintenanceOverdue(searchTerm, role, username),
+    staleTime: 1000 * 60 * 2,
+  });
+}
+
+/**
+ * Fetch upcoming maintenance tasks
+ */
+export function useMaintenanceUpcomingQuery(
+  searchTerm = "",
+  role: string | null = null,
+  username: string | null = null,
+) {
+  return useQuery({
+    queryKey: repairDashboardKeys.maintenanceUpcoming(
+      searchTerm,
+      role,
+      username,
+    ),
+    queryFn: () => fetchMaintenanceUpcoming(searchTerm, role, username),
     staleTime: 1000 * 60 * 2,
   });
 }

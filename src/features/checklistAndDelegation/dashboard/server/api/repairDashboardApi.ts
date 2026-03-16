@@ -333,6 +333,63 @@ export const fetchMaintenanceOverdue = async (
   }
 };
 
+// Fetch upcoming maintenance tasks (task start date >= today and <= today + 7 days)
+export const fetchMaintenanceUpcoming = async (
+  searchTerm = "",
+  role: string | null = null,
+  username: string | null = null,
+): Promise<MachineMaintenanceTask[]> => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startOfTodayISO = today.toISOString();
+
+    const sevenDaysLater = new Date();
+    sevenDaysLater.setDate(today.getDate() + 7);
+    sevenDaysLater.setHours(23, 59, 59, 999);
+    const endOfSevenDaysISO = sevenDaysLater.toISOString();
+
+    let query = supabase
+      .from("machine_maintenance")
+      .select("*")
+      .gte("task_start_date", startOfTodayISO)
+      .lte("task_start_date", endOfSevenDaysISO)
+      .is("actual_date", null)
+      .order("task_start_date", { ascending: true });
+
+    if (searchTerm && searchTerm.trim() !== "") {
+      const sv = searchTerm.trim();
+      const isNumeric = /^\d+$/.test(sv);
+      let orConds = [
+        `machine_name.ilike.%${sv}%`,
+        `task_description.ilike.%${sv}%`,
+        `doer_name.ilike.%${sv}%`,
+        `frequency.ilike.%${sv}%`,
+      ];
+      if (isNumeric) {
+        orConds.push(`task_id.eq.${sv}`);
+      }
+      query = query.or(orConds.join(","));
+    }
+
+    if (role === "user" && username) {
+      query = query.eq("doer_name", username);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("Error fetching upcoming maintenance:", error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error("Unexpected error in fetchMaintenanceUpcoming:", error);
+    return [];
+  }
+};
+
 export const updateMaintenanceTask = async (
   id: number,
   updates: Partial<MachineMaintenanceTask>,

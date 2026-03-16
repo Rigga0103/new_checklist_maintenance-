@@ -11,6 +11,7 @@ import {
   fetchChecklistDataForHistory,
   fetchChecklistLast7Days,
   fetchChecklistUpcoming7Days,
+  fetchChecklistOverdue,
   updateChecklistData,
   postChecklistAdminDone,
 } from "../api/checklistApi";
@@ -47,6 +48,20 @@ export const checklistKeys = {
     [
       ...checklistKeys.all,
       "upcoming7days",
+      searchTerm,
+      role,
+      username,
+      nameFilter,
+    ] as const,
+  overdue: (
+    searchTerm: string,
+    role: string | null,
+    username: string | null,
+    nameFilter: string,
+  ) =>
+    [
+      ...checklistKeys.all,
+      "overdue",
       searchTerm,
       role,
       username,
@@ -174,6 +189,33 @@ export function useChecklistUpcoming7Days(
     ),
     queryFn: async () => {
       const result = await fetchChecklistUpcoming7Days(
+        1,
+        1000,
+        searchTerm,
+        role,
+        username,
+        nameFilter,
+      );
+      return result;
+    },
+  });
+}
+
+// ============ Overdue Query ============
+
+/**
+ * Query for checklist tasks that are past their start date and not yet submitted
+ */
+export function useChecklistOverdue(
+  searchTerm = "",
+  role: string | null = null,
+  username: string | null = null,
+  nameFilter = "",
+) {
+  return useQuery({
+    queryKey: checklistKeys.overdue(searchTerm, role, username, nameFilter),
+    queryFn: async () => {
+      const result = await fetchChecklistOverdue(
         1,
         1000,
         searchTerm,

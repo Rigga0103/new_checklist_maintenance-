@@ -4,6 +4,7 @@ import {
   fetchMaintenanceHistory,
   fetchMaintenanceLast7Days,
   fetchAllOverdueMaintenance,
+  fetchUpcomingMaintenance,
   fetchAllMaintenance,
   completeMaintenance,
   bulkCompleteMaintenance,
@@ -64,6 +65,18 @@ export const maintenanceKeys = {
     [
       ...maintenanceKeys.all,
       "overdue",
+      { page, limit, searchTerm, role, username },
+    ] as const,
+  upcoming: (
+    page: number,
+    limit: number,
+    searchTerm: string,
+    role: string | null,
+    username: string | null,
+  ) =>
+    [
+      ...maintenanceKeys.all,
+      "upcoming",
       { page, limit, searchTerm, role, username },
     ] as const,
 };
@@ -160,6 +173,21 @@ export const useAllOverdueMaintenanceQuery = (
     queryKey: maintenanceKeys.overdue(page, limit, searchTerm, role, username),
     queryFn: () =>
       fetchAllOverdueMaintenance(page, limit, searchTerm, role, username),
+    placeholderData: (previousData) => previousData,
+  });
+};
+
+export const useUpcomingMaintenanceQuery = (
+  page: number,
+  limit: number,
+  searchTerm: string,
+  role: string | null,
+  username: string | null,
+) => {
+  return useQuery({
+    queryKey: maintenanceKeys.upcoming(page, limit, searchTerm, role, username),
+    queryFn: () =>
+      fetchUpcomingMaintenance(page, limit, searchTerm, role, username),
     placeholderData: (previousData) => previousData,
   });
 };

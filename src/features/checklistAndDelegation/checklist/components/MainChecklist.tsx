@@ -24,8 +24,9 @@ import {
   useChecklistHistory,
   useSubmitChecklist,
   flattenChecklistPages,
-  useChecklistLast7Days,
+   useChecklistLast7Days,
   useChecklistUpcoming7Days,
+  useChecklistOverdue,
 } from "../server/tanstackQuery/useChecklist";
 import { useUsers } from "../../quickTask/server/tanstackQuery/useQuickTask";
 import { useUploadChecklistImage } from "../server/tanstackQuery/useChecklistUpload";
@@ -36,7 +37,7 @@ const ITEMS_PER_PAGE = 50;
 
 export default function MainChecklist() {
   const [activeTab, setActiveTab] = useState<
-    "pending" | "history" | "last7days" | "upcoming7days"
+    "pending" | "history" | "last7days" | "upcoming7days" | "overdue"
   >("pending");
   const [searchTerm, setSearchTerm] = useState("");
   const [nameFilter, setNameFilter] = useState("");
@@ -106,6 +107,11 @@ export default function MainChecklist() {
     username,
     nameFilter,
   );
+  const {
+    data: overdueData,
+    isFetching: isFetchingOverdue,
+    refetch: refetchOverdue,
+  } = useChecklistOverdue(searchTerm, effectiveRole, username, nameFilter);
 
   const { data: usersData } = useUsers();
   const allNames = useMemo(() => {
@@ -124,6 +130,7 @@ export default function MainChecklist() {
   const historyTasks = historyData?.pages.flatMap((page) => page.data) || [];
   const last7DaysTasks = last7DaysData?.data || [];
   const upcoming7DaysTasks = upcoming7DaysData?.data || [];
+  const overdueTasks = overdueData?.data || [];
 
   const rawTasks =
     activeTab === "pending"
@@ -132,7 +139,9 @@ export default function MainChecklist() {
         ? historyTasks
         : activeTab === "last7days"
           ? last7DaysTasks
-          : upcoming7DaysTasks;
+          : activeTab === "overdue"
+            ? overdueTasks
+            : upcoming7DaysTasks;
 
   // Apply date-range filter on history tab (filters by submission_date)
   const dateFilteredTasks =
@@ -162,7 +171,8 @@ export default function MainChecklist() {
     isFetchingActive ||
     isFetchingHistory ||
     isFetchingLast7Days ||
-    isFetchingUpcoming7Days;
+    isFetchingUpcoming7Days ||
+    isFetchingOverdue;
 
   // Pagination
   const totalPages = Math.ceil(tasks.length / ITEMS_PER_PAGE);
@@ -380,6 +390,7 @@ export default function MainChecklist() {
       // Refresh data
       refetchActive();
       refetchHistory();
+      refetchOverdue();
       toast.success("Checklist submitted successfully");
     } catch (error) {
       console.error("Failed to submit checklist:", error);
@@ -392,6 +403,7 @@ export default function MainChecklist() {
     refetchHistory();
     refetchLast7Days();
     refetchUpcoming7Days();
+    refetchOverdue();
   };
 
   const formatDate = (dateString: string | null) => {
@@ -588,6 +600,19 @@ export default function MainChecklist() {
           >
             Last 7 Days
           </button>
+          <button
+            onClick={() => {
+              setActiveTab("overdue");
+              setCurrentPage(1);
+            }}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === "overdue"
+                ? "bg-red-600 text-white"
+                : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
+            }`}
+          >
+            Overdue
+          </button>
         </div>
 
         <div className="relative flex-1 max-w-xs">
@@ -693,7 +718,7 @@ export default function MainChecklist() {
           Download CSV
         </button>
 
-        {activeTab === "pending" && tasks.length > 0 && (
+        { (activeTab === "pending" || activeTab === "overdue") && tasks.length > 0 && (
           <div className="flex items-center gap-2 ml-auto">
             <button
               onClick={selectAllTasks}
@@ -761,7 +786,7 @@ export default function MainChecklist() {
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase w-10">
                     Seq No
                   </th>
-                  {activeTab === "pending" && (
+                  {(activeTab === "pending" || activeTab === "overdue") && (
                     <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase w-10">
                       <input
                         type="checkbox"
@@ -798,6 +823,7 @@ export default function MainChecklist() {
                   </th>
                   {activeTab === "history" ||
                   activeTab === "last7days" ||
+                  activeTab === "overdue" ||
                   activeTab === "upcoming7days" ? (
                     <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase bg-yellow-50 dark:bg-yellow-900/20">
                       Submitted Date
@@ -838,6 +864,19 @@ export default function MainChecklist() {
                       <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase">
                         Attachment
                       </th>
+                      {activeTab === "overdue" && (
+                        <>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase bg-blue-50 dark:bg-blue-900/20">
+                            Select Status
+                          </th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase">
+                            New Remark
+                          </th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase">
+                            New Upload
+                          </th>
+                        </>
+                      )}
                     </>
                   )}
                 </tr>
@@ -855,7 +894,7 @@ export default function MainChecklist() {
                     <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
                       {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
                     </td>
-                    {activeTab === "pending" && (
+                    {(activeTab === "pending" || activeTab === "overdue") && (
                       <td className="px-3 py-3">
                         <input
                           type="checkbox"
@@ -890,6 +929,7 @@ export default function MainChecklist() {
                     </td>
                     {(activeTab === "history" ||
                       activeTab === "last7days" ||
+                      activeTab === "overdue" ||
                       activeTab === "upcoming7days") && (
                       <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap bg-yellow-50 dark:bg-yellow-900/10">
                         {formatDate(task.submission_date)}
@@ -927,62 +967,10 @@ export default function MainChecklist() {
                     <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
                       {task.require_attachment || "—"}
                     </td>
-
-                    {/* Pending Tab Actions */}
-                    {activeTab === "pending" && (
-                      <>
-                        <td className="px-3 py-3">
-                          {task.require_attachment === "yes" ? (
-                            <label className="cursor-pointer">
-                              <input
-                                type="file"
-                                accept="image/jpeg,image/png,image/webp"
-                                className="hidden"
-                                onChange={(e) =>
-                                  handleImageUpload(task.task_id, e)
-                                }
-                                disabled={taskImages[task.task_id]?.uploading}
-                              />
-                              {taskImages[task.task_id]?.uploading ? (
-                                <div className="flex items-center gap-1 text-blue-600">
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                  <span className="text-xs">Uploading...</span>
-                                </div>
-                              ) : taskImages[task.task_id]?.uploadedUrl ? (
-                                <div className="flex items-center gap-1 text-green-600">
-                                  <Check className="w-4 h-4" />
-                                  <span className="text-xs">Uploaded</span>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-1 text-blue-600 hover:text-blue-700">
-                                  <Upload className="w-4 h-4" />
-                                  <span className="text-xs">Upload</span>
-                                </div>
-                              )}
-                            </label>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">
-                              —
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-3 py-3">
-                          <input
-                            type="text"
-                            value={taskRemarks[task.task_id] || ""}
-                            onChange={(e) =>
-                              updateTaskRemark(task.task_id, e.target.value)
-                            }
-                            placeholder="Remark..."
-                            className="w-24 px-2 py-1 text-xs rounded border border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                          />
-                        </td>
-                      </>
-                    )}
-
-                    {/* History, Last 7 Days & Upcoming 7 Days Tab Info */}
+                    {/* History, Last 7 Days, Overdue & Upcoming 7 Days Tab Info */}
                     {(activeTab === "history" ||
                       activeTab === "last7days" ||
+                      activeTab === "overdue" ||
                       activeTab === "upcoming7days") && (
                       <>
                         <td className="px-3 py-3">
@@ -1036,6 +1024,119 @@ export default function MainChecklist() {
                               —
                             </span>
                           )}
+                        </td>
+                        {/* Interactive columns for Overdue tab */}
+                        {activeTab === "overdue" && (
+                          <>
+                            <td className="px-3 py-3 bg-blue-50 dark:bg-blue-900/10">
+                              <select
+                                disabled={!selectedTasks.has(task.task_id)}
+                                value={taskStatuses[task.task_id] || ""}
+                                onChange={(e) =>
+                                  updateTaskStatus(task.task_id, e.target.value)
+                                }
+                                className="min-w-32 border border-gray-300 dark:border-neutral-600 rounded-md px-2 py-1 w-full disabled:bg-gray-100 dark:disabled:bg-neutral-800 disabled:cursor-not-allowed text-xs sm:text-sm bg-white dark:bg-neutral-700 text-gray-900 dark:text-white"
+                              >
+                                <option value="">Select</option>
+                                <option value="yes">Done</option>
+                                <option value="no">Not Done</option>
+                              </select>
+                            </td>
+                            <td className="px-3 py-3">
+                              <input
+                                type="text"
+                                value={taskRemarks[task.task_id] || ""}
+                                onChange={(e) =>
+                                  updateTaskRemark(task.task_id, e.target.value)
+                                }
+                                placeholder="Remark..."
+                                className="w-24 px-2 py-1 text-xs rounded border border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                              />
+                            </td>
+                            <td className="px-3 py-3">
+                              {task.require_attachment === "yes" ? (
+                                <label className="cursor-pointer">
+                                  <input
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    className="hidden"
+                                    onChange={(e) =>
+                                      handleImageUpload(task.task_id, e)
+                                    }
+                                    disabled={taskImages[task.task_id]?.uploading}
+                                  />
+                                  {taskImages[task.task_id]?.uploading ? (
+                                    <div className="flex items-center gap-1 text-blue-600">
+                                      <Loader2 className="w-4 h-4 animate-spin" />
+                                      <span className="text-xs">Uploading...</span>
+                                    </div>
+                                  ) : taskImages[task.task_id]?.uploadedUrl ? (
+                                    <div className="flex items-center gap-1 text-green-600">
+                                      <Check className="w-4 h-4" />
+                                      <span className="text-xs">Uploaded</span>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-1 text-blue-600 hover:text-blue-700">
+                                      <Upload className="w-4 h-4" />
+                                      <span className="text-xs">Upload</span>
+                                    </div>
+                                  )}
+                                </label>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">—</span>
+                              )}
+                            </td>
+                          </>
+                        )}
+                      </>
+                    )}
+
+                    {/* Pending Tab Actions */}
+                    {activeTab === "pending" && (
+                      <>
+                        <td className="px-3 py-3">
+                          {task.require_attachment === "yes" ? (
+                            <label className="cursor-pointer">
+                              <input
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                className="hidden"
+                                onChange={(e) =>
+                                  handleImageUpload(task.task_id, e)
+                                }
+                                disabled={taskImages[task.task_id]?.uploading}
+                              />
+                              {taskImages[task.task_id]?.uploading ? (
+                                <div className="flex items-center gap-1 text-blue-600">
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  <span className="text-xs">Uploading...</span>
+                                </div>
+                              ) : taskImages[task.task_id]?.uploadedUrl ? (
+                                <div className="flex items-center gap-1 text-green-600">
+                                  <Check className="w-4 h-4" />
+                                  <span className="text-xs">Uploaded</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1 text-blue-600 hover:text-blue-700">
+                                  <Upload className="w-4 h-4" />
+                                  <span className="text-xs">Upload</span>
+                                </div>
+                              )}
+                            </label>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-3">
+                          <input
+                            type="text"
+                            value={taskRemarks[task.task_id] || ""}
+                            onChange={(e) =>
+                              updateTaskRemark(task.task_id, e.target.value)
+                            }
+                            placeholder="Remark..."
+                            className="w-24 px-2 py-1 text-xs rounded border border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                          />
                         </td>
                       </>
                     )}

@@ -23,7 +23,7 @@ import { formatDate } from "../hooks/useMaintenanceDashboard";
 const ITEMS_PER_PAGE = 50;
 
 interface MaintenanceListProps {
-  initialTab?: "pending" | "history" | "last7days" | "overdue";
+  initialTab?: "pending" | "history" | "last7days" | "overdue" | "upcoming";
   showTabs?: boolean;
 }
 
@@ -176,7 +176,7 @@ export default function MaintenanceList({
         ];
         csvRows.push(row.join(","));
       });
-    } else if (activeTab === "overdue") {
+    } else if (activeTab === "overdue" || activeTab === "upcoming") {
       const headers = [
         "Task ID",
         "Machine Name",
@@ -449,7 +449,9 @@ export default function MaintenanceList({
                 ? "Manage pending maintenance tasks"
                 : activeTab === "last7days"
                   ? "All tasks from Monday to Saturday"
-                  : "View maintenance history"}
+                  : activeTab === "overdue"
+                    ? "View overdue maintenance tasks"
+                    : "Maintenance tasks scheduled for the next 7 days"}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -536,6 +538,16 @@ export default function MaintenanceList({
               }`}
             >
               All Overdue
+            </button>
+            <button
+              onClick={() => setActiveTab("upcoming")}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === "upcoming"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
+              }`}
+            >
+              Upcoming 7 Days Task
             </button>
           </div>
         )}
@@ -638,7 +650,9 @@ export default function MaintenanceList({
           )}
         </div>
 
-        {(activeTab === "pending" || activeTab === "overdue") &&
+        {(activeTab === "pending" ||
+          activeTab === "overdue" ||
+          activeTab === "upcoming") &&
           filteredMaintenanceData.length > 0 && (
             <div className="flex items-center gap-2 ml-auto">
               <button
@@ -704,7 +718,9 @@ export default function MaintenanceList({
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase w-10">
                     Seq
                   </th>
-                  {(activeTab === "pending" || activeTab === "overdue") && (
+                  {(activeTab === "pending" ||
+                    activeTab === "overdue" ||
+                    activeTab === "upcoming") && (
                     <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase w-10">
                       <input
                         type="checkbox"
@@ -737,11 +753,15 @@ export default function MaintenanceList({
                     Start Date
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase bg-yellow-50 dark:bg-yellow-900/20">
-                    {activeTab === "pending" || activeTab === "overdue"
+                    {activeTab === "pending" ||
+                    activeTab === "overdue" ||
+                    activeTab === "upcoming"
                       ? "End/Due Date"
                       : "Completed Date"}
                   </th>
-                  {(activeTab === "pending" || activeTab === "overdue") && (
+                  {(activeTab === "pending" ||
+                    activeTab === "overdue" ||
+                    activeTab === "upcoming") && (
                     <>
                       <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase bg-blue-50 dark:bg-blue-900/20">
                         Status
@@ -798,7 +818,9 @@ export default function MaintenanceList({
                     <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
                       {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
                     </td>
-                    {(activeTab === "pending" || activeTab === "overdue") && (
+                    {(activeTab === "pending" ||
+                      activeTab === "overdue" ||
+                      activeTab === "upcoming") && (
                       <td className="px-3 py-3">
                         <input
                           type="checkbox"
@@ -833,13 +855,17 @@ export default function MaintenanceList({
                       {formatDate(task.task_start_date)}
                     </td>
                     <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap bg-yellow-50 dark:bg-yellow-900/10">
-                      {activeTab === "pending" || activeTab === "overdue"
+                      {activeTab === "pending" ||
+                      activeTab === "overdue" ||
+                      activeTab === "upcoming"
                         ? "—"
                         : formatDate(task.actual_date)}
                     </td>
 
                     {/* Pending Actions */}
-                    {(activeTab === "pending" || activeTab === "overdue") && (
+                    {(activeTab === "pending" ||
+                      activeTab === "overdue" ||
+                      activeTab === "upcoming") && (
                       <>
                         <td className="px-3 py-3 whitespace-nowrap bg-blue-50 dark:bg-blue-900/10">
                           <select
