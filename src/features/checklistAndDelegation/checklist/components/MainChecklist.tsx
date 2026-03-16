@@ -718,7 +718,7 @@ export default function MainChecklist() {
           Download CSV
         </button>
 
-        { (activeTab === "pending" || activeTab === "overdue") && tasks.length > 0 && (
+        { (activeTab === "pending" || activeTab === "overdue" || activeTab === "last7days" || activeTab === "upcoming7days") && tasks.length > 0 && (
           <div className="flex items-center gap-2 ml-auto">
             <button
               onClick={selectAllTasks}
@@ -786,7 +786,7 @@ export default function MainChecklist() {
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase w-10">
                     Seq No
                   </th>
-                  {(activeTab === "pending" || activeTab === "overdue") && (
+                  {(activeTab === "pending" || activeTab === "overdue" || activeTab === "last7days" || activeTab === "upcoming7days") && (
                     <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase w-10">
                       <input
                         type="checkbox"
@@ -829,7 +829,7 @@ export default function MainChecklist() {
                       Submitted Date
                     </th>
                   ) : null}
-                  {activeTab === "pending" && (
+                  {(activeTab === "pending" || activeTab === "last7days" || activeTab === "upcoming7days") && (
                     <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase bg-blue-50 dark:bg-blue-900/20">
                       Status
                     </th>
@@ -894,7 +894,7 @@ export default function MainChecklist() {
                     <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
                       {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
                     </td>
-                    {(activeTab === "pending" || activeTab === "overdue") && (
+                    {(activeTab === "pending" || activeTab === "overdue" || activeTab === "last7days" || activeTab === "upcoming7days") && (
                       <td className="px-3 py-3">
                         <input
                           type="checkbox"
@@ -935,7 +935,7 @@ export default function MainChecklist() {
                         {formatDate(task.submission_date)}
                       </td>
                     )}
-                    {activeTab === "pending" && (
+                    {(activeTab === "pending" || activeTab === "last7days" || activeTab === "upcoming7days") && (
                       <td className="px-3 py-3 bg-blue-50 dark:bg-blue-900/10">
                         <select
                           disabled={!selectedTasks.has(task.task_id)}

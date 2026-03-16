@@ -652,7 +652,8 @@ export default function MaintenanceList({
 
         {(activeTab === "pending" ||
           activeTab === "overdue" ||
-          activeTab === "upcoming") &&
+          activeTab === "upcoming" ||
+          activeTab === "last7days") &&
           filteredMaintenanceData.length > 0 && (
             <div className="flex items-center gap-2 ml-auto">
               <button
@@ -720,7 +721,8 @@ export default function MaintenanceList({
                   </th>
                   {(activeTab === "pending" ||
                     activeTab === "overdue" ||
-                    activeTab === "upcoming") && (
+                    activeTab === "upcoming" ||
+                    activeTab === "last7days") && (
                     <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase w-10">
                       <input
                         type="checkbox"
@@ -761,11 +763,14 @@ export default function MaintenanceList({
                   </th>
                   {(activeTab === "pending" ||
                     activeTab === "overdue" ||
-                    activeTab === "upcoming") && (
+                    activeTab === "upcoming" ||
+                    activeTab === "last7days") && (
+                    <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase bg-blue-50 dark:bg-blue-900/20">
+                      Status
+                    </th>
+                  )}
+                  {(activeTab === "pending" || activeTab === "overdue") && (
                     <>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase bg-blue-50 dark:bg-blue-900/20">
-                        Status
-                      </th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
                         Reminders
                       </th>
@@ -820,7 +825,8 @@ export default function MaintenanceList({
                     </td>
                     {(activeTab === "pending" ||
                       activeTab === "overdue" ||
-                      activeTab === "upcoming") && (
+                      activeTab === "upcoming" ||
+                      activeTab === "last7days") && (
                       <td className="px-3 py-3">
                         <input
                           type="checkbox"
@@ -857,7 +863,8 @@ export default function MaintenanceList({
                     <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap bg-yellow-50 dark:bg-yellow-900/10">
                       {activeTab === "pending" ||
                       activeTab === "overdue" ||
-                      activeTab === "upcoming"
+                      activeTab === "upcoming" ||
+                      activeTab === "last7days"
                         ? "—"
                         : formatDate(task.actual_date)}
                     </td>
@@ -865,27 +872,30 @@ export default function MaintenanceList({
                     {/* Pending Actions */}
                     {(activeTab === "pending" ||
                       activeTab === "overdue" ||
-                      activeTab === "upcoming") && (
+                      activeTab === "upcoming" ||
+                      activeTab === "last7days") && (
+                      <td className="px-3 py-3 whitespace-nowrap bg-blue-50 dark:bg-blue-900/10">
+                        <select
+                          disabled={!selectedTasks.has(task.task_id)}
+                          value={taskStatuses[task.task_id] || "Select"}
+                          onChange={(e) =>
+                            updateTaskStatus(task.task_id, e.target.value)
+                          }
+                          className="min-w-32 border border-gray-300 dark:border-neutral-600 rounded-md px-2 py-1 w-full disabled:bg-gray-100 dark:disabled:bg-neutral-800 disabled:cursor-not-allowed text-xs bg-white dark:bg-neutral-700 text-gray-900 dark:text-white"
+                        >
+                          <option value="Select">Select</option>
+                          <option value="Done">Done</option>
+                          <option value="Hold">Hold</option>
+                          <option value="Machine Breakdown">
+                            Machine Breakdown
+                          </option>
+                          <option value="Not Plan">Not Plan</option>
+                          <option value="Cancel">Cancel</option>
+                        </select>
+                      </td>
+                    )}
+                    {(activeTab === "pending" || activeTab === "overdue") && (
                       <>
-                        <td className="px-3 py-3 whitespace-nowrap bg-blue-50 dark:bg-blue-900/10">
-                          <select
-                            disabled={!selectedTasks.has(task.task_id)}
-                            value={taskStatuses[task.task_id] || "Select"}
-                            onChange={(e) =>
-                              updateTaskStatus(task.task_id, e.target.value)
-                            }
-                            className="min-w-32 border border-gray-300 dark:border-neutral-600 rounded-md px-2 py-1 w-full disabled:bg-gray-100 dark:disabled:bg-neutral-800 disabled:cursor-not-allowed text-xs bg-white dark:bg-neutral-700 text-gray-900 dark:text-white"
-                          >
-                            <option value="Select">Select</option>
-                            <option value="Done">Done</option>
-                            <option value="Hold">Hold</option>
-                            <option value="Machine Breakdown">
-                              Machine Breakdown
-                            </option>
-                            <option value="Not Plan">Not Plan</option>
-                            <option value="Cancel">Cancel</option>
-                          </select>
-                        </td>
                         <td className="px-3 py-3 whitespace-nowrap">
                           {task.enable_reminder?.toLowerCase() === "yes" ? (
                             <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
