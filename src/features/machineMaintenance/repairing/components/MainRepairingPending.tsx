@@ -103,7 +103,10 @@ export default function MainRepairingPending() {
     vendorName: "",
     billAmount: undefined,
     remarks: "",
-    warranty: "",
+    warrantyFromDate: "",
+    warrantyToDate: "",
+    workDoneBy: "",
+    typeOfWork: "",
   });
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [billFile, setBillFile] = useState<File | null>(null);
@@ -124,12 +127,15 @@ export default function MainRepairingPending() {
       vendorName: repair.vendor_name || "",
       billAmount: repair.bill_amount || undefined,
       remarks: repair.remarks || "",
-      warranty: repair.warranty || "",
+      warrantyFromDate: repair.warranty_start_date || "",
+      warrantyToDate: repair.warranty_end_date || "",
+      workDoneBy: repair.Work_Done_By || "",
+      typeOfWork: repair.Type_of_Work || "",
     });
     setPhotoFile(null);
     setBillFile(null);
     setPhotoPreview(repair.photo_url || null);
-    setHasWarranty(!!repair.warranty);
+    setHasWarranty(!!(repair.warranty_start_date || repair.warranty_end_date));
   };
 
   const closeProcessModal = () => {
@@ -137,7 +143,7 @@ export default function MainRepairingPending() {
     setPhotoFile(null);
     setBillFile(null);
     setPhotoPreview(null);
-    setHasWarranty(false);
+    setHasWarranty(!!(selectedRepair?.warranty_start_date || selectedRepair?.warranty_end_date));
   };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -444,7 +450,7 @@ export default function MainRepairingPending() {
                     className="hover:bg-neutral-50 dark:hover:bg-neutral-700/50 transition-colors"
                   >
                     <td className="px-4 py-3 text-sm font-medium text-foreground">
-                      #{repair.task_id}
+                      {repair.task_id}
                     </td>
                     <td className="px-4 py-3 text-sm text-foreground">
                       {repair.machine_name || "-"}
@@ -521,7 +527,7 @@ export default function MainRepairingPending() {
           <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-700">
               <h2 className="text-lg font-semibold text-foreground">
-                Process Repair #{selectedRepair.task_id}
+                Process Repair {selectedRepair.task_id}
               </h2>
               <button
                 onClick={closeProcessModal}
@@ -600,6 +606,45 @@ export default function MainRepairingPending() {
               {/* Completed: All fields */}
               {processForm.status === "completed" && (
                 <>
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1.5">
+                        Work Done By
+                      </label>
+                      <input
+                        type="text"
+                        value={processForm.workDoneBy || ""}
+                        onChange={(e) =>
+                          setProcessForm((prev) => ({
+                            ...prev,
+                            workDoneBy: e.target.value,
+                          }))
+                        }
+                        placeholder="Name of person..."
+                        className="w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1.5">
+                        Type of Work
+                      </label>
+                      <select
+                        value={processForm.typeOfWork || ""}
+                        onChange={(e) =>
+                          setProcessForm((prev) => ({
+                            ...prev,
+                            typeOfWork: e.target.value,
+                          }))
+                        }
+                        className="w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground"
+                      >
+                        <option value="">Select Type</option>
+                        <option value="in_house">In House</option>
+                        <option value="out_source">Out Source</option>
+                      </select>
+                    </div>
+                  </div>
+
                   {/* Part Replaced */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -632,7 +677,8 @@ export default function MainRepairingPending() {
                             if (!e.target.checked) {
                               setProcessForm((prev) => ({
                                 ...prev,
-                                warranty: "",
+                                warrantyFromDate: "",
+                                warrantyToDate: "",
                               }));
                             }
                           }}
@@ -646,18 +692,38 @@ export default function MainRepairingPending() {
                         </label>
                       </div>
                       {hasWarranty && (
-                        <input
-                          type="text"
-                          value={processForm.warranty || ""}
-                          onChange={(e) =>
-                            setProcessForm((prev) => ({
-                              ...prev,
-                              warranty: e.target.value,
-                            }))
-                          }
-                          placeholder="e.g., 1 Year, 6 Months"
-                          className="w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground"
-                        />
+                        <div className="flex gap-2">
+                          <div className="flex-1">
+                            <label className="block text-[10px] uppercase text-muted-foreground mb-1 ml-1">From</label>
+                            <input
+                              type="date"
+                              value={processForm.warrantyFromDate || ""}
+                              onChange={(e) =>
+                                setProcessForm((prev) => ({
+                                  ...prev,
+                                  warrantyFromDate: e.target.value,
+                                }))
+                              }
+                              className="w-full px-3 py-2 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground text-sm"
+                              title="Warranty From"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <label className="block text-[10px] uppercase text-muted-foreground mb-1 ml-1">To</label>
+                            <input
+                              type="date"
+                              value={processForm.warrantyToDate || ""}
+                              onChange={(e) =>
+                                setProcessForm((prev) => ({
+                                  ...prev,
+                                  warrantyToDate: e.target.value,
+                                }))
+                              }
+                              className="w-full px-3 py-2 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground text-sm"
+                              title="Warranty To"
+                            />
+                          </div>
+                        </div>
                       )}
                     </div>
                   </div>

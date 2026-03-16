@@ -25,9 +25,9 @@ export function formatDate(dateStr: string | undefined | null): string {
   if (!dateStr) return "—";
   const date = parseDateFromString(dateStr);
   if (!date) return dateStr;
-  return date.toLocaleDateString("en-GB", {
+  return date.toLocaleDateString("en-IN", {
     day: "2-digit",
-    month: "2-digit",
+    month: "short",
     year: "numeric",
   });
 }

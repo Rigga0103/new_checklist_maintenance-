@@ -45,9 +45,17 @@ export const fetchPendingMaintenance = async (
     // Apply search filter
     if (searchTerm && searchTerm.trim() !== "") {
       const searchValue = searchTerm.trim();
-      query = query.or(
-        `task_id::text.ilike.%${searchValue}%,machine_name.ilike.%${searchValue}%,doer_name.ilike.%${searchValue}%,task_description.ilike.%${searchValue}%,department.ilike.%${searchValue}%`,
-      );
+      const isNumeric = /^\d+$/.test(searchValue);
+      let orConds = [
+        `machine_name.ilike.%${searchValue}%`,
+        `doer_name.ilike.%${searchValue}%`,
+        `task_description.ilike.%${searchValue}%`,
+        `department.ilike.%${searchValue}%`,
+      ];
+      if (isNumeric) {
+        orConds.push(`task_id.eq.${searchValue}`);
+      }
+      query = query.or(orConds.join(","));
     }
 
     // Apply role filter - users only see their assigned tasks
@@ -103,9 +111,16 @@ export const fetchMaintenanceHistory = async (
     // Apply search filter
     if (searchTerm && searchTerm.trim() !== "") {
       const searchValue = searchTerm.trim();
-      query = query.or(
-        `task_id::text.ilike.%${searchValue}%,machine_name.ilike.%${searchValue}%,doer_name.ilike.%${searchValue}%,task_description.ilike.%${searchValue}%`,
-      );
+      const isNumeric = /^\d+$/.test(searchValue);
+      let orConds = [
+        `machine_name.ilike.%${searchValue}%`,
+        `doer_name.ilike.%${searchValue}%`,
+        `task_description.ilike.%${searchValue}%`,
+      ];
+      if (isNumeric) {
+        orConds.push(`task_id.eq.${searchValue}`);
+      }
+      query = query.or(orConds.join(","));
     }
 
     // Apply role filter
@@ -173,9 +188,17 @@ export const fetchAllOverdueMaintenance = async (
     // Apply search filter
     if (searchTerm && searchTerm.trim() !== "") {
       const searchValue = searchTerm.trim();
-      query = query.or(
-        `task_id::text.ilike.%${searchValue}%,machine_name.ilike.%${searchValue}%,doer_name.ilike.%${searchValue}%,task_description.ilike.%${searchValue}%,department.ilike.%${searchValue}%`,
-      );
+      const isNumeric = /^\d+$/.test(searchValue);
+      let orConds = [
+        `machine_name.ilike.%${searchValue}%`,
+        `doer_name.ilike.%${searchValue}%`,
+        `task_description.ilike.%${searchValue}%`,
+        `department.ilike.%${searchValue}%`,
+      ];
+      if (isNumeric) {
+        orConds.push(`task_id.eq.${searchValue}`);
+      }
+      query = query.or(orConds.join(","));
     }
 
     // Apply role filter - users only see their assigned tasks
@@ -223,9 +246,16 @@ export const fetchMaintenanceLast7Days = async (
 
     if (searchTerm && searchTerm.trim() !== "") {
       const searchValue = searchTerm.trim();
-      query = query.or(
-        `task_id::text.ilike.%${searchValue}%,machine_name.ilike.%${searchValue}%,doer_name.ilike.%${searchValue}%,task_description.ilike.%${searchValue}%`,
-      );
+      const isNumeric = /^\d+$/.test(searchValue);
+      let orConds = [
+        `machine_name.ilike.%${searchValue}%`,
+        `doer_name.ilike.%${searchValue}%`,
+        `task_description.ilike.%${searchValue}%`,
+      ];
+      if (isNumeric) {
+        orConds.push(`task_id.eq.${searchValue}`);
+      }
+      query = query.or(orConds.join(","));
     }
 
     if (role === "user" && username) {

@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   TrendingUp,
   IndianRupee,
+  Calendar,
 } from "lucide-react";
 import { fetchAllRepairs } from "../server/api/repairingApi";
 import type { MachineRepair } from "../../types/types";
@@ -285,9 +286,9 @@ export default function MainRepairingDashboard() {
                         Vendor: {repair.vendor_name}
                       </p>
                     )}
-                    {repair.warranty && (
-                      <p className="text-xs text-green-600 dark:text-green-400 font-medium">
-                        Warranty: {repair.warranty}
+                    {repair.warranty_start_date && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mt-1">
+                        Warranty: {formatDate(repair.warranty_start_date)} to {formatDate(repair.warranty_end_date)}
                       </p>
                     )}
                   </div>

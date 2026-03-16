@@ -112,7 +112,7 @@ export default function MainPartAndVendor() {
       r.part_replaced || "",
       r.vendor_name || "",
       r.bill_amount || "",
-      r.warranty || "",
+      r.warranty_start_date ? `${r.warranty_start_date} to ${r.warranty_end_date || 'N/A'}` : "",
       r.work_done || "",
       r.issue_detail || "",
       r.assigned_to || "",
@@ -369,7 +369,7 @@ export default function MainPartAndVendor() {
                     className="hover:bg-neutral-50 dark:hover:bg-neutral-700/50 transition-colors"
                   >
                     <td className="px-4 py-3 text-sm font-medium text-foreground">
-                      #{repair.task_id}
+                      {repair.task_id}
                     </td>
                     <td className="px-4 py-3 text-sm text-foreground">
                       {repair.machine_type || "-"}
@@ -387,7 +387,7 @@ export default function MainPartAndVendor() {
                       {formatCurrency(repair.bill_amount)}
                     </td>
                     <td className="px-4 py-3 text-sm text-amber-600 dark:text-amber-400 font-medium">
-                      {repair.warranty || "-"}
+                      {repair.warranty_start_date ? `${formatDate(repair.warranty_start_date)} to ${formatDate(repair.warranty_end_date)}` : "-"}
                     </td>
                     <td className="px-4 py-3 text-sm text-muted-foreground">
                       {formatDate(repair.actual_date)}
@@ -445,7 +445,7 @@ export default function MainPartAndVendor() {
             <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-700 shrink-0">
               <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
                 <Package className="w-5 h-5 text-blue-500" />
-                Part & Vendor Info #{selectedRepair.task_id}
+                Part & Vendor Info {selectedRepair.task_id}
               </h2>
               <button
                 onClick={() => setSelectedRepair(null)}
@@ -484,7 +484,7 @@ export default function MainPartAndVendor() {
                 <div>
                   <p className="text-sm text-muted-foreground">Warranty</p>
                   <p className="font-medium text-foreground">
-                    {selectedRepair.warranty || "-"}
+                    {selectedRepair.warranty_start_date ? `${formatDate(selectedRepair.warranty_start_date)} to ${formatDate(selectedRepair.warranty_end_date)}` : "-"}
                   </p>
                 </div>
                 <div>

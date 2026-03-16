@@ -167,7 +167,7 @@ export default function RepairingDashboard() {
         `"${task.part_replaced || ""}"`,
         `"${task.assigned_to || ""}"`,
         `"${task.vendor_name || ""}"`,
-        `"${task.warranty || ""}"`,
+        `"${task.warranty_start_date ? `${formatDate(task.warranty_start_date)} to ${formatDate(task.warranty_end_date)}` : ""}"`,
         task.bill_amount || "",
         `"${task.status || ""}"`,
         `"${(task.remarks || "").replace(/"/g, '""')}"`,
@@ -602,7 +602,9 @@ export default function RepairingDashboard() {
                       {row.vendor_name || "—"}
                     </td>
                     <td className="px-5 py-4 text-sm text-gray-700 dark:text-gray-300 align-middle">
-                      {row.warranty || "—"}
+                      {row.warranty_start_date
+                        ? `${formatDate(row.warranty_start_date)} to ${formatDate(row.warranty_end_date)}`
+                        : "—"}
                     </td>
                     <td className="px-5 py-4 text-sm font-bold text-gray-900 dark:text-white align-middle">
                       {row.bill_amount ? formatCurrency(row.bill_amount) : "—"}
@@ -653,7 +655,7 @@ export default function RepairingDashboard() {
               ) : (
                 <tr>
                   <td
-                    colSpan={11}
+                    colSpan={12}
                     className="px-5 py-16 text-center text-muted-foreground"
                   >
                     No repair records found
@@ -696,6 +698,11 @@ export default function RepairingDashboard() {
                       Part:
                     </span>{" "}
                     {row.part_replaced}
+                  </p>
+                )}
+                {row.warranty_start_date && (
+                  <p className="mb-2 text-xs text-amber-600 dark:text-amber-400 font-medium">
+                    Warranty: {formatDate(row.warranty_start_date)} to {formatDate(row.warranty_end_date)}
                   </p>
                 )}
                 <div className="flex items-center justify-between pt-2 text-sm border-t border-gray-200 dark:border-neutral-600">

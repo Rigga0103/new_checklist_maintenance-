@@ -20,7 +20,10 @@ export interface MachineRepair {
   bill_amount: number | null;
   remarks: string | null;
   motor_name: string | null;
-  warranty: string | null;
+  warranty_start_date: string | null;
+  warranty_end_date: string | null;
+  Work_Done_By?: string | null;
+  Type_of_Work?: string | null;
 }
 
 export interface MachineMaintenance {
@@ -69,7 +72,10 @@ export interface RepairProcessFormData {
   billCopyUrl?: string;
   billAmount?: number;
   remarks?: string;
-  warranty?: string;
+  warrantyFromDate?: string;
+  warrantyToDate?: string;
+  workDoneBy?: string;
+  typeOfWork?: string;
 }
 
 export type RepairStatus =

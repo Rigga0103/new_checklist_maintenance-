@@ -42,9 +42,17 @@ export const fetchPendingRepairs = async (
     // Apply search filter
     if (searchTerm && searchTerm.trim() !== "") {
       const searchValue = searchTerm.trim();
-      query = query.or(
-        `task_id::text.ilike.%${searchValue}%,machine_name.ilike.%${searchValue}%,form_filled_by.ilike.%${searchValue}%,issue_detail.ilike.%${searchValue}%,assigned_to.ilike.%${searchValue}%`,
-      );
+      const isNumeric = /^\d+$/.test(searchValue);
+      let orConditions = [
+        `machine_name.ilike.%${searchValue}%`,
+        `form_filled_by.ilike.%${searchValue}%`,
+        `issue_detail.ilike.%${searchValue}%`,
+        `assigned_to.ilike.%${searchValue}%`,
+      ];
+      if (isNumeric) {
+        orConditions.push(`task_id.eq.${searchValue}`);
+      }
+      query = query.or(orConditions.join(","));
     }
 
     // Apply role filter - users only see their assigned tasks
@@ -95,9 +103,17 @@ export const fetchAllOverdueRepairing = async (
     // Apply search filter
     if (searchTerm && searchTerm.trim() !== "") {
       const searchValue = searchTerm.trim();
-      query = query.or(
-        `task_id::text.ilike.%${searchValue}%,machine_name.ilike.%${searchValue}%,form_filled_by.ilike.%${searchValue}%,issue_detail.ilike.%${searchValue}%,assigned_to.ilike.%${searchValue}%`,
-      );
+      const isNumeric = /^\d+$/.test(searchValue);
+      let orConditions = [
+        `machine_name.ilike.%${searchValue}%`,
+        `form_filled_by.ilike.%${searchValue}%`,
+        `issue_detail.ilike.%${searchValue}%`,
+        `assigned_to.ilike.%${searchValue}%`,
+      ];
+      if (isNumeric) {
+        orConditions.push(`task_id.eq.${searchValue}`);
+      }
+      query = query.or(orConditions.join(","));
     }
 
     // Apply role filter - users only see their assigned tasks
@@ -153,9 +169,16 @@ export const fetchRepairHistory = async (
     // Apply search filter
     if (searchTerm && searchTerm.trim() !== "") {
       const searchValue = searchTerm.trim();
-      query = query.or(
-        `task_id::text.ilike.%${searchValue}%,machine_name.ilike.%${searchValue}%,form_filled_by.ilike.%${searchValue}%,issue_detail.ilike.%${searchValue}%`,
-      );
+      const isNumeric = /^\d+$/.test(searchValue);
+      let orConditions = [
+        `machine_name.ilike.%${searchValue}%`,
+        `form_filled_by.ilike.%${searchValue}%`,
+        `issue_detail.ilike.%${searchValue}%`,
+      ];
+      if (isNumeric) {
+        orConditions.push(`task_id.eq.${searchValue}`);
+      }
+      query = query.or(orConditions.join(","));
     }
 
     // Apply role filter
@@ -205,9 +228,16 @@ export const fetchAllRepairHistory = async (
     // Apply search filter
     if (searchTerm && searchTerm.trim() !== "") {
       const searchValue = searchTerm.trim();
-      query = query.or(
-        `task_id::text.ilike.%${searchValue}%,machine_name.ilike.%${searchValue}%,form_filled_by.ilike.%${searchValue}%,issue_detail.ilike.%${searchValue}%`,
-      );
+      const isNumeric = /^\d+$/.test(searchValue);
+      let orConditions = [
+        `machine_name.ilike.%${searchValue}%`,
+        `form_filled_by.ilike.%${searchValue}%`,
+        `issue_detail.ilike.%${searchValue}%`,
+      ];
+      if (isNumeric) {
+        orConditions.push(`task_id.eq.${searchValue}`);
+      }
+      query = query.or(orConditions.join(","));
     }
 
     // Apply role filter
@@ -284,9 +314,17 @@ export const fetchRepairLast7Days = async (
     // Apply search filter
     if (searchTerm && searchTerm.trim() !== "") {
       const searchValue = searchTerm.trim();
-      query = query.or(
-        `task_id::text.ilike.%${searchValue}%,machine_name.ilike.%${searchValue}%,form_filled_by.ilike.%${searchValue}%,issue_detail.ilike.%${searchValue}%,assigned_to.ilike.%${searchValue}%`,
-      );
+      const isNumeric = /^\d+$/.test(searchValue);
+      let orConditions = [
+        `machine_name.ilike.%${searchValue}%`,
+        `form_filled_by.ilike.%${searchValue}%`,
+        `issue_detail.ilike.%${searchValue}%`,
+        `assigned_to.ilike.%${searchValue}%`,
+      ];
+      if (isNumeric) {
+        orConditions.push(`task_id.eq.${searchValue}`);
+      }
+      query = query.or(orConditions.join(","));
     }
 
     // Apply role filter - users only see their assigned tasks
@@ -332,9 +370,16 @@ export const fetchPartsAndVendors = async (
     // Apply search filter (for task ID, machine name, etc)
     if (searchTerm && searchTerm.trim() !== "") {
       const searchValue = searchTerm.trim();
-      query = query.or(
-        `task_id::text.ilike.%${searchValue}%,machine_name.ilike.%${searchValue}%,vendor_name.ilike.%${searchValue}%,part_replaced.ilike.%${searchValue}%`,
-      );
+      const isNumeric = /^\d+$/.test(searchValue);
+      let orConditions = [
+        `machine_name.ilike.%${searchValue}%`,
+        `vendor_name.ilike.%${searchValue}%`,
+        `part_replaced.ilike.%${searchValue}%`,
+      ];
+      if (isNumeric) {
+        orConditions.push(`task_id.eq.${searchValue}`);
+      }
+      query = query.or(orConditions.join(","));
     }
 
     // Apply specific filters
@@ -539,7 +584,10 @@ export const processRepair = async (
       vendor_name: processData.vendorName || null,
       bill_amount: processData.billAmount || null,
       remarks: processData.remarks || null,
-      warranty: processData.warranty || null,
+      warranty_start_date: processData.warrantyFromDate || null,
+      warranty_end_date: processData.warrantyToDate || null,
+      Work_Done_By: processData.workDoneBy || null,
+      Type_of_Work: processData.typeOfWork || null,
       task_start_date: new Date().toISOString(),
     };
 

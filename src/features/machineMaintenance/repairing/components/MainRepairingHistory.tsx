@@ -113,7 +113,9 @@ export default function MainRepairingHistory() {
         r.machine_name || "",
         r.issue_detail || "",
         r.part_replaced || "",
-        r.warranty || "",
+        r.warranty_start_date
+          ? `${formatDate(r.warranty_start_date)} to ${formatDate(r.warranty_end_date)}`
+          : "-", // Updated to use warranty_from_date and warranty_to_date
         r.work_done || "",
         r.form_filled_by || "",
         r.assigned_to || "",
@@ -311,7 +313,7 @@ export default function MainRepairingHistory() {
                     className="hover:bg-neutral-50 dark:hover:bg-neutral-700/50 transition-colors"
                   >
                     <td className="px-4 py-3 text-sm font-medium text-foreground">
-                      #{repair.task_id}
+                      {repair.task_id}
                     </td>
                     <td className="px-4 py-3 text-sm text-foreground">
                       {repair.machine_name || "-"}
@@ -323,7 +325,9 @@ export default function MainRepairingHistory() {
                       {repair.part_replaced || "-"}
                     </td>
                     <td className="px-4 py-3 text-sm text-foreground">
-                      {repair.warranty || "-"}
+                      {repair.warranty_start_date
+                        ? `${formatDate(repair.warranty_start_date)} to ${formatDate(repair.warranty_end_date)}`
+                        : "-"}
                     </td>
                     <td className="px-4 py-3 text-sm text-foreground">
                       {repair.assigned_to || "-"}
@@ -389,7 +393,7 @@ export default function MainRepairingHistory() {
           <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-700">
               <h2 className="text-lg font-semibold text-foreground">
-                Repair Details #{selectedRepair.task_id}
+                Repair Details {selectedRepair.task_id}
               </h2>
               <button
                 onClick={() => setSelectedRepair(null)}
@@ -434,7 +438,9 @@ export default function MainRepairingHistory() {
                 <div>
                   <p className="text-sm text-muted-foreground">Warranty</p>
                   <p className="font-medium text-foreground">
-                    {selectedRepair.warranty || "-"}
+                    {selectedRepair.warranty_start_date
+                      ? `${formatDate(selectedRepair.warranty_start_date)} to ${formatDate(selectedRepair.warranty_end_date)}`
+                      : "-"}
                   </p>
                 </div>
                 <div>

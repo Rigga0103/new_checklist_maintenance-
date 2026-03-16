@@ -21,6 +21,8 @@ export interface MachineRepairTask {
   bill_amount?: number;
   remarks?: string;
   warranty?: string;
+  warranty_start_date?: string;
+  warranty_end_date?: string;
 }
 
 export interface MachineMaintenanceTask {
@@ -119,9 +121,17 @@ export const fetchMaintenancePending = async (
     // Search filter
     if (searchTerm && searchTerm.trim() !== "") {
       const sv = searchTerm.trim();
-      query = query.or(
-        `machine_name.ilike.%${sv}%,task_description.ilike.%${sv}%,doer_name.ilike.%${sv}%,frequency.ilike.%${sv}%`,
-      );
+      const isNumeric = /^\d+$/.test(sv);
+      let orConds = [
+        `machine_name.ilike.%${sv}%`,
+        `task_description.ilike.%${sv}%`,
+        `doer_name.ilike.%${sv}%`,
+        `frequency.ilike.%${sv}%`,
+      ];
+      if (isNumeric) {
+        orConds.push(`task_id.eq.${sv}`);
+      }
+      query = query.or(orConds.join(","));
     }
 
     // Role filter - regular users only see their own tasks
@@ -169,9 +179,17 @@ export const fetchMaintenanceHistory = async (
     // Search filter
     if (searchTerm && searchTerm.trim() !== "") {
       const sv = searchTerm.trim();
-      query = query.or(
-        `machine_name.ilike.%${sv}%,task_description.ilike.%${sv}%,doer_name.ilike.%${sv}%,frequency.ilike.%${sv}%`,
-      );
+      const isNumeric = /^\d+$/.test(sv);
+      let orConds = [
+        `machine_name.ilike.%${sv}%`,
+        `task_description.ilike.%${sv}%`,
+        `doer_name.ilike.%${sv}%`,
+        `frequency.ilike.%${sv}%`,
+      ];
+      if (isNumeric) {
+        orConds.push(`task_id.eq.${sv}`);
+      }
+      query = query.or(orConds.join(","));
     }
 
     // Role filter
@@ -233,9 +251,17 @@ export const fetchMaintenanceLast7Days = async (
 
     if (searchTerm && searchTerm.trim() !== "") {
       const sv = searchTerm.trim();
-      query = query.or(
-        `machine_name.ilike.%${sv}%,task_description.ilike.%${sv}%,doer_name.ilike.%${sv}%,frequency.ilike.%${sv}%`,
-      );
+      const isNumeric = /^\d+$/.test(sv);
+      let orConds = [
+        `machine_name.ilike.%${sv}%`,
+        `task_description.ilike.%${sv}%`,
+        `doer_name.ilike.%${sv}%`,
+        `frequency.ilike.%${sv}%`,
+      ];
+      if (isNumeric) {
+        orConds.push(`task_id.eq.${sv}`);
+      }
+      query = query.or(orConds.join(","));
     }
 
     if (role === "user" && username) {
@@ -276,9 +302,17 @@ export const fetchMaintenanceOverdue = async (
 
     if (searchTerm && searchTerm.trim() !== "") {
       const sv = searchTerm.trim();
-      query = query.or(
-        `machine_name.ilike.%${sv}%,task_description.ilike.%${sv}%,doer_name.ilike.%${sv}%,frequency.ilike.%${sv}%`,
-      );
+      const isNumeric = /^\d+$/.test(sv);
+      let orConds = [
+        `machine_name.ilike.%${sv}%`,
+        `task_description.ilike.%${sv}%`,
+        `doer_name.ilike.%${sv}%`,
+        `frequency.ilike.%${sv}%`,
+      ];
+      if (isNumeric) {
+        orConds.push(`task_id.eq.${sv}`);
+      }
+      query = query.or(orConds.join(","));
     }
 
     if (role === "user" && username) {
@@ -343,9 +377,17 @@ export const fetchUniqueMaintenanceTasksForEdit = async (
 
     if (searchTerm && searchTerm.trim() !== "") {
       const sv = searchTerm.trim();
-      query = query.or(
-        `machine_name.ilike.%${sv}%,task_description.ilike.%${sv}%,doer_name.ilike.%${sv}%,frequency.ilike.%${sv}%`,
-      );
+      const isNumeric = /^\d+$/.test(sv);
+      let orConds = [
+        `machine_name.ilike.%${sv}%`,
+        `task_description.ilike.%${sv}%`,
+        `doer_name.ilike.%${sv}%`,
+        `frequency.ilike.%${sv}%`,
+      ];
+      if (isNumeric) {
+        orConds.push(`task_id.eq.${sv}`);
+      }
+      query = query.or(orConds.join(","));
     }
 
     if (machineName && machineName.trim() !== "") {
@@ -420,9 +462,17 @@ export const fetchMaintenanceTasksForEdit = async (
 
     if (searchTerm && searchTerm.trim() !== "") {
       const sv = searchTerm.trim();
-      query = query.or(
-        `machine_name.ilike.%${sv}%,task_description.ilike.%${sv}%,doer_name.ilike.%${sv}%,frequency.ilike.%${sv}%`,
-      );
+      const isNumeric = /^\d+$/.test(sv);
+      let orConds = [
+        `machine_name.ilike.%${sv}%`,
+        `task_description.ilike.%${sv}%`,
+        `doer_name.ilike.%${sv}%`,
+        `frequency.ilike.%${sv}%`,
+      ];
+      if (isNumeric) {
+        orConds.push(`task_id.eq.${sv}`);
+      }
+      query = query.or(orConds.join(","));
     }
 
     if (machineName && machineName.trim() !== "") {
@@ -567,9 +617,17 @@ export const fetchRepairTasksForEdit = async (
 
     if (searchTerm && searchTerm.trim() !== "") {
       const sv = searchTerm.trim();
-      query = query.or(
-        `machine_name.ilike.%${sv}%,issue_detail.ilike.%${sv}%,assigned_to.ilike.%${sv}%,vendor_name.ilike.%${sv}%`,
-      );
+      const isNumeric = /^\d+$/.test(sv);
+      let orConds = [
+        `machine_name.ilike.%${sv}%`,
+        `issue_detail.ilike.%${sv}%`,
+        `assigned_to.ilike.%${sv}%`,
+        `vendor_name.ilike.%${sv}%`,
+      ];
+      if (isNumeric) {
+        orConds.push(`task_id.eq.${sv}`);
+      }
+      query = query.or(orConds.join(","));
     }
 
     if (machineName && machineName.trim() !== "") {
@@ -663,9 +721,17 @@ export const fetchMaintenanceSchedulesForEdit = async (
 
     if (searchTerm && searchTerm.trim() !== "") {
       const sv = searchTerm.trim();
-      query = query.or(
-        `machine_name.ilike.%${sv}%,task_description.ilike.%${sv}%,assigned_to.ilike.%${sv}%,frequency.ilike.%${sv}%`,
-      );
+      const isNumeric = /^\d+$/.test(sv);
+      let orConds = [
+        `machine_name.ilike.%${sv}%`,
+        `task_description.ilike.%${sv}%`,
+        `assigned_to.ilike.%${sv}%`,
+        `frequency.ilike.%${sv}%`,
+      ];
+      if (isNumeric) {
+        orConds.push(`id.eq.${sv}`);
+      }
+      query = query.or(orConds.join(","));
     }
 
     if (machineName && machineName.trim() !== "") {
