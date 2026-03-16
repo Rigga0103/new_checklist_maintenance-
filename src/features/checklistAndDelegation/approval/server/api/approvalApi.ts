@@ -184,3 +184,52 @@ export async function markMultipleAsDone(
     }
   }
 }
+
+// Fetch all checklist tasks for unique tasks view
+export async function fetchAllChecklistData(
+  username: string | null = null,
+  role: string | null = null,
+): Promise<{ data: ApprovalTask[]; members: string[] }> {
+  let query = supabase.from("checklist").select("*");
+
+  if (role === "user" && username) {
+    query = query.eq("name", username);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw new Error(`Failed to fetch checklist data: ${error.message}`);
+  }
+
+  const membersSet = new Set<string>();
+
+  const processedData: ApprovalTask[] = (data || []).map((row, index) => {
+    const assignedTo = row.name || "Unassigned";
+    membersSet.add(assignedTo);
+
+    return {
+      _id: `checklist_all_${row.task_id}_${index}`,
+      _rowIndex: index + 1,
+      _taskId: String(row.task_id),
+      _sheetType: "checklist" as const,
+      task_id: row.task_id,
+      task_description: row.task_description,
+      name: row.name,
+      given_by: row.given_by,
+      department: row.department,
+      task_start_date: formatDateTime(row.task_start_date),
+      planned_date: formatDateTime(row.planned_date),
+      frequency: row.frequency,
+      enable_reminders: row.enable_reminders,
+      require_attachment: row.require_attachment,
+      submission_date: formatDateTime(row.submission_date),
+      status: row.status,
+      remark: row.remark,
+      image: row.image,
+      admin_done: row.admin_done,
+    };
+  });
+
+  return { data: processedData, members: Array.from(membersSet).sort() };
+}

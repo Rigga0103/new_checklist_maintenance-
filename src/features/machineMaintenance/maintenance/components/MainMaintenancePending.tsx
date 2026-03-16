@@ -142,6 +142,12 @@ export default function MainMaintenancePending() {
   const handleProcessSubmit = async () => {
     if (!selectedTask) return;
 
+    // Check if attachment is required and image is missing
+    if (selectedTask.require_attachment?.toLowerCase() === "yes" && !imageFile && !selectedTask.image_url) {
+      toast.error("image required");
+      return;
+    }
+
     try {
       await completeMutation.mutateAsync({
         taskId: selectedTask.task_id,

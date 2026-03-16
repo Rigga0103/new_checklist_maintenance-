@@ -39,9 +39,17 @@ export const fetchChecklistDataSortByDate = async (
     // Apply search filter
     if (searchTerm && searchTerm.trim() !== "") {
       const searchValue = searchTerm.trim();
-      query = query.or(
-        `task_id.ilike.%${searchValue}%,name.ilike.%${searchValue}%,given_by.ilike.%${searchValue}%,department.ilike.%${searchValue}%,task_description.ilike.%${searchValue}%`,
-      );
+      const isNumeric = /^\d+$/.test(searchValue);
+      let orConds = [
+        `name.ilike.%${searchValue}%`,
+        `given_by.ilike.%${searchValue}%`,
+        `department.ilike.%${searchValue}%`,
+        `task_description.ilike.%${searchValue}%`,
+      ];
+      if (isNumeric) {
+        orConds.push(`task_id.eq.${searchValue}`);
+      }
+      query = query.or(orConds.join(","));
     }
 
     // Apply role filter - users only see their own tasks
@@ -89,9 +97,17 @@ export const fetchChecklistDataForHistory = async (
     // Apply search filter
     if (searchTerm && searchTerm.trim() !== "") {
       const searchValue = searchTerm.trim();
-      query = query.or(
-        `task_id.ilike.%${searchValue}%,name.ilike.%${searchValue}%,given_by.ilike.%${searchValue}%,department.ilike.%${searchValue}%,task_description.ilike.%${searchValue}%`,
-      );
+      const isNumeric = /^\d+$/.test(searchValue);
+      let orConds = [
+        `name.ilike.%${searchValue}%`,
+        `given_by.ilike.%${searchValue}%`,
+        `department.ilike.%${searchValue}%`,
+        `task_description.ilike.%${searchValue}%`,
+      ];
+      if (isNumeric) {
+        orConds.push(`task_id.eq.${searchValue}`);
+      }
+      query = query.or(orConds.join(","));
     }
 
     // Apply role filter
@@ -171,9 +187,17 @@ export const fetchChecklistLast7Days = async (
     // Apply search filter
     if (searchTerm && searchTerm.trim() !== "") {
       const searchValue = searchTerm.trim();
-      query = query.or(
-        `task_id.ilike.%${searchValue}%,name.ilike.%${searchValue}%,given_by.ilike.%${searchValue}%,department.ilike.%${searchValue}%,task_description.ilike.%${searchValue}%`,
-      );
+      const isNumeric = /^\d+$/.test(searchValue);
+      let orConds = [
+        `name.ilike.%${searchValue}%`,
+        `given_by.ilike.%${searchValue}%`,
+        `department.ilike.%${searchValue}%`,
+        `task_description.ilike.%${searchValue}%`,
+      ];
+      if (isNumeric) {
+        orConds.push(`task_id.eq.${searchValue}`);
+      }
+      query = query.or(orConds.join(","));
     }
 
     // Apply role filter — users only see their own tasks
@@ -240,9 +264,17 @@ export const fetchChecklistUpcoming7Days = async (
     // Apply search filter
     if (searchTerm && searchTerm.trim() !== "") {
       const searchValue = searchTerm.trim();
-      query = query.or(
-        `task_id.ilike.%${searchValue}%,name.ilike.%${searchValue}%,given_by.ilike.%${searchValue}%,department.ilike.%${searchValue}%,task_description.ilike.%${searchValue}%`,
-      );
+      const isNumeric = /^\d+$/.test(searchValue);
+      let orConds = [
+        `name.ilike.%${searchValue}%`,
+        `given_by.ilike.%${searchValue}%`,
+        `department.ilike.%${searchValue}%`,
+        `task_description.ilike.%${searchValue}%`,
+      ];
+      if (isNumeric) {
+        orConds.push(`task_id.eq.${searchValue}`);
+      }
+      query = query.or(orConds.join(","));
     }
 
     // Apply role filter
@@ -300,9 +332,17 @@ export const fetchChecklistOverdue = async (
     // Apply search filter
     if (searchTerm && searchTerm.trim() !== "") {
       const searchValue = searchTerm.trim();
-      query = query.or(
-        `task_id.ilike.%${searchValue}%,name.ilike.%${searchValue}%,given_by.ilike.%${searchValue}%,department.ilike.%${searchValue}%,task_description.ilike.%${searchValue}%`,
-      );
+      const isNumeric = /^\d+$/.test(searchValue);
+      let orConds = [
+        `name.ilike.%${searchValue}%`,
+        `given_by.ilike.%${searchValue}%`,
+        `department.ilike.%${searchValue}%`,
+        `task_description.ilike.%${searchValue}%`,
+      ];
+      if (isNumeric) {
+        orConds.push(`task_id.eq.${searchValue}`);
+      }
+      query = query.or(orConds.join(","));
     }
 
     // Apply role filter

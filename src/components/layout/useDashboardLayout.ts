@@ -171,6 +171,13 @@ const routes: Route[] = [
     permissionResource: "approval",
   },
   {
+    href: "/unique-tasks",
+    label: "Unique Tasks",
+    icon: "ClipboardList",
+    showFor: ["admin"] as const,
+    permissionResource: "approval", // Reusing approval permission for now
+  },
+  {
     href: "/settings",
     label: "Settings",
     icon: "Settings",

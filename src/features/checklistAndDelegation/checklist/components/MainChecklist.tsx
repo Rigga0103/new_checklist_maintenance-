@@ -342,7 +342,7 @@ export default function MainChecklist() {
 
     // Check if tasks requiring attachment have an image uploaded
     const missingImage = Array.from(selectedTasks).some((taskId) => {
-      const task = activeTasks.find((t) => t.task_id === taskId);
+      const task = tasks.find((t) => t.task_id === taskId);
       if (task?.require_attachment?.toLowerCase() === "yes") {
         // Check if image was uploaded in this session OR already exists in DB
         return !taskImages[taskId]?.uploadedUrl && !task.image;
@@ -351,7 +351,7 @@ export default function MainChecklist() {
     });
 
     if (missingImage) {
-      toast.error("Please upload an image for tasks that require attachment");
+      toast.error("image required");
       return;
     }
 

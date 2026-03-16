@@ -88,3 +88,15 @@ export function useMarkMultipleDone() {
     },
   });
 }
+
+// Hook to fetch all checklist tasks
+export function useAllChecklistTasks(
+  role: string | null = null,
+  username: string | null = null,
+) {
+  return useQuery({
+    queryKey: ["approval", "all_checklist", role, username],
+    queryFn: () => import("../api/approvalApi").then(api => api.fetchAllChecklistData(username, role)),
+    staleTime: 1000 * 60 * 5,
+  });
+}
