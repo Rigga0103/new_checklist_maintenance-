@@ -348,17 +348,38 @@ export const fetchUpcomingMaintenance = async (
  */
 export const fetchAllMaintenance = async (): Promise<MachineMaintenance[]> => {
   try {
-    const { data, error } = await supabase
-      .from("machine_maintenance")
-      .select("*")
-      .order("task_start_date", { ascending: true });
+    let allData: any[] = [];
+    let page = 0;
+    const pageSize = 1000;
+    let hasMore = true;
 
-    if (error) {
-      console.error("Error fetching all maintenance:", error);
-      return [];
+    while (hasMore) {
+      const from = page * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error } = await supabase
+        .from("machine_maintenance")
+        .select("*")
+        .order("task_start_date", { ascending: true })
+        .range(from, to);
+
+      if (error) {
+        console.error("Error fetching all maintenance:", error);
+        return [];
+      }
+
+      if (data && data.length > 0) {
+        allData = [...allData, ...data];
+      }
+
+      if (!data || data.length < pageSize) {
+        hasMore = false;
+      }
+
+      page++;
     }
 
-    return data as MachineMaintenance[];
+    return allData as MachineMaintenance[];
   } catch (error) {
     console.error("Error from Supabase:", error);
     return [];

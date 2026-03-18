@@ -148,7 +148,7 @@ export default function UniqueApproval() {
 
       const matchesSearch = searchTerm
         ? itemDescription.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          itemName.toLowerCase().includes(searchTerm.toLowerCase())
+        itemName.toLowerCase().includes(searchTerm.toLowerCase())
         : true;
 
       const matchesMember =
@@ -250,11 +250,10 @@ export default function UniqueApproval() {
             setCurrentPage(1);
             resetFilters();
           }}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            activeTab === "checklist"
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === "checklist"
               ? "bg-blue-600 text-white"
               : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
-          }`}
+            }`}
         >
           Checklist Tasks
         </button>
@@ -264,11 +263,10 @@ export default function UniqueApproval() {
             setCurrentPage(1);
             resetFilters();
           }}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            activeTab === "maintenance"
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === "maintenance"
               ? "bg-blue-600 text-white"
               : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
-          }`}
+            }`}
         >
           Maintenance Tasks
         </button>
@@ -366,19 +364,19 @@ export default function UniqueApproval() {
 
           {/* Search Term */}
           <div className="flex-1 min-w-[200px]">
-             <label className="block text-sm font-medium text-foreground dark:text-gray-300 mb-1">
-                Search Tasks
-              </label>
-              <div className="relative">
-                <input
-                    type="text"
-                    placeholder="Search by name or description..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full px-3 py-2 pr-8 text-sm border border-gray-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-                <Search className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              </div>
+            <label className="block text-sm font-medium text-foreground dark:text-gray-300 mb-1">
+              Search Tasks
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search by name or description..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-3 py-2 pr-8 text-sm border border-gray-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              />
+              <Search className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            </div>
           </div>
 
           {/* Clear Filters */}
@@ -386,13 +384,13 @@ export default function UniqueApproval() {
             startDate ||
             endDate ||
             searchTerm) && (
-            <button
-              onClick={resetFilters}
-              className="px-3 py-2 text-sm bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50"
-            >
-              Clear Filters
-            </button>
-          )}
+              <button
+                onClick={resetFilters}
+                className="px-3 py-2 text-sm bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50"
+              >
+                Clear Filters
+              </button>
+            )}
         </div>
       </div>
 

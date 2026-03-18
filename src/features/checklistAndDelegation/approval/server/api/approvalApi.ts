@@ -25,25 +25,46 @@ export async function fetchChecklistApprovalData(
   username: string | null,
   role: string | null,
 ): Promise<{ data: ApprovalTask[]; members: string[] }> {
-  let query = supabase
-    .from("checklist")
-    .select("*")
-    .not("submission_date", "is", null)
-    .not("status", "is", null);
+  let allData: any[] = [];
+  let page = 0;
+  const pageSize = 1000;
+  let hasMore = true;
 
-  if (role === "user" && username) {
-    query = query.eq("name", username);
-  }
+  while (hasMore) {
+    const from = page * pageSize;
+    const to = from + pageSize - 1;
 
-  const { data, error } = await query;
+    let query = supabase
+      .from("checklist")
+      .select("*")
+      .not("submission_date", "is", null)
+      .not("status", "is", null)
+      .range(from, to);
 
-  if (error) {
-    throw new Error(`Failed to fetch checklist data: ${error.message}`);
+    if (role === "user" && username) {
+      query = query.eq("name", username);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw new Error(`Failed to fetch checklist data: ${error.message}`);
+    }
+
+    if (data && data.length > 0) {
+      allData = [...allData, ...data];
+    }
+
+    if (!data || data.length < pageSize) {
+      hasMore = false;
+    }
+
+    page++;
   }
 
   const membersSet = new Set<string>();
 
-  const processedData: ApprovalTask[] = (data || []).map((row, index) => {
+  const processedData: ApprovalTask[] = allData.map((row: any, index: number) => {
     const assignedTo = row.name || "Unassigned";
     membersSet.add(assignedTo);
 
@@ -83,26 +104,47 @@ export async function fetchDelegationApprovalData(
   username: string | null,
   role: string | null,
 ): Promise<{ data: ApprovalTask[]; members: string[] }> {
-  let query = supabase
-    .from("delegation")
-    .select("*")
-    .not("submission_date", "is", null)
-    .not("status", "is", null);
+  let allData: any[] = [];
+  let page = 0;
+  const pageSize = 1000;
+  let hasMore = true;
 
-  if (role === "user" && username) {
-    query = query.eq("name", username);
-  }
+  while (hasMore) {
+    const from = page * pageSize;
+    const to = from + pageSize - 1;
 
-  const { data, error } = await query;
+    let query = supabase
+      .from("delegation")
+      .select("*")
+      .not("submission_date", "is", null)
+      .not("status", "is", null)
+      .range(from, to);
 
-  if (error) {
-    console.warn(`Failed to fetch delegation data: ${error.message}`);
-    return { data: [], members: [] };
+    if (role === "user" && username) {
+      query = query.eq("name", username);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.warn(`Failed to fetch delegation data: ${error.message}`);
+      return { data: [], members: [] };
+    }
+
+    if (data && data.length > 0) {
+      allData = [...allData, ...data];
+    }
+
+    if (!data || data.length < pageSize) {
+      hasMore = false;
+    }
+
+    page++;
   }
 
   const membersSet = new Set<string>();
 
-  const processedData: ApprovalTask[] = (data || []).map((row, index) => {
+  const processedData: ApprovalTask[] = allData.map((row: any, index: number) => {
     const assignedTo = row.name || "Unassigned";
     membersSet.add(assignedTo);
 
@@ -190,21 +232,41 @@ export async function fetchAllChecklistData(
   username: string | null = null,
   role: string | null = null,
 ): Promise<{ data: ApprovalTask[]; members: string[] }> {
-  let query = supabase.from("checklist").select("*");
+  let allData: any[] = [];
+  let page = 0;
+  const pageSize = 1000;
+  let hasMore = true;
 
-  if (role === "user" && username) {
-    query = query.eq("name", username);
-  }
+  while (hasMore) {
+    const from = page * pageSize;
+    const to = from + pageSize - 1;
 
-  const { data, error } = await query;
+    let query = supabase.from("checklist").select("*").range(from, to);
 
-  if (error) {
-    throw new Error(`Failed to fetch checklist data: ${error.message}`);
+    if (role === "user" && username) {
+      query = query.eq("name", username);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw new Error(`Failed to fetch checklist data: ${error.message}`);
+    }
+
+    if (data && data.length > 0) {
+      allData = [...allData, ...data];
+    }
+
+    if (!data || data.length < pageSize) {
+      hasMore = false;
+    }
+
+    page++;
   }
 
   const membersSet = new Set<string>();
 
-  const processedData: ApprovalTask[] = (data || []).map((row, index) => {
+  const processedData: ApprovalTask[] = allData.map((row: any, index: number) => {
     const assignedTo = row.name || "Unassigned";
     membersSet.add(assignedTo);
 
