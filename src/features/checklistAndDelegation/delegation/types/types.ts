@@ -18,6 +18,7 @@ export interface DelegationTask {
   created_at?: string;
   planned_date?: string | null;
   next_extend_date?: string | null;
+  sample_image?: string | null;
 }
 
 export interface DelegationFilters {

@@ -19,6 +19,7 @@ export interface ChecklistItem {
   task_start_date: string | null;
   submission_date: string | null;
   next_extend_date?: string | null;
+  sample_image?: string | null;
 }
 
 export interface ChecklistSubmissionItem {

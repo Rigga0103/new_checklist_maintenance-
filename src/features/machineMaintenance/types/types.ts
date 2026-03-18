@@ -43,6 +43,7 @@ export interface MachineMaintenance {
   image_url: string | null;
   maintenance_cost: number | null;
   require_attachment: string | null;
+  sample_image?: string | null;
 }
 
 export interface RepairFetchResponse {

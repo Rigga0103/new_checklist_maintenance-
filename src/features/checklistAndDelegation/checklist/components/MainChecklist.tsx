@@ -841,11 +841,18 @@ export default function MainChecklist() {
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase">
                     Reminders
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase">
-                    Attach Req
-                  </th>
+                  {(activeTab === "pending" ||
+                    activeTab === "overdue" ||
+                    activeTab === "upcoming7days") && (
+                    <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase">
+                      Attachment Required
+                    </th>
+                  )}
                   {activeTab === "pending" ? (
                     <>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase">
+                        Sample Image
+                      </th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase">
                         Upload
                       </th>
@@ -857,6 +864,9 @@ export default function MainChecklist() {
                     <>
                       <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase">
                         Status
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase">
+                        Sample Image
                       </th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase">
                         Remark
@@ -964,9 +974,21 @@ export default function MainChecklist() {
                     <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
                       {task.enable_reminder || "—"}
                     </td>
-                    <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
-                      {task.require_attachment || "—"}
-                    </td>
+                    {(activeTab === "pending" ||
+                      activeTab === "overdue" ||
+                      activeTab === "upcoming7days") && (
+                      <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                            task.require_attachment === "yes"
+                              ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                              : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                          }`}
+                        >
+                          {task.require_attachment === "yes" ? "Yes" : "No"}
+                        </span>
+                      </td>
+                    )}
                     {/* History, Last 7 Days, Overdue & Upcoming 7 Days Tab Info */}
                     {(activeTab === "history" ||
                       activeTab === "last7days" ||
@@ -1004,6 +1026,31 @@ export default function MainChecklist() {
                                     ? "Overdue"
                                     : "Pending"}
                           </span>
+                        </td>
+                        <td className="px-3 py-3">
+                          {task.sample_image ? (
+                            <div className="w-10 h-10 rounded border border-gray-200 dark:border-neutral-700 overflow-hidden">
+                              <a
+                                href={task.sample_image}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <img
+                                  src={task.sample_image}
+                                  alt="Sample"
+                                  className="w-full h-full object-cover hover:scale-110 transition-transform"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).src =
+                                      "https://placehold.co/40?text=Error";
+                                  }}
+                                />
+                              </a>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">
+                              No Image
+                            </span>
+                          )}
                         </td>
                         <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground max-w-37.5 truncate">
                           {task.remark || "—"}
@@ -1095,6 +1142,31 @@ export default function MainChecklist() {
                     {activeTab === "pending" && (
                       <>
                         <td className="px-3 py-3">
+                          {task.sample_image ? (
+                            <div className="w-10 h-10 rounded border border-gray-200 dark:border-neutral-700 overflow-hidden">
+                              <a
+                                href={task.sample_image}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <img
+                                  src={task.sample_image}
+                                  alt="Sample"
+                                  className="w-full h-full object-cover hover:scale-110 transition-transform"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).src =
+                                      "https://placehold.co/40?text=Error";
+                                  }}
+                                />
+                              </a>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">
+                              No Image
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-3 py-3">
                           {task.require_attachment === "yes" ? (
                             <label className="cursor-pointer">
                               <input
@@ -1107,10 +1179,7 @@ export default function MainChecklist() {
                                 disabled={taskImages[task.task_id]?.uploading}
                               />
                               {taskImages[task.task_id]?.uploading ? (
-                                <div className="flex items-center gap-1 text-blue-600">
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                  <span className="text-xs">Uploading...</span>
-                                </div>
+                                <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
                               ) : taskImages[task.task_id]?.uploadedUrl ? (
                                 <div className="flex items-center gap-1 text-green-600">
                                   <Check className="w-4 h-4" />

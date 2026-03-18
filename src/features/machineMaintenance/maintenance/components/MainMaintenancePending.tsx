@@ -186,7 +186,7 @@ export default function MainMaintenancePending() {
 
     const colorClass = frequency
       ? colors[frequency.toLowerCase()] ||
-        "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
+      "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
       : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400";
 
     return (
@@ -220,13 +220,13 @@ export default function MainMaintenancePending() {
       formatDate(t.task_start_date),
       ...(activeTab === "last7days"
         ? [
-            formatDate(t.actual_date),
-            t.actual_date
-              ? "Completed"
-              : new Date(t.task_start_date || "") < new Date()
-                ? "Overdue"
-                : "Pending",
-          ]
+          formatDate(t.actual_date),
+          t.actual_date
+            ? "Completed"
+            : new Date(t.task_start_date || "") < new Date()
+              ? "Overdue"
+              : "Pending",
+        ]
         : []),
     ]);
 
@@ -298,41 +298,37 @@ export default function MainMaintenancePending() {
       <div className="flex gap-2">
         <button
           onClick={() => handleTabChange("pending")}
-          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-            activeTab === "pending"
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${activeTab === "pending"
               ? "bg-blue-600 text-white"
               : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
-          }`}
+            }`}
         >
           Pending
         </button>
         <button
           onClick={() => handleTabChange("last7days")}
-          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-            activeTab === "last7days"
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${activeTab === "last7days"
               ? "bg-blue-600 text-white"
               : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
-          }`}
+            }`}
         >
           Last 7 Days
         </button>
         <button
           onClick={() => handleTabChange("overdue")}
-          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-            activeTab === "overdue"
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${activeTab === "overdue"
               ? "bg-red-600 text-white"
               : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
-          }`}
+            }`}
         >
           All Overdue
         </button>
         <button
           onClick={() => handleTabChange("upcoming")}
-          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-            activeTab === "upcoming"
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${activeTab === "upcoming"
               ? "bg-blue-600 text-white"
               : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
-          }`}
+            }`}
         >
           Upcoming 7 Days Task
         </button>
@@ -382,19 +378,19 @@ export default function MainMaintenancePending() {
       {(activeTab === "last7days" ||
         activeTab === "overdue" ||
         activeTab === "upcoming") && (
-        <div className="flex flex-col sm:flex-row gap-4 mb-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search by machine, task, or doer..."
-              value={searchTerm}
-              onChange={(e) => handleSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            />
+          <div className="flex flex-col sm:flex-row gap-4 mb-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search by machine, task, or doer..."
+                value={searchTerm}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              />
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* Table */}
       <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-700 overflow-hidden">
@@ -442,10 +438,17 @@ export default function MainMaintenancePending() {
                   {(activeTab === "pending" ||
                     activeTab === "overdue" ||
                     activeTab === "upcoming") && (
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                      Action
-                    </th>
-                  )}
+                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                        Sample Image
+                      </th>
+                    )}
+                  {(activeTab === "pending" ||
+                    activeTab === "overdue" ||
+                    activeTab === "upcoming") && (
+                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                        Action
+                      </th>
+                    )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
@@ -480,19 +483,18 @@ export default function MainMaintenancePending() {
                     {activeTab === "last7days" && (
                       <td className="px-4 py-3">
                         <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                            task.actual_date
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${task.actual_date
                               ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
                               : task.task_start_date &&
-                                  new Date(task.task_start_date) < new Date()
+                                new Date(task.task_start_date) < new Date()
                                 ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
                                 : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
-                          }`}
+                            }`}
                         >
                           {task.actual_date
                             ? "Completed"
                             : task.task_start_date &&
-                                new Date(task.task_start_date) < new Date()
+                              new Date(task.task_start_date) < new Date()
                               ? "Overdue"
                               : "Pending"}
                         </span>
@@ -501,18 +503,47 @@ export default function MainMaintenancePending() {
                     {(activeTab === "pending" ||
                       activeTab === "overdue" ||
                       activeTab === "upcoming") && (
-                      <td className="px-4 py-3">
-                        {canEdit && (
-                          <button
-                            onClick={() => openProcessModal(task)}
-                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                            Process
-                          </button>
-                        )}
-                      </td>
-                    )}
+                        <td className="px-4 py-3 text-sm text-foreground">
+                          {task.sample_image ? (
+                            <div className="w-10 h-10 rounded border border-neutral-200 dark:border-neutral-700 overflow-hidden">
+                              <a
+                                href={task.sample_image}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <img
+                                  src={task.sample_image}
+                                  alt="Sample"
+                                  className="w-full h-full object-cover hover:scale-110 transition-transform"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).src =
+                                      "https://placehold.co/40?text=Error";
+                                  }}
+                                />
+                              </a>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">
+                              No Image
+                            </span>
+                          )}
+                        </td>
+                      )}
+                    {(activeTab === "pending" ||
+                      activeTab === "overdue" ||
+                      activeTab === "upcoming") && (
+                        <td className="px-4 py-3">
+                          {canEdit && (
+                            <button
+                              onClick={() => openProcessModal(task)}
+                              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                              Process
+                            </button>
+                          )}
+                        </td>
+                      )}
                   </tr>
                 ))}
               </tbody>

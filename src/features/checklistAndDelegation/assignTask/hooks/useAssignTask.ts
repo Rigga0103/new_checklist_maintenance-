@@ -6,6 +6,7 @@ import {
   fetchUniqueDoerNameDataApi,
   fetchWorkingDaysApi,
   pushAssignTaskApi,
+  fetchUniqueTaskDescriptionsApi,
 } from "../server/api/assignTaskApi";
 import { fetchActiveMachines } from "@/features/machineMaintenance/machines/server/api/machinesApi";
 import {
@@ -39,6 +40,7 @@ const initialFormData: AssignTaskFormData = {
   enableReminders: true,
   requireAttachment: false,
   endDate: "",
+  sampleImage: "",
 };
 
 // Get current timestamp in DD/MM/YYYY HH:MM:SS format
@@ -129,6 +131,7 @@ export interface UseAssignTaskReturn {
   handleGenerate: () => Promise<void>;
   handleSubmit: (e: React.FormEvent) => Promise<void>;
   handleReset: () => void;
+  taskSuggestions: string[];
 
   // Helpers
   getFormattedDate: (date: Date) => string;
@@ -141,6 +144,7 @@ export function useAssignTask(): UseAssignTaskReturn {
   const [givenByList, setGivenByList] = useState<string[]>([]);
   const [doerNames, setDoerNames] = useState<string[]>([]);
   const [workingDays, setWorkingDays] = useState<string[]>([]);
+  const [taskSuggestions, setTaskSuggestions] = useState<string[]>([]);
 
   // Section toggle
   const [selectedSection, setSelectedSection] =
@@ -215,6 +219,22 @@ export function useAssignTask(): UseAssignTaskReturn {
     setSelectedDate(new Date()); // auto-fill today's date
     setSelectedEndDate(null);
     setAccordionOpen(false);
+  }, [selectedSection]);
+
+  // Load task suggestions for autocomplete
+  useEffect(() => {
+    const loadTaskSuggestions = async () => {
+      try {
+        const suggestions = await fetchUniqueTaskDescriptionsApi(
+          selectedSection,
+        );
+        setTaskSuggestions(suggestions);
+      } catch (error) {
+        console.error("Error loading task suggestions:", error);
+        setTaskSuggestions([]);
+      }
+    };
+    loadTaskSuggestions();
   }, [selectedSection]);
 
   // Load doer names - all users for maintenance, filtered by dept for checklist
@@ -359,6 +379,12 @@ export function useAssignTask(): UseAssignTaskReturn {
 
   // --- Generate Tasks Logic Matching Legacy ---
   const handleGenerate = useCallback(async () => {
+    // Validation for Attachment Required
+    if (formData.requireAttachment && (!formData.sampleImage || formData.sampleImage.trim() === "")) {
+      toast.error("Sample Image is required when Attachment Required is ON.");
+      return;
+    }
+
     if (
       !selectedDate ||
       !formData.time ||
@@ -408,6 +434,7 @@ export function useAssignTask(): UseAssignTaskReturn {
         endDate: selectedEndDate
           ? formatDateTimeForStorage(selectedEndDate, formData.time)
           : undefined,
+        sampleImage: formData.sampleImage,
       });
     } else {
       // For recurring tasks
@@ -543,6 +570,7 @@ export function useAssignTask(): UseAssignTaskReturn {
             frequency: formData.frequency,
             enableReminders: formData.enableReminders,
             requireAttachment: formData.requireAttachment,
+            sampleImage: formData.sampleImage,
           });
 
           taskCount++;
@@ -660,6 +688,7 @@ export function useAssignTask(): UseAssignTaskReturn {
     handleGenerate,
     handleSubmit,
     handleReset,
+    taskSuggestions,
 
     // Helpers
     getFormattedDate,

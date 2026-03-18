@@ -230,6 +230,7 @@ export const pushAssignTaskApi = async (
         created_at: new Date().toISOString(),
         enable_reminder: task.enableReminders ? "yes" : "no",
         require_attachment: task.requireAttachment ? "yes" : "no",
+        sample_image: task.sampleImage || null,
       }));
     } else {
       tasksData = generatedTasks.map((task, index) => ({
@@ -242,6 +243,7 @@ export const pushAssignTaskApi = async (
         frequency: task.frequency,
         enable_reminder: task.enableReminders ? "yes" : "no",
         require_attachment: task.requireAttachment ? "yes" : "no",
+        sample_image: task.sampleImage || null,
         // status: "pending", // Status column in checklist is enum(yes/no), cannot be "pending".
         created_at: new Date().toISOString(),
       }));
@@ -279,5 +281,37 @@ export const pushAssignTaskApi = async (
   } catch (error) {
     console.error("Error submitting tasks:", error);
     return { success: false, message: "Failed to submit tasks" };
+  }
+};
+
+// Fetch unique task descriptions for autocomplete
+export const fetchUniqueTaskDescriptionsApi = async (
+  section: "checklist" | "maintenance",
+): Promise<string[]> => {
+  try {
+    const table =
+      section === "maintenance" ? "unique_maintanence" : "unique_checklist";
+
+    const { data, error } = await supabase
+      .from(table)
+      .select("task_description")
+      .not("task_description", "is", null)
+      .order("task_description", { ascending: true });
+
+    if (error) {
+      console.error(
+        `Error fetching unique task descriptions from ${table}:`,
+        error,
+      );
+      return [];
+    }
+
+    const uniqueDescriptions = [
+      ...new Set(data.map((d) => d.task_description as string)),
+    ];
+    return uniqueDescriptions;
+  } catch (error) {
+    console.error("Error fetching unique task descriptions:", error);
+    return [];
   }
 };

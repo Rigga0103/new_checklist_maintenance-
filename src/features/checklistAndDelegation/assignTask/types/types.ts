@@ -11,6 +11,7 @@ export interface AssignTaskFormData {
   enableReminders: boolean;
   requireAttachment: boolean;
   endDate?: string; // Only for one-time tasks in checklist section
+  sampleImage?: string; // Store URL or manually entered link
 }
 
 export type FrequencyType =
@@ -45,6 +46,7 @@ export interface GeneratedTask {
   enableReminders: boolean;
   requireAttachment: boolean;
   endDate?: string; // End date/deadline for one-time tasks (stored as planned_date in delegation)
+  sampleImage?: string;
 }
 
 export interface WorkingDay {

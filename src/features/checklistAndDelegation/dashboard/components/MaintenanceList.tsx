@@ -769,6 +769,9 @@ export default function MaintenanceList({
                       Status
                     </th>
                   )}
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Sample Image
+                  </th>
                   {(activeTab === "pending" || activeTab === "overdue") && (
                     <>
                       <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
@@ -894,6 +897,31 @@ export default function MaintenanceList({
                         </select>
                       </td>
                     )}
+                    <td className="px-3 py-3">
+                      {task.sample_image ? (
+                        <div className="w-10 h-10 rounded border border-gray-200 dark:border-neutral-700 overflow-hidden">
+                          <a
+                            href={task.sample_image}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <img
+                              src={task.sample_image}
+                              alt="Sample"
+                              className="w-full h-full object-cover hover:scale-110 transition-transform"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src =
+                                  "https://placehold.co/40?text=Error";
+                              }}
+                            />
+                          </a>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">
+                          No Image
+                        </span>
+                      )}
+                    </td>
                     {(activeTab === "pending" || activeTab === "overdue") && (
                       <>
                         <td className="px-3 py-3 whitespace-nowrap">
@@ -907,16 +935,18 @@ export default function MaintenanceList({
                             </span>
                           )}
                         </td>
-                        <td className="px-3 py-3 whitespace-nowrap">
-                          {task.require_attachment?.toLowerCase() === "yes" ? (
-                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
-                              Yes
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                              No
-                            </span>
-                          )}
+                        <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                              task.require_attachment?.toLowerCase() === "yes"
+                                ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                                : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                            }`}
+                          >
+                            {task.require_attachment?.toLowerCase() === "yes"
+                              ? "Yes"
+                              : "No"}
+                          </span>
                         </td>
                         <td className="px-3 py-3">
                           {task.require_attachment?.toLowerCase() === "yes" ? (

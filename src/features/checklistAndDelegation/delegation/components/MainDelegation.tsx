@@ -609,7 +609,10 @@ export default function MainDelegation() {
                     Reminders
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase">
-                    {activeTab === "pending" ? "Req Attachment" : "Attachment"}
+                    Sample Image
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase">
+                    {activeTab === "pending" ? "Attachment Required" : "Attachment"}
                   </th>
                   {activeTab === "pending" && (
                     <>
@@ -761,21 +764,61 @@ export default function MainDelegation() {
                       {task.enable_reminder || "—"}
                     </td>
                     <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
-                      {task.image ? (
-                        <a
-                          href={task.image}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <img
-                            src={task.image}
-                            alt="attachment"
-                            className="w-10 h-10 object-cover rounded border border-gray-300 dark:border-neutral-600 hover:border-blue-500 hover:opacity-80 transition-all"
-                            title="Click to view full image"
-                          />
-                        </a>
+                      {task.sample_image ? (
+                        <div className="w-10 h-10 rounded border border-gray-200 dark:border-neutral-700 overflow-hidden">
+                          <a
+                            href={task.sample_image}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <img
+                              src={task.sample_image}
+                              alt="Sample"
+                              className="w-full h-full object-cover hover:scale-110 transition-transform"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src =
+                                  "https://placehold.co/40?text=Error";
+                              }}
+                            />
+                          </a>
+                        </div>
                       ) : (
-                        <span>{task.require_attachment || "—"}</span>
+                        <span className="text-muted-foreground text-xs">
+                          No Image
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
+                      {activeTab === "pending" ? (
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                            task.require_attachment?.toLowerCase() === "yes"
+                              ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                              : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                          }`}
+                        >
+                          {task.require_attachment?.toLowerCase() === "yes"
+                            ? "Yes"
+                            : "No"}
+                        </span>
+                      ) : (
+                        task.image ? (
+                          <div className="w-10 h-10 rounded border border-gray-200 dark:border-neutral-700 overflow-hidden">
+                            <a
+                              href={task.image}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <img
+                                src={task.image}
+                                alt="Attachment"
+                                className="w-full h-full object-cover hover:scale-110 transition-transform"
+                              />
+                            </a>
+                          </div>
+                        ) : (
+                          <span>{"—"}</span>
+                        )
                       )}
                     </td>
                     {activeTab === "pending" && (

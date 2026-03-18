@@ -43,6 +43,7 @@ export interface MachineMaintenanceTask {
   doer_name?: string;
   require_attachment?: string; // e.g. "yes", "no"
   enable_reminder?: string; // e.g. "yes", "no"
+  sample_image?: string;
 }
 
 export interface RepairDashboardData {

@@ -10,8 +10,14 @@ import {
   BellRing,
   FileCheck,
   ChevronDown,
+  Upload,
+  Eye,
   X,
 } from "lucide-react";
+import AutocompleteInput from "./AutocompleteInput";
+import { useState } from "react";
+import { uploadSampleImage } from "../server/api/assignTaskImageApi";
+import { toast } from "sonner";
 
 const inputClass =
   "w-full px-3 py-2 text-sm bg-white dark:bg-neutral-900 text-foreground border border-gray-200 dark:border-neutral-700 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
@@ -45,7 +51,33 @@ export default function MainAssignTask() {
     handleGenerate,
     handleSubmit,
     handleReset,
+    taskSuggestions,
   } = useAssignTask();
+
+  const [isUploadingSampleImage, setIsUploadingSampleImage] = useState(false);
+
+  const handleSampleImageUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingSampleImage(true);
+    try {
+      const url = await uploadSampleImage(file);
+      handleChange({
+        target: { name: "sampleImage", value: url },
+      } as React.ChangeEvent<HTMLInputElement>);
+      toast.success("Image uploaded successfully");
+    } catch (error) {
+      console.error("Image upload failed:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to upload image",
+      );
+    } finally {
+      setIsUploadingSampleImage(false);
+    }
+  };
 
   // Convert Date to input format
   const getInputDateValue = () => {
@@ -119,8 +151,8 @@ export default function MainAssignTask() {
       <form onSubmit={handleSubmit}>
         <div className="bg-white dark:bg-neutral-800 rounded-lg border border-gray-200 dark:border-neutral-700 shadow-sm">
           <div className="p-4">
-            {/* Row 1: Department/Machine, Given By, Doer Name, Frequency */}
-            <div className="grid gap-3 sm:grid-cols-4 mb-3">
+            {/* Row 1: Dept/Machine, Given By, Doer, Frequency, From Date */}
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5 mb-3">
               <div>
                 <label className={labelClass}>
                   {selectedSection === "checklist"
@@ -205,20 +237,86 @@ export default function MainAssignTask() {
                   ))}
                 </select>
               </div>
+              <div>
+                <label className={labelClass}>From Date *</label>
+                <input
+                  type="date"
+                  value={getInputDateValue()}
+                  onChange={handleDateChange}
+                  required
+                  className={inputClass}
+                />
+              </div>
             </div>
 
-            {/* Row 2: Description */}
             <div className="mb-3">
               <label className={labelClass}>Task Description *</label>
-              <textarea
+              <AutocompleteInput
                 name="description"
                 value={formData.description}
                 onChange={handleChange}
                 required
-                rows={2}
+                suggestions={taskSuggestions}
                 placeholder="Enter task description..."
-                className={inputClass + " resize-none"}
+                className={inputClass}
               />
+            </div>
+
+            {/* Row 3: Sample Image */}
+            <div className="mb-3">
+              <label className={labelClass}>
+                Sample Image {formData.requireAttachment && "*"}
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  name="sampleImage"
+                  value={formData.sampleImage || ""}
+                  onChange={handleChange}
+                  placeholder="Paste image URL..."
+                  className={inputClass + " flex-1"}
+                />
+                <label className="cursor-pointer flex items-center justify-center h-9 px-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded-md hover:bg-blue-100 transition-colors">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleSampleImageUpload}
+                    className="hidden"
+                  />
+                  {isUploadingSampleImage ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 mr-1.5" />
+                      Upload
+                    </>
+                  )}
+                </label>
+              </div>
+              {formData.sampleImage && (
+                <div className="mt-2 relative w-20 h-20 rounded border border-gray-200 dark:border-neutral-700 overflow-hidden group">
+                  <img
+                    src={formData.sampleImage}
+                    alt="Sample"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src =
+                        "https://placehold.co/100?text=Invalid+Link";
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleChange({
+                        target: { name: "sampleImage", value: "" },
+                      } as any)
+                    }
+                    className="absolute top-1 right-1 p-0.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Row 3: Time */}
