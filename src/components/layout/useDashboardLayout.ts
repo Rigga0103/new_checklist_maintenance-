@@ -140,13 +140,6 @@ const routes: Route[] = [
         showFor: ["admin", "user"] as const,
         permissionResource: "maintenance_schedules",
       },
-      {
-        href: "/maintenance/calendar",
-        label: "Calendar",
-        icon: "Calendar",
-        showFor: ["admin", "user"] as const,
-        permissionResource: "maintenance_calendar",
-      },
     ],
   },
   {
@@ -176,6 +169,13 @@ const routes: Route[] = [
     icon: "ClipboardList",
     showFor: ["admin"] as const,
     permissionResource: "approval", // Reusing approval permission for now
+  },
+  {
+    href: "/calendar",
+    label: "Calendar",
+    icon: "Calendar",
+    showFor: ["admin", "user"] as const,
+    permissionResource: "maintenance_calendar",
   },
   {
     href: "/settings",

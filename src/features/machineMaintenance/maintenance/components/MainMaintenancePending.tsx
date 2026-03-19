@@ -72,7 +72,7 @@ export default function MainMaintenancePending() {
   const upcomingTasks = upcomingData?.data || [];
   const upcomingTotalCount = upcomingData?.totalCount || 0;
 
-  const tasks =
+  const unfilteredTasks =
     activeTab === "pending"
       ? pendingTasks
       : activeTab === "last7days"
@@ -80,13 +80,33 @@ export default function MainMaintenancePending() {
         : activeTab === "overdue"
           ? overdueTasks
           : upcomingTasks;
+
+  const tasks =
+    activeTab === "overdue" && (startDate || endDate)
+      ? unfilteredTasks.filter((t) => {
+          const dateStr = t.task_start_date;
+          if (!dateStr) return false;
+          const d = new Date(dateStr).getTime();
+          const start = startDate
+            ? new Date(startDate).setHours(0, 0, 0, 0)
+            : null;
+          const end = endDate
+            ? new Date(endDate).setHours(23, 59, 59, 999)
+            : null;
+
+          if (start && d < start) return false;
+          if (end && d > end) return false;
+          return true;
+        })
+      : unfilteredTasks;
+
   const totalCount =
     activeTab === "pending"
       ? pendingTotalCount
       : activeTab === "last7days"
         ? last7DaysTasks.length
         : activeTab === "overdue"
-          ? overdueTotalCount
+          ? (startDate || endDate ? tasks.length : overdueTotalCount)
           : upcomingTotalCount;
 
   const completeMutation = useCompleteMaintenanceMutation();
@@ -335,7 +355,7 @@ export default function MainMaintenancePending() {
       </div>
 
       {/* Filters */}
-      {activeTab === "pending" && (
+      {activeTab === "overdue" && (
         <div className="flex flex-col sm:flex-row gap-4 mb-4">
           {/* Search */}
           <div className="relative flex-1">
@@ -375,9 +395,8 @@ export default function MainMaintenancePending() {
           </div>
         </div>
       )}
-      {(activeTab === "last7days" ||
-        activeTab === "overdue" ||
-        activeTab === "upcoming") && (
+      {(activeTab === "pending" ||
+        activeTab === "last7days" ||
           <div className="flex flex-col sm:flex-row gap-4 mb-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />

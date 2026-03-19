@@ -61,9 +61,9 @@ export default function MainChecklist() {
     Record<number, string>
   >({});
 
-  // Date range filter for History tab
-  const [historyFromDate, setHistoryFromDate] = useState("");
-  const [historyToDate, setHistoryToDate] = useState("");
+  // Date range filters
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   // Read role and username from localStorage for role-based filtering
   const [role, setRole] = useState<string | null>(null);
@@ -143,20 +143,25 @@ export default function MainChecklist() {
             ? overdueTasks
             : upcoming7DaysTasks;
 
-  // Apply date-range filter on history tab (filters by submission_date)
+  // Apply date-range filter ONLY on history and overdue tabs
   const dateFilteredTasks =
-    activeTab === "history" && (historyFromDate || historyToDate)
+    (startDate || endDate) && (activeTab === "history" || activeTab === "overdue")
       ? rawTasks.filter((t) => {
-          if (!t.submission_date) return false;
-          const d = new Date(t.submission_date).setHours(0, 0, 0, 0);
+          // Use submission_date for completed tabs, task_start_date for others
+          const dateStr = (activeTab === "history")
+            ? t.submission_date
+            : t.task_start_date;
+            
+          if (!dateStr) return false;
+          const d = new Date(dateStr).setHours(0, 0, 0, 0);
           if (
-            historyFromDate &&
-            d < new Date(historyFromDate).setHours(0, 0, 0, 0)
+            startDate &&
+            d < new Date(startDate).setHours(0, 0, 0, 0)
           )
             return false;
           if (
-            historyToDate &&
-            d > new Date(historyToDate).setHours(23, 59, 59, 999)
+            endDate &&
+            d > new Date(endDate).setHours(23, 59, 59, 999)
           )
             return false;
           return true;
@@ -667,39 +672,35 @@ export default function MainChecklist() {
           </div>
         )}
 
-        {/* Date range filter — History only */}
-        {activeTab === "history" && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center gap-1 text-xs text-muted-foreground font-medium">
-              <Calendar className="w-3.5 h-3.5" />
-              From:
-            </div>
+        {/* Date range filter */}
+        {(activeTab === "history" || activeTab === "overdue") && (
+          <div className="flex items-center gap-2">
             <input
               type="date"
-              value={historyFromDate}
+              value={startDate}
               onChange={(e) => {
-                setHistoryFromDate(e.target.value);
+                setStartDate(e.target.value);
                 setCurrentPage(1);
               }}
-              className="px-2 py-1.5 text-sm border border-gray-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="px-2 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              title="Start Date"
             />
-            <span className="text-xs text-muted-foreground font-medium">
-              To:
-            </span>
+            <span className="text-gray-500 dark:text-gray-400 text-sm">-</span>
             <input
               type="date"
-              value={historyToDate}
+              value={endDate}
               onChange={(e) => {
-                setHistoryToDate(e.target.value);
+                setEndDate(e.target.value);
                 setCurrentPage(1);
               }}
-              className="px-2 py-1.5 text-sm border border-gray-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="px-2 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              title="End Date"
             />
-            {(historyFromDate || historyToDate) && (
+            {(startDate || endDate) && (
               <button
                 onClick={() => {
-                  setHistoryFromDate("");
-                  setHistoryToDate("");
+                  setStartDate("");
+                  setEndDate("");
                   setCurrentPage(1);
                 }}
                 className="px-2 py-1 text-xs rounded-lg bg-gray-100 dark:bg-neutral-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-neutral-600 transition-colors"
