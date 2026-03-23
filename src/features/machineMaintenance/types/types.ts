@@ -86,3 +86,53 @@ export type RepairStatus =
   | "completed"
   | "cancelled";
 export type MaintenanceStatus = "pending" | "completed" | "overdue";
+
+export interface Vendor {
+  id: number;
+  Timestamp: string | null;
+  "VENDOR CODE": string | null;
+  "Vendro Name": string | null;
+  "Contact No": string | null;
+  Location: string | null;
+  "Venodr Type": string | null;
+  "Parts Name": string | null;
+  "Work Type": string | null;
+  "Visiting Card": string | null;
+  "Images If Any": string | null;
+  "FROM LINK": string | null;
+}
+
+export interface CreateVendorDTO {
+  "VENDOR CODE"?: string;
+  "Vendro Name": string;
+  "Contact No"?: string;
+  Location?: string;
+  "Venodr Type"?: string;
+  "Parts Name"?: string;
+  "Work Type"?: string;
+  "Visiting Card"?: string;
+  "Images If Any"?: string;
+  "FROM LINK"?: string;
+}
+
+export interface Part {
+  id: number;
+  Timestamp: string | null;
+  "VENDOR CODE": string | null;
+  "ITEM NAME": string | null;
+  "DATE OF PURCHASE": string | null;
+  RATE: string | null;
+  QTY: string | null;
+  UNIT: string | null;
+  "VENDOR NAME": string | null;
+}
+
+export interface CreatePartDTO {
+  "VENDOR CODE"?: string;
+  "ITEM NAME": string;
+  "DATE OF PURCHASE"?: string;
+  RATE?: string;
+  QTY?: string;
+  UNIT?: string;
+  "VENDOR NAME"?: string;
+}

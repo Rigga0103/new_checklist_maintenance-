@@ -18,9 +18,11 @@ import {
   Menu,
   Monitor,
   Moon,
+  Package,
   Settings,
   Sun,
   UserRound,
+  Users,
   Wrench,
   Zap
 } from "lucide-react";
@@ -39,6 +41,8 @@ const iconMap: Record<string, LucideIcon> = {
   FileText,
   Clock,
   Calendar,
+  Users,
+  Package,
 };
 
 interface DashboardLayoutProps {

@@ -17,6 +17,7 @@ export interface CreateMachineDTO {
   model?: string;
   location?: string;
   department?: string;
+  type?: string;
   status?: "active" | "inactive";
 }
 

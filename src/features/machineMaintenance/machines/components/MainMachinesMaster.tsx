@@ -8,6 +8,10 @@ import {
   useDeleteMachineMutation,
 } from "../server/tanstackQuery/useMachineQueries";
 import {
+  useMachineTypesQuery,
+  useAllMachineNamesQuery,
+} from "../../repairing/server/tanstackQuery/useMachineTypes";
+import {
   Plus,
   Pencil,
   Trash2,
@@ -31,10 +35,13 @@ export default function MainMachinesMaster() {
     model: "",
     location: "",
     department: "",
+    type: "",
     status: "active",
   });
 
   const { data: machines = [], isLoading } = useMachinesQuery();
+  const { data: machineTypes = [] } = useMachineTypesQuery();
+  const { data: allRepairMachineNames = [] } = useAllMachineNamesQuery();
   const createMutation = useCreateMachineMutation();
   const updateMutation = useUpdateMachineMutation();
   const deleteMutation = useDeleteMachineMutation();
@@ -60,6 +67,7 @@ export default function MainMachinesMaster() {
         model: machine.model || "",
         location: machine.location || "",
         department: machine.department || "",
+        type: machine.type || "",
         status: machine.status || "active",
       });
     } else {
@@ -70,6 +78,7 @@ export default function MainMachinesMaster() {
         model: "",
         location: "",
         department: "",
+        type: "",
         status: "active",
       });
     }
@@ -166,6 +175,9 @@ export default function MainMachinesMaster() {
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                 Status
               </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                Type
+              </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
                 Actions
               </th>
@@ -204,14 +216,16 @@ export default function MainMachinesMaster() {
                   </td>
                   <td className="px-6 py-4">
                     <span
-                      className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        machine.status === "active"
-                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                          : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                      }`}
+                      className={`px-2 py-1 text-xs font-medium rounded-full ${machine.status === "active"
+                        ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                        : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                        }`}
                     >
                       {machine.status}
                     </span>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-foreground">
+                    {machine.type || "-"}
                   </td>
                   <td className="px-6 py-4 text-right space-x-2">
                     {canEdit && (
@@ -283,13 +297,34 @@ export default function MainMachinesMaster() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">
+                    Type
+                  </label>
+                  <input
+                    type="text"
+                    list="machine-types"
+                    value={formData.type || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, type: e.target.value })
+                    }
+                    className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-green-500"
+                    placeholder="Search or type machine type..."
+                  />
+                  <datalist id="machine-types">
+                    {machineTypes.map((type) => (
+                      <option key={type.id} value={type.type_name} />
+                    ))}
+                  </datalist>
+                </div>
+                <div className="col-span-1">
                   <label className="block text-sm font-medium text-foreground mb-1">
                     Machine Name *
                   </label>
                   <input
                     type="text"
                     required
+                    list="repair-machine-names"
                     value={formData.machine_name}
                     onChange={(e) =>
                       setFormData({ ...formData, machine_name: e.target.value })
@@ -297,7 +332,23 @@ export default function MainMachinesMaster() {
                     className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-green-500"
                     placeholder="e.g. CNC Machine 01"
                   />
+                  <datalist id="repair-machine-names">
+                    {(formData.type
+                      ? allRepairMachineNames.filter(
+                        (n) =>
+                          n.type_id ===
+                          machineTypes.find(
+                            (t) => t.type_name === formData.type,
+                          )?.id,
+                      )
+                      : allRepairMachineNames
+                    ).map((name) => (
+                      <option key={name.id} value={name.machine_name} />
+                    ))}
+                  </datalist>
                 </div>
+
+
 
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1">
@@ -377,6 +428,8 @@ export default function MainMachinesMaster() {
                     <option value="inactive">Inactive</option>
                   </select>
                 </div>
+
+
               </div>
 
               <div className="flex justify-end gap-3 pt-4">

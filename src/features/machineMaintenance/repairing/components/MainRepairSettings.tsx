@@ -159,19 +159,17 @@ export default function MainRepairSettings() {
                   <li key={type.id} className="group flex items-center gap-2">
                     <button
                       onClick={() => setSelectedType(type)}
-                      className={`flex-1 flex items-center justify-between px-3 py-2.5 rounded-lg text-sm text-left transition-colors border ${
-                        selectedType?.id === type.id
-                          ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-medium"
-                          : "border-transparent text-foreground hover:bg-neutral-100 dark:hover:bg-neutral-700/50"
-                      }`}
+                      className={`flex-1 flex items-center justify-between px-3 py-2.5 rounded-lg text-sm text-left transition-colors border ${selectedType?.id === type.id
+                        ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-medium"
+                        : "border-transparent text-foreground hover:bg-neutral-100 dark:hover:bg-neutral-700/50"
+                        }`}
                     >
                       <span className="truncate pr-2">{type.type_name}</span>
                       <ChevronRight
-                        className={`w-4 h-4 shrink-0 transition-opacity ${
-                          selectedType?.id === type.id
-                            ? "opacity-100"
-                            : "opacity-0 group-hover:opacity-40"
-                        }`}
+                        className={`w-4 h-4 shrink-0 transition-opacity ${selectedType?.id === type.id
+                          ? "opacity-100"
+                          : "opacity-0 group-hover:opacity-40"
+                          }`}
                       />
                     </button>
                     <div className="flex shrink-0">

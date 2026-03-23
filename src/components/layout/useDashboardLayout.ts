@@ -74,7 +74,7 @@ const routes: Route[] = [
         showFor: ["admin", "user"] as const,
         permissionResource: "repair_request",
       },
-      
+
       {
         href: "/repairing/pending",
         label: "Pending",
@@ -151,8 +151,22 @@ const routes: Route[] = [
   },
   {
     href: "/machines",
-    label: "Machines",
+    label: "Machines Master",
     icon: "Settings",
+    showFor: ["admin"] as const,
+    permissionResource: "machines",
+  },
+  {
+    href: "/vendor-master",
+    label: "Vendor Master",
+    icon: "Users",
+    showFor: ["admin"] as const,
+    permissionResource: "machines",
+  },
+  {
+    href: "/part-master",
+    label: "Part Master",
+    icon: "Package",
     showFor: ["admin"] as const,
     permissionResource: "machines",
   },
