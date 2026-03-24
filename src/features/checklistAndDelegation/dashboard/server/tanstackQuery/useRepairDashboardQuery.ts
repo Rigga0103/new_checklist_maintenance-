@@ -19,6 +19,8 @@ import {
   fetchMaintenanceSchedulesForEdit,
   updateMaintenanceScheduleCascade,
   deleteMaintenanceScheduleCascade,
+  createMaintenanceTask,
+  createRepairTask,
   MachineMaintenanceTask,
   MachineRepairTask,
   MaintenanceSchedule,
@@ -527,6 +529,39 @@ export function useUpdateRepairTask() {
       taskId: number;
       updates: Partial<MachineRepairTask>;
     }) => updateRepairTask(taskId, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: repairDashboardKeys.all,
+      });
+    },
+  });
+}
+
+/**
+ * Create a new maintenance task mutation
+ */
+export function useCreateMaintenanceTask() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (task: Partial<MachineMaintenanceTask>) =>
+      createMaintenanceTask(task),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: repairDashboardKeys.all,
+      });
+    },
+  });
+}
+
+/**
+ * Create a new repair task mutation
+ */
+export function useCreateRepairTask() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (task: Partial<MachineRepairTask>) => createRepairTask(task),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: repairDashboardKeys.all,

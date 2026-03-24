@@ -129,6 +129,7 @@ export default function MaintenanceDashboard() {
 
     const headers = [
       "Machine Name",
+      "Machine Type",
       "Task Description",
       "Assigned To",
       "Start Date",
@@ -146,6 +147,7 @@ export default function MaintenanceDashboard() {
 
       return [
         `"${(t.machine_name || "").replace(/"/g, '""')}"`,
+        `"${(t.machine_type || "").replace(/"/g, '""')}"`,
         `"${(t.task_description || "").replace(/"/g, '""')}"`,
         `"${(t.assigned_to || t.doer_name || "").replace(/"/g, '""')}"`,
         t.task_start_date || "",
@@ -254,7 +256,7 @@ export default function MaintenanceDashboard() {
                       key={`cell-${index}`}
                       fill={
                         FREQUENCY_COLORS[
-                          entry.name.toLowerCase() as keyof typeof FREQUENCY_COLORS
+                        entry.name.toLowerCase() as keyof typeof FREQUENCY_COLORS
                         ] || "#94a3b8"
                       }
                     />
@@ -324,33 +326,30 @@ export default function MaintenanceDashboard() {
       <div className="mt-8">
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700 p-1.5 flex gap-1 mb-6 max-w-2xl">
           <button
-            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-              dashboardView === "recent"
-                ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 shadow-sm"
-                : "text-muted-foreground hover:bg-gray-50 dark:hover:bg-neutral-700 hover:text-foreground"
-            }`}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${dashboardView === "recent"
+              ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 shadow-sm"
+              : "text-muted-foreground hover:bg-gray-50 dark:hover:bg-neutral-700 hover:text-foreground"
+              }`}
             onClick={() => setDashboardView("recent")}
           >
             <Clock className="w-4 h-4" />
             Recent & Today
           </button>
           <button
-            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-              dashboardView === "upcoming"
-                ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 shadow-sm"
-                : "text-muted-foreground hover:bg-gray-50 dark:hover:bg-neutral-700 hover:text-foreground"
-            }`}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${dashboardView === "upcoming"
+              ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 shadow-sm"
+              : "text-muted-foreground hover:bg-gray-50 dark:hover:bg-neutral-700 hover:text-foreground"
+              }`}
             onClick={() => setDashboardView("upcoming")}
           >
             <Settings className="w-4 h-4" />
             Upcoming
           </button>
           <button
-            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-              dashboardView === "overdue"
-                ? "bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 shadow-sm"
-                : "text-muted-foreground hover:bg-gray-50 dark:hover:bg-neutral-700 hover:text-foreground"
-            }`}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${dashboardView === "overdue"
+              ? "bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 shadow-sm"
+              : "text-muted-foreground hover:bg-gray-50 dark:hover:bg-neutral-700 hover:text-foreground"
+              }`}
             onClick={() => setDashboardView("overdue")}
           >
             <AlertTriangle className="w-4 h-4" />
@@ -388,6 +387,9 @@ export default function MaintenanceDashboard() {
                     Machine
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground dark:text-gray-300 uppercase tracking-wider">
+                    Machine Type
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground dark:text-gray-300 uppercase tracking-wider">
                     Description
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground dark:text-gray-300 uppercase tracking-wider">
@@ -405,7 +407,7 @@ export default function MaintenanceDashboard() {
                 {paginatedTasks.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={6}
                       className="px-4 py-8 text-center text-muted-foreground dark:text-muted-foreground"
                     >
                       No tasks found
@@ -420,6 +422,11 @@ export default function MaintenanceDashboard() {
                       <td className="px-4 py-4">
                         <p className="text-sm font-medium text-gray-900 dark:text-white">
                           {task.machine_name}
+                        </p>
+                      </td>
+                      <td className="px-4 py-4">
+                        <p className="text-sm text-foreground-secondary dark:text-gray-300">
+                          {task.machine_type || "—"}
                         </p>
                       </td>
                       <td className="px-4 py-4">
@@ -439,13 +446,12 @@ export default function MaintenanceDashboard() {
                       </td>
                       <td className="px-4 py-4">
                         <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            task.actual_date && task.actual_date.trim() !== ""
-                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                              : dashboardView === "overdue"
-                                ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                                : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
-                          }`}
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${task.actual_date && task.actual_date.trim() !== ""
+                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                            : dashboardView === "overdue"
+                              ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                              : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+                            }`}
                         >
                           {task.actual_date && task.actual_date.trim() !== ""
                             ? "Completed"

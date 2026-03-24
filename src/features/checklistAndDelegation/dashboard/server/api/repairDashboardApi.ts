@@ -918,3 +918,49 @@ export const deleteMaintenanceScheduleCascade = async (
     throw error;
   }
 };
+
+// Create a new maintenance task
+export const createMaintenanceTask = async (
+  task: Partial<MachineMaintenanceTask>,
+): Promise<MachineMaintenanceTask | null> => {
+  try {
+    const { data, error } = await supabase
+      .from("machine_maintenance")
+      .insert([task])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error creating machine_maintenance:", error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Unexpected error in createMaintenanceTask:", error);
+    throw error;
+  }
+};
+
+// Create a new repair task
+export const createRepairTask = async (
+  task: Partial<MachineRepairTask>,
+): Promise<MachineRepairTask | null> => {
+  try {
+    const { data, error } = await supabase
+      .from("machine_repair")
+      .insert([task])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error creating machine_repair:", error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Unexpected error in createRepairTask:", error);
+    throw error;
+  }
+};

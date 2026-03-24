@@ -12,15 +12,18 @@ import {
   FileText,
   ChevronLeft,
   ChevronRight,
+  Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
+  useDeleteRepairTasks,
+  useUpdateRepairTask,
+  useCreateMaintenanceTask,
+  useCreateRepairTask,
   useMaintenanceEditQuery,
   useRepairEditQuery,
   useUpdateMaintenanceTaskCascade,
   useDeleteMaintenanceTaskCascade,
-  useDeleteRepairTasks,
-  useUpdateRepairTask,
 } from "../server/tanstackQuery/useRepairDashboardQuery";
 import type {
   MachineMaintenanceTask,
@@ -67,6 +70,7 @@ export default function MainEditMachine() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMachine, setSelectedMachine] = useState("");
   const [selectedPerson, setSelectedPerson] = useState("");
+  const [selectedType, setSelectedType] = useState(""); // New type filter
   const [maintenancePage, setMaintenancePage] = useState(0);
   const [repairPage, setRepairPage] = useState(0);
 
@@ -98,6 +102,29 @@ export default function MainEditMachine() {
     taskId?: number;
     count?: number;
   } | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [maintenanceAddForm, setMaintenanceAddForm] = useState<Partial<MachineMaintenanceTask>>({
+    machine_name: "",
+    machine_type: "",
+    task_description: "",
+    frequency: "daily",
+    assigned_to: "",
+    doer_name: "",
+    enable_reminder: "no",
+    require_attachment: "no",
+  });
+  const [repairAddForm, setRepairAddForm] = useState<Partial<MachineRepairTask>>({
+    machine_name: "",
+    machine_type: "",
+    issue_detail: "",
+    assigned_to: "",
+    vendor_name: "",
+    part_replaced: "",
+    warranty: "",
+    remarks: "",
+    task_start_date: new Date().toISOString().split("T")[0],
+    status: "Pending",
+  });
 
   const [userRole, setUserRole] = useState<string>("");
   const tableRef = useRef<HTMLDivElement>(null);
@@ -138,12 +165,29 @@ export default function MainEditMachine() {
   const repairTasks = repairResponse?.data || [];
   const repairTotal = repairResponse?.total || 0;
 
+  // Apply type filter to the data
+  const filteredMaintenanceTasks = useMemo(() => {
+    if (!selectedType) return maintenanceTasks;
+    return maintenanceTasks.filter(task =>
+      task.machine_type?.toLowerCase() === selectedType.toLowerCase()
+    );
+  }, [maintenanceTasks, selectedType]);
+
+  const filteredRepairTasks = useMemo(() => {
+    if (!selectedType) return repairTasks;
+    return repairTasks.filter(task =>
+      task.machine_type?.toLowerCase() === selectedType.toLowerCase()
+    );
+  }, [repairTasks, selectedType]);
+
   // Mutations
   const updateMaintenanceMutation = useUpdateMaintenanceTaskCascade();
   const deleteMaintenanceMutation = useDeleteMaintenanceTaskCascade();
 
   const deleteRepairMutation = useDeleteRepairTasks();
   const updateRepairMutation = useUpdateRepairTask();
+  const createMaintenanceMutation = useCreateMaintenanceTask();
+  const createRepairMutation = useCreateRepairTask();
 
   const isLoading =
     activeTab === "maintenance" ? maintenanceLoading : repairLoading;
@@ -187,6 +231,18 @@ export default function MainEditMachine() {
     return Array.from(new Set(persons)).sort();
   }, [allUsersData, maintenanceTasks, repairTasks, activeTab]);
 
+  // Deriving unique machine types for the type filter
+  const uniqueTypes = useMemo(() => {
+    if (activeTab === "maintenance") {
+      const types = maintenanceTasks
+        .map((t) => t.machine_type)
+        .filter(Boolean);
+      return Array.from(new Set(types)).sort();
+    }
+    const types = repairTasks.map((t) => t.machine_type).filter(Boolean);
+    return Array.from(new Set(types)).sort();
+  }, [maintenanceTasks, repairTasks, activeTab]);
+
   // Pagination
   const handleNextPage = () => {
     if (activeTab === "maintenance") {
@@ -213,10 +269,10 @@ export default function MainEditMachine() {
   };
 
   const handleMaintenanceSelectAll = () => {
-    if (selectedMaintenanceIds.length === maintenanceTasks.length) {
+    if (selectedMaintenanceIds.length === filteredMaintenanceTasks.length) {
       setSelectedMaintenanceIds([]);
     } else {
-      setSelectedMaintenanceIds(maintenanceTasks.map((t) => t.task_id));
+      setSelectedMaintenanceIds(filteredMaintenanceTasks.map((t) => t.task_id));
     }
   };
 
@@ -232,7 +288,7 @@ export default function MainEditMachine() {
 
   const executeDeleteMaintenanceSelected = async () => {
     if (selectedMaintenanceIds.length === 0) return;
-    const selectedTasks = maintenanceTasks.filter((t) =>
+    const selectedTasks = filteredMaintenanceTasks.filter((t) =>
       selectedMaintenanceIds.includes(t.task_id),
     );
     const totalAffected = selectedTasks.reduce(
@@ -292,7 +348,7 @@ export default function MainEditMachine() {
     if (!editingMaintenanceId) return;
 
     // Find the original task to get the old matching keys
-    const originalTask = maintenanceTasks.find(
+    const originalTask = filteredMaintenanceTasks.find(
       (t) => t.task_id === editingMaintenanceId,
     );
     if (!originalTask) return;
@@ -335,10 +391,10 @@ export default function MainEditMachine() {
   };
 
   const handleRepairSelectAll = () => {
-    if (selectedRepairIds.length === repairTasks.length) {
+    if (selectedRepairIds.length === filteredRepairTasks.length) {
       setSelectedRepairIds([]);
     } else {
-      setSelectedRepairIds(repairTasks.map((t) => t.task_id));
+      setSelectedRepairIds(filteredRepairTasks.map((t) => t.task_id));
     }
   };
 
@@ -416,7 +472,7 @@ export default function MainEditMachine() {
     try {
       if (activeTab === "maintenance") {
         // Find original task to get old matching keys
-        const originalTask = maintenanceTasks.find((t) => t.task_id === id);
+        const originalTask = filteredMaintenanceTasks.find((t) => t.task_id === id);
         if (!originalTask) return;
 
         // Remove task_id and created_at from update payload
@@ -463,6 +519,51 @@ export default function MainEditMachine() {
     setRepairEditForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handleAddMaintenanceSubmit = async () => {
+    try {
+      await createMaintenanceMutation.mutateAsync({
+        ...maintenanceAddForm,
+        task_start_date: new Date().toISOString().split("T")[0],
+      });
+      setIsAddModalOpen(false);
+      setMaintenanceAddForm({
+        machine_name: "",
+        machine_type: "",
+        task_description: "",
+        frequency: "daily",
+        assigned_to: "",
+        doer_name: "",
+        enable_reminder: "no",
+        require_attachment: "no",
+      });
+      toast.success("Maintenance task added successfully");
+    } catch {
+      toast.error("Failed to add maintenance task");
+    }
+  };
+
+  const handleAddRepairSubmit = async () => {
+    try {
+      await createRepairMutation.mutateAsync(repairAddForm);
+      setIsAddModalOpen(false);
+      setRepairAddForm({
+        machine_name: "",
+        machine_type: "",
+        issue_detail: "",
+        assigned_to: "",
+        vendor_name: "",
+        part_replaced: "",
+        warranty: "",
+        remarks: "",
+        task_start_date: new Date().toISOString().split("T")[0],
+        status: "Pending",
+      });
+      toast.success("Repair task added successfully");
+    } catch {
+      toast.error("Failed to add repair task");
+    }
+  };
+
   // ============ Render ============
 
   const inputClass =
@@ -477,8 +578,8 @@ export default function MainEditMachine() {
               <input
                 type="checkbox"
                 checked={
-                  selectedMaintenanceIds.length === maintenanceTasks.length &&
-                  maintenanceTasks.length > 0
+                  selectedMaintenanceIds.length === filteredMaintenanceTasks.length &&
+                  filteredMaintenanceTasks.length > 0
                 }
                 onChange={handleMaintenanceSelectAll}
                 className="w-4 h-4 rounded border-gray-300 text-blue-600"
@@ -526,7 +627,7 @@ export default function MainEditMachine() {
               <Loader2 className="animate-spin mx-auto h-8 w-8 text-primary" />
             </td>
           </tr>
-        ) : maintenanceTasks.length === 0 ? (
+        ) : filteredMaintenanceTasks.length === 0 ? (
           <tr>
             <td
               colSpan={8}
@@ -536,7 +637,7 @@ export default function MainEditMachine() {
             </td>
           </tr>
         ) : (
-          maintenanceTasks.map((task, index) => {
+          filteredMaintenanceTasks.map((task, index) => {
             const isEditing = editingMaintenanceId === task.task_id;
             const isSelected = selectedMaintenanceIds.includes(task.task_id);
 
@@ -564,34 +665,36 @@ export default function MainEditMachine() {
                 </td>
                 <td className="px-3 py-3 text-sm text-gray-900 dark:text-white whitespace-nowrap">
                   {isEditing ? (
-                    <input
-                      type="text"
+                    <select
                       value={maintenanceEditForm.machine_name || ""}
                       onChange={(e) =>
-                        handleMaintenanceFieldChange(
-                          "machine_name",
-                          e.target.value,
-                        )
+                        handleMaintenanceFieldChange("machine_name", e.target.value)
                       }
                       className={inputClass}
-                    />
+                    >
+                      <option value="">Select Machine</option>
+                      {uniqueMachines.map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
                   ) : (
                     task.machine_name || "—"
                   )}
                 </td>
                 <td className="px-3 py-3 text-sm text-gray-900 dark:text-white whitespace-nowrap">
                   {isEditing ? (
-                    <input
-                      type="text"
+                    <select
                       value={maintenanceEditForm.machine_type || ""}
                       onChange={(e) =>
-                        handleMaintenanceFieldChange(
-                          "machine_type",
-                          e.target.value,
-                        )
+                        handleMaintenanceFieldChange("machine_type", e.target.value)
                       }
                       className={inputClass}
-                    />
+                    >
+                      <option value="">Select Type</option>
+                      {uniqueTypes.map((t) => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
                   ) : (
                     task.machine_type || "—"
                   )}
@@ -782,8 +885,8 @@ export default function MainEditMachine() {
               <input
                 type="checkbox"
                 checked={
-                  selectedRepairIds.length === repairTasks.length &&
-                  repairTasks.length > 0
+                  selectedRepairIds.length === filteredRepairTasks.length &&
+                  filteredRepairTasks.length > 0
                 }
                 onChange={handleRepairSelectAll}
                 className="w-4 h-4 rounded border-gray-300 text-blue-600"
@@ -831,7 +934,7 @@ export default function MainEditMachine() {
         </tr>
       </thead>
       <tbody className="bg-white dark:bg-neutral-800 divide-y divide-gray-100 dark:divide-neutral-700">
-        {repairTasks.map((task, index) => {
+        {filteredRepairTasks.map((task, index) => {
           const isEditing = editingRepairId === task.task_id;
           const isSelected = selectedRepairIds.includes(task.task_id);
 
@@ -859,28 +962,36 @@ export default function MainEditMachine() {
               </td>
               <td className="px-3 py-3 text-sm text-gray-900 dark:text-white whitespace-nowrap">
                 {isEditing ? (
-                  <input
-                    type="text"
+                  <select
                     value={repairEditForm.machine_name || ""}
                     onChange={(e) =>
                       handleRepairFieldChange("machine_name", e.target.value)
                     }
                     className={inputClass}
-                  />
+                  >
+                    <option value="">Select Machine</option>
+                    {uniqueMachines.map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
                 ) : (
                   task.machine_name || "—"
                 )}
               </td>
               <td className="px-3 py-3 text-sm text-gray-900 dark:text-white whitespace-nowrap">
                 {isEditing ? (
-                  <input
-                    type="text"
+                  <select
                     value={repairEditForm.machine_type || ""}
                     onChange={(e) =>
                       handleRepairFieldChange("machine_type", e.target.value)
                     }
                     className={inputClass}
-                  />
+                  >
+                    <option value="">Select Type</option>
+                    {uniqueTypes.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
                 ) : (
                   task.machine_type || "—"
                 )}
@@ -1036,7 +1147,7 @@ export default function MainEditMachine() {
   );
 
   const taskCount =
-    activeTab === "maintenance" ? maintenanceTasks.length : repairTasks.length;
+    activeTab === "maintenance" ? filteredMaintenanceTasks.length : filteredRepairTasks.length;
   const selectedCount =
     activeTab === "maintenance"
       ? selectedMaintenanceIds.length
@@ -1064,6 +1175,15 @@ export default function MainEditMachine() {
             <RefreshCw className="w-4 h-4" />
             Refresh
           </button>
+          {isAdmin && (
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              {activeTab === "maintenance" ? "Add Maintenance" : "Add Repairing"}
+            </button>
+          )}
         </div>
       </div>
 
@@ -1077,6 +1197,7 @@ export default function MainEditMachine() {
               setMaintenancePage(0);
               setSelectedMaintenanceIds([]);
               setEditingMaintenanceId(null);
+              setSelectedType(""); // Reset type filter when switching tabs
             }}
             className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === "maintenance"
               ? "bg-white dark:bg-neutral-700 text-blue-600 shadow-sm"
@@ -1091,6 +1212,7 @@ export default function MainEditMachine() {
               setRepairPage(0);
               setSelectedRepairIds([]);
               setEditingRepairId(null);
+              setSelectedType(""); // Reset type filter when switching tabs
             }}
             className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === "repairing"
               ? "bg-white dark:bg-neutral-700 text-blue-600 shadow-sm"
@@ -1102,7 +1224,7 @@ export default function MainEditMachine() {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-1 items-center gap-2 w-full md:w-auto">
+        <div className="flex flex-1 items-center gap-2 w-full md:w-auto flex-wrap">
           {/* Search */}
           <div className="relative flex-1 md:max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -1120,41 +1242,58 @@ export default function MainEditMachine() {
           </div>
 
           {/* Machine Filter */}
-          <div className="flex items-center gap-2">
-            <select
-              value={selectedMachine}
-              onChange={(e) => {
-                setSelectedMachine(e.target.value);
-                setMaintenancePage(0);
-                setRepairPage(0);
-              }}
-              className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            >
-              <option value="">All Machines</option>
-              {uniqueMachines.map((machine) => (
-                <option key={machine} value={machine}>
-                  {machine}
-                </option>
-              ))}
-            </select>
+          <select
+            value={selectedMachine}
+            onChange={(e) => {
+              setSelectedMachine(e.target.value);
+              setMaintenancePage(0);
+              setRepairPage(0);
+            }}
+            className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          >
+            <option value="">All Machines</option>
+            {uniqueMachines.map((machine) => (
+              <option key={machine} value={machine}>
+                {machine}
+              </option>
+            ))}
+          </select>
 
-            <select
-              value={selectedPerson}
-              onChange={(e) => {
-                setSelectedPerson(e.target.value);
-                setMaintenancePage(0);
-                setRepairPage(0);
-              }}
-              className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            >
-              <option value="">All Names</option>
-              {uniquePersons.map((person) => (
-                <option key={person} value={person}>
-                  {person}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Type Filter - New */}
+          <select
+            value={selectedType}
+            onChange={(e) => {
+              setSelectedType(e.target.value);
+              setMaintenancePage(0);
+              setRepairPage(0);
+            }}
+            className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          >
+            <option value="">All Types</option>
+            {uniqueTypes.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
+
+          {/* Person Filter */}
+          <select
+            value={selectedPerson}
+            onChange={(e) => {
+              setSelectedPerson(e.target.value);
+              setMaintenancePage(0);
+              setRepairPage(0);
+            }}
+            className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          >
+            <option value="">All Names</option>
+            {uniquePersons.map((person) => (
+              <option key={person} value={person}>
+                {person}
+              </option>
+            ))}
+          </select>
 
           {/* Bulk Delete */}
           {selectedCount > 0 && isAdmin && (
@@ -1239,7 +1378,7 @@ export default function MainEditMachine() {
             <p className="text-gray-500 dark:text-gray-400 mb-6">
               {deleteConfirmTask.isBulk
                 ? deleteConfirmTask.type === "maintenance"
-                  ? `Delete ${selectedMaintenanceIds.length} unique task group(s) (${maintenanceTasks
+                  ? `Delete ${selectedMaintenanceIds.length} unique task group(s) (${filteredMaintenanceTasks
                     .filter((t) => selectedMaintenanceIds.includes(t.task_id))
                     .reduce(
                       (sum, t) => sum + ((t as any).task_count || 1),
@@ -1272,6 +1411,222 @@ export default function MainEditMachine() {
               >
                 {isDeleting && <Loader2 className="w-4 h-4 animate-spin" />}
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Modal */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-xl w-full max-w-2xl p-6 overflow-y-auto max-h-[90vh]">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                Add New {activeTab === "maintenance" ? "Maintenance" : "Repair"} Task
+              </h3>
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors"
+              >
+                <X className="w-6 h-6 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {activeTab === "maintenance" ? (
+                <>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">Machine Name</label>
+                    <select
+                      className={inputClass}
+                      value={maintenanceAddForm.machine_name}
+                      onChange={(e) => setMaintenanceAddForm({ ...maintenanceAddForm, machine_name: e.target.value })}
+                    >
+                      <option value="">Select Machine</option>
+                      {uniqueMachines.map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">Machine Type</label>
+                    <select
+                      className={inputClass}
+                      value={maintenanceAddForm.machine_type}
+                      onChange={(e) => setMaintenanceAddForm({ ...maintenanceAddForm, machine_type: e.target.value })}
+                    >
+                      <option value="">Select Type</option>
+                      {uniqueTypes.map((t) => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5 md:col-span-2">
+                    <label className="text-sm font-medium">Task Description</label>
+                    <textarea
+                      className={inputClass}
+                      rows={3}
+                      value={maintenanceAddForm.task_description}
+                      onChange={(e) => setMaintenanceAddForm({ ...maintenanceAddForm, task_description: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">Frequency</label>
+                    <select
+                      className={inputClass}
+                      value={maintenanceAddForm.frequency}
+                      onChange={(e) => setMaintenanceAddForm({ ...maintenanceAddForm, frequency: e.target.value })}
+                    >
+                      <option value="daily">Daily</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="monthly">Monthly</option>
+                      <option value="one-time">One-time</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">Assigned To (Doer)</label>
+                    <input
+                      type="text"
+                      className={inputClass}
+                      value={maintenanceAddForm.doer_name}
+                      onChange={(e) => setMaintenanceAddForm({ ...maintenanceAddForm, doer_name: e.target.value, assigned_to: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">Enable Reminder</label>
+                    <select
+                      className={inputClass}
+                      value={maintenanceAddForm.enable_reminder}
+                      onChange={(e) => setMaintenanceAddForm({ ...maintenanceAddForm, enable_reminder: e.target.value })}
+                    >
+                      <option value="yes">Yes</option>
+                      <option value="no">No</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">Require Attachment</label>
+                    <select
+                      className={inputClass}
+                      value={maintenanceAddForm.require_attachment}
+                      onChange={(e) => setMaintenanceAddForm({ ...maintenanceAddForm, require_attachment: e.target.value })}
+                    >
+                      <option value="yes">Yes</option>
+                      <option value="no">No</option>
+                    </select>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">Machine Name</label>
+                    <select
+                      className={inputClass}
+                      value={repairAddForm.machine_name}
+                      onChange={(e) => setRepairAddForm({ ...repairAddForm, machine_name: e.target.value })}
+                    >
+                      <option value="">Select Machine</option>
+                      {uniqueMachines.map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">Machine Type</label>
+                    <select
+                      className={inputClass}
+                      value={repairAddForm.machine_type}
+                      onChange={(e) => setRepairAddForm({ ...repairAddForm, machine_type: e.target.value })}
+                    >
+                      <option value="">Select Type</option>
+                      {uniqueTypes.map((t) => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5 md:col-span-2">
+                    <label className="text-sm font-medium">Issue Detail</label>
+                    <textarea
+                      className={inputClass}
+                      rows={3}
+                      value={repairAddForm.issue_detail}
+                      onChange={(e) => setRepairAddForm({ ...repairAddForm, issue_detail: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">Assigned To</label>
+                    <input
+                      type="text"
+                      className={inputClass}
+                      value={repairAddForm.assigned_to}
+                      onChange={(e) => setRepairAddForm({ ...repairAddForm, assigned_to: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">Vendor</label>
+                    <input
+                      type="text"
+                      className={inputClass}
+                      value={repairAddForm.vendor_name}
+                      onChange={(e) => setRepairAddForm({ ...repairAddForm, vendor_name: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">Part Replaced</label>
+                    <input
+                      type="text"
+                      className={inputClass}
+                      value={repairAddForm.part_replaced}
+                      onChange={(e) => setRepairAddForm({ ...repairAddForm, part_replaced: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">Warranty</label>
+                    <input
+                      type="text"
+                      className={inputClass}
+                      value={repairAddForm.warranty}
+                      onChange={(e) => setRepairAddForm({ ...repairAddForm, warranty: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">Start Date</label>
+                    <input
+                      type="date"
+                      className={inputClass}
+                      value={repairAddForm.task_start_date}
+                      onChange={(e) => setRepairAddForm({ ...repairAddForm, task_start_date: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5 md:col-span-2">
+                    <label className="text-sm font-medium">Remarks</label>
+                    <input
+                      type="text"
+                      className={inputClass}
+                      value={repairAddForm.remarks}
+                      onChange={(e) => setRepairAddForm({ ...repairAddForm, remarks: e.target.value })}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="mt-8 flex justify-end gap-3">
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:bg-neutral-700 dark:text-gray-300 dark:hover:bg-neutral-600 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={activeTab === "maintenance" ? handleAddMaintenanceSubmit : handleAddRepairSubmit}
+                disabled={createMaintenanceMutation.isPending || createRepairMutation.isPending}
+                className="flex items-center gap-2 px-6 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-all disabled:opacity-50"
+              >
+                {(createMaintenanceMutation.isPending || createRepairMutation.isPending) && (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                )}
+                Save Task
               </button>
             </div>
           </div>
