@@ -140,14 +140,14 @@ const routes: Route[] = [
         showFor: ["admin", "user"] as const,
         permissionResource: "maintenance_schedules",
       },
+      {
+        href: "/maintenance/edit-task",
+        label: "Maintenance Edit Task",
+        icon: "Edit",
+        showFor: ["admin"] as const,
+        permissionResource: "maintenance_edit",
+      },
     ],
-  },
-  {
-    href: "/maintenance/edit-task",
-    label: "Machine Edit Task",
-    icon: "Edit",
-    showFor: ["admin"] as const,
-    permissionResource: "maintenance_edit",
   },
   {
     href: "/machines",

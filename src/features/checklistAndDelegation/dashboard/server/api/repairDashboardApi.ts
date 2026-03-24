@@ -23,6 +23,7 @@ export interface MachineRepairTask {
   warranty?: string;
   warranty_start_date?: string;
   warranty_end_date?: string;
+  machine_type?: string;
 }
 
 export interface MachineMaintenanceTask {
@@ -44,6 +45,7 @@ export interface MachineMaintenanceTask {
   require_attachment?: string; // e.g. "yes", "no"
   enable_reminder?: string; // e.g. "yes", "no"
   sample_image?: string;
+  machine_type?: string;
 }
 
 export interface RepairDashboardData {

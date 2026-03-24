@@ -136,11 +136,10 @@ export default function MainAssignTask() {
         <select
           value={selectedSection}
           onChange={(e) => setSelectedSection(e.target.value as SectionType)}
-          className={`px-3 py-1.5 text-sm font-medium rounded-md border transition-colors cursor-pointer ${
-            selectedSection === "checklist"
+          className={`px-3 py-1.5 text-sm font-medium rounded-md border transition-colors cursor-pointer ${selectedSection === "checklist"
               ? "border-blue-200 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400"
               : "border-orange-200 bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:border-orange-800 dark:text-orange-400"
-          }`}
+            }`}
         >
           <option value="checklist">Checklist</option>
           <option value="maintenance">Maintenance</option>
@@ -431,9 +430,8 @@ export default function MainAssignTask() {
                   </span>
                 </span>
                 <ChevronDown
-                  className={`w-4 h-4 text-green-600 transition-transform ${
-                    accordionOpen ? "rotate-180" : ""
-                  }`}
+                  className={`w-4 h-4 text-green-600 transition-transform ${accordionOpen ? "rotate-180" : ""
+                    }`}
                 />
               </button>
 

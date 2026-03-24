@@ -146,6 +146,7 @@ export default function RepairingDashboard() {
       "Task ID",
       "Date",
       "Machine Name",
+      "Machine Type",
       "Issue Detail",
       "Part Replaced",
       "Assigned To",
@@ -163,6 +164,7 @@ export default function RepairingDashboard() {
         task.task_id || task.id,
         formatDate(task.created_at),
         `"${task.machine_name || ""}"`,
+        `"${task.machine_type || ""}"`,
         `"${(task.issue_detail || "").replace(/"/g, '""')}"`,
         `"${task.part_replaced || ""}"`,
         `"${task.assigned_to || ""}"`,
@@ -304,16 +306,15 @@ export default function RepairingDashboard() {
                       e.stopPropagation();
                       handleMachineSelection(machine);
                     }}
-                    className={`px-3 py-2 cursor-pointer hover:bg-orange-50 dark:hover:bg-neutral-700 flex items-center gap-2 ${
-                      selectedMachines.includes(machine)
-                        ? "bg-orange-100 dark:bg-orange-900/20"
-                        : ""
-                    }`}
+                    className={`px-3 py-2 cursor-pointer hover:bg-orange-50 dark:hover:bg-neutral-700 flex items-center gap-2 ${selectedMachines.includes(machine)
+                      ? "bg-orange-100 dark:bg-orange-900/20"
+                      : ""
+                      }`}
                   >
                     <input
                       type="checkbox"
                       checked={selectedMachines.includes(machine)}
-                      onChange={() => {}}
+                      onChange={() => { }}
                       className="w-4 h-4 text-orange-600 border-gray-300 dark:border-neutral-600 rounded focus:ring-orange-500"
                     />
                     <span className="text-sm text-gray-700 dark:text-gray-200 truncate">
@@ -545,7 +546,8 @@ export default function RepairingDashboard() {
                 {[
                   "Task ID",
                   "Date",
-                  "Machine",
+                  "Machine Name",
+                  "Machine Type",
                   "Issue",
                   "Part Replaced",
                   "Assigned To",
@@ -558,9 +560,8 @@ export default function RepairingDashboard() {
                 ].map((header, i) => (
                   <th
                     key={header}
-                    className={`px-5 py-4 text-xs font-semibold tracking-wider text-muted-foreground dark:text-gray-300 uppercase ${
-                      i === 8 || i === 9 ? "text-center" : "text-left"
-                    }`}
+                    className={`px-5 py-4 text-xs font-semibold tracking-wider text-muted-foreground dark:text-gray-300 uppercase ${i === 8 || i === 9 ? "text-center" : "text-left"
+                      }`}
                   >
                     {header}
                   </th>
@@ -582,6 +583,9 @@ export default function RepairingDashboard() {
                     </td>
                     <td className="px-5 py-4 text-sm font-semibold text-orange-700 dark:text-orange-400 align-middle">
                       {row.machine_name || "—"}
+                    </td>
+                    <td className="px-5 py-4 text-sm text-gray-700 dark:text-gray-300 align-middle whitespace-nowrap">
+                      {row.machine_type || "—"}
                     </td>
                     <td
                       className="px-5 py-4 text-sm text-gray-600 dark:text-gray-300 align-middle max-w-45 truncate"
@@ -680,7 +684,12 @@ export default function RepairingDashboard() {
                       {row.task_id} &bull; {formatDate(row.created_at)}
                     </p>
                     <p className="font-semibold text-orange-700 dark:text-orange-400">
-                      {row.machine_name || "—"}
+                      {row.machine_name || "—"}{" "}
+                      {row.machine_type && (
+                        <span className="text-xs font-normal text-muted-foreground">
+                          ({row.machine_type})
+                        </span>
+                      )}
                     </p>
                   </div>
                   <span

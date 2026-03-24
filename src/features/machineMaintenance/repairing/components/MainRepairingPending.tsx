@@ -224,6 +224,7 @@ export default function MainRepairingPending() {
     const headers = [
       "Task ID",
       "Machine Name",
+      "Machine Type",
       "Issue Detail",
       "Requested By",
       "Assigned To",
@@ -235,6 +236,7 @@ export default function MainRepairingPending() {
     const rows = repairs.map((t) => [
       t.task_id,
       t.machine_name || "",
+      t.machine_type || "",
       t.issue_detail || "",
       t.form_filled_by || "",
       t.assigned_to || "",
@@ -421,6 +423,9 @@ export default function MainRepairingPending() {
                     Machine
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Machine Type
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                     Issue
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
@@ -454,6 +459,9 @@ export default function MainRepairingPending() {
                     </td>
                     <td className="px-4 py-3 text-sm text-foreground">
                       {repair.machine_name || "-"}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-foreground">
+                      {repair.machine_type || "-"}
                     </td>
                     <td className="px-4 py-3 text-sm text-foreground max-w-xs truncate">
                       {repair.issue_detail || "-"}
@@ -543,7 +551,7 @@ export default function MainRepairingPending() {
                 <p>
                   <span className="text-muted-foreground">Machine:</span>{" "}
                   <span className="font-medium text-foreground">
-                    {selectedRepair.machine_name}
+                    {selectedRepair.machine_name} {selectedRepair.machine_type ? `(${selectedRepair.machine_type})` : ""}
                   </span>
                 </p>
                 <p>

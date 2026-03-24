@@ -424,7 +424,11 @@ export default function MainQuickTask() {
 
   // Row styling
   const getRowClassName = (task: ChecklistTask | any) => {
-    const isSelected = selectedTasks.find((t) => t.task_id === task.task_id);
+    const isSelected =
+      activeTab === "checklist"
+        ? selectedTasks.find((t) => t.task_id === task.task_id)
+        : selectedDelegationTasks.find((t) => t.task_id === task.task_id);
+
     if (isSelected)
       return "bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30";
 

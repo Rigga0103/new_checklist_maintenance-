@@ -106,19 +106,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                     <div className="mb-1">
                       <button
                         onClick={() => toggleSubmenu(route.label)}
-                        className={`flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                          route.active
+                        className={`flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${route.active
                             ? "bg-neutral-100 dark:bg-neutral-800 text-foreground"
                             : "text-foreground dark:text-zinc-300 hover:bg-neutral-100 dark:hover:bg-zinc-800"
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center gap-3">
                           <IconComponent
-                            className={`h-4 w-4 ${
-                              route.active
+                            className={`h-4 w-4 ${route.active
                                 ? "text-muted-foreground"
                                 : "text-foreground-secondary dark:text-zinc-400"
-                            }`}
+                              }`}
                           />
                           <span className="font-medium text-foreground dark:text-zinc-200">
                             {route.label}
@@ -136,65 +134,61 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                         <ul className="pl-2 mt-1 ml-6 space-y-1 border-l border-muted dark:border-zinc-700">
                           {route.children
                             ? route.children.map((child) => {
-                                const ChildIcon =
-                                  iconMap[child.icon] || CheckSquare;
-                                const isChildActive = pathname === child.href;
-                                return (
-                                  <li key={`${child.label}-${child.href}`}>
-                                    <Link
-                                      href={child.href}
-                                      className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${
-                                        isChildActive
-                                          ? "bg-secondary dark:bg-zinc-800 text-foreground font-medium"
-                                          : "text-foreground-secondary dark:text-zinc-400 hover:bg-secondary dark:hover:bg-zinc-800 hover:text-primary dark:hover:text-foreground"
-                                      }`}
-                                      onClick={() => setIsMobileMenuOpen(false)}
-                                    >
-                                      <ChildIcon className="w-3 h-3 text-muted-foreground dark:text-zinc-500" />
-                                      {child.label}
-                                    </Link>
-                                  </li>
-                                );
-                              })
-                            : // Fallback for legacy data departments if any
-                              accessibleDepartments.map((category) => (
-                                <li key={category.id}>
+                              const ChildIcon =
+                                iconMap[child.icon] || CheckSquare;
+                              const isChildActive = pathname === child.href;
+                              return (
+                                <li key={`${child.label}-${child.href}`}>
                                   <Link
-                                    href={
-                                      category.link || `/data/${category.id}`
-                                    }
-                                    className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${
-                                      pathname ===
-                                      (category.link || `/data/${category.id}`)
+                                    href={child.href}
+                                    className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${isChildActive
                                         ? "bg-secondary dark:bg-zinc-800 text-foreground font-medium"
                                         : "text-foreground-secondary dark:text-zinc-400 hover:bg-secondary dark:hover:bg-zinc-800 hover:text-primary dark:hover:text-foreground"
-                                    }`}
+                                      }`}
                                     onClick={() => setIsMobileMenuOpen(false)}
                                   >
-                                    <Database className="w-3 h-3 text-muted-foreground dark:text-zinc-500" />
-                                    {category.name}
+                                    <ChildIcon className="w-3 h-3 text-muted-foreground dark:text-zinc-500" />
+                                    {child.label}
                                   </Link>
                                 </li>
-                              ))}
+                              );
+                            })
+                            : // Fallback for legacy data departments if any
+                            accessibleDepartments.map((category) => (
+                              <li key={category.id}>
+                                <Link
+                                  href={
+                                    category.link || `/data/${category.id}`
+                                  }
+                                  className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${pathname ===
+                                      (category.link || `/data/${category.id}`)
+                                      ? "bg-secondary dark:bg-zinc-800 text-foreground font-medium"
+                                      : "text-foreground-secondary dark:text-zinc-400 hover:bg-secondary dark:hover:bg-zinc-800 hover:text-primary dark:hover:text-foreground"
+                                    }`}
+                                  onClick={() => setIsMobileMenuOpen(false)}
+                                >
+                                  <Database className="w-3 h-3 text-muted-foreground dark:text-zinc-500" />
+                                  {category.name}
+                                </Link>
+                              </li>
+                            ))}
                         </ul>
                       )}
                     </div>
                   ) : (
                     <Link
                       href={route.href}
-                      className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                        route.active
+                      className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${route.active
                           ? "bg-neutral-100 dark:bg-neutral-800 text-foreground border-l-4 border-green-600"
                           : "text-foreground dark:text-zinc-300 hover:bg-neutral-100 dark:hover:bg-zinc-800 hover:border-l-4 hover:border-neutral-400"
-                      }`}
+                        }`}
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       <IconComponent
-                        className={`h-4 w-4 ${
-                          route.active
+                        className={`h-4 w-4 ${route.active
                             ? "text-muted-foreground"
                             : "text-foreground-secondary dark:text-zinc-400"
-                        }`}
+                          }`}
                       />
                       <span className="text-foreground dark:text-zinc-200">
                         {route.label}
@@ -280,19 +274,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                         <div className="mb-1">
                           <button
                             onClick={() => toggleSubmenu(route.label)}
-                            className={`flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                              route.active
+                            className={`flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${route.active
                                 ? "bg-accent text-foreground"
                                 : "text-foreground dark:text-zinc-300 hover:bg-secondary dark:hover:bg-zinc-800"
-                            }`}
+                              }`}
                           >
                             <div className="flex items-center gap-3">
                               <IconComponent
-                                className={`h-4 w-4 ${
-                                  route.active
+                                className={`h-4 w-4 ${route.active
                                     ? "text-muted-foreground"
                                     : "text-foreground-secondary dark:text-zinc-400"
-                                }`}
+                                  }`}
                               />
                               <span className="font-medium text-foreground dark:text-zinc-200">
                                 {route.label}
@@ -310,73 +302,69 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                             <ul className="pl-2 mt-1 ml-6 space-y-1 border-l border-muted dark:border-zinc-700">
                               {route.children
                                 ? route.children.map((child) => {
-                                    const ChildIcon =
-                                      iconMap[child.icon] || CheckSquare;
-                                    const isChildActive =
-                                      pathname === child.href;
-                                    return (
-                                      <li
-                                        key={`mobile-${child.label}-${child.href}`}
-                                      >
-                                        <Link
-                                          href={child.href}
-                                          className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${
-                                            isChildActive
-                                              ? "bg-secondary dark:bg-zinc-800 text-foreground font-medium"
-                                              : "text-foreground-secondary dark:text-zinc-400 hover:bg-secondary dark:hover:bg-zinc-800 hover:text-primary dark:hover:text-foreground"
-                                          }`}
-                                          onClick={() =>
-                                            setIsMobileMenuOpen(false)
-                                          }
-                                        >
-                                          <ChildIcon className="w-3 h-3 text-muted-foreground dark:text-zinc-500" />
-                                          {child.label}
-                                        </Link>
-                                      </li>
-                                    );
-                                  })
-                                : accessibleDepartments.map((category) => (
-                                    <li key={`mobile-${category.id}`}>
+                                  const ChildIcon =
+                                    iconMap[child.icon] || CheckSquare;
+                                  const isChildActive =
+                                    pathname === child.href;
+                                  return (
+                                    <li
+                                      key={`mobile-${child.label}-${child.href}`}
+                                    >
                                       <Link
-                                        href={
-                                          category.link ||
-                                          `/data/${category.id}`
-                                        }
-                                        className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${
-                                          pathname ===
-                                          (category.link ||
-                                            `/data/${category.id}`)
+                                        href={child.href}
+                                        className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${isChildActive
                                             ? "bg-secondary dark:bg-zinc-800 text-foreground font-medium"
                                             : "text-foreground-secondary dark:text-zinc-400 hover:bg-secondary dark:hover:bg-zinc-800 hover:text-primary dark:hover:text-foreground"
-                                        }`}
+                                          }`}
                                         onClick={() =>
                                           setIsMobileMenuOpen(false)
                                         }
                                       >
-                                        <Database className="w-3 h-3 text-muted-foreground dark:text-zinc-500" />
-                                        {category.name}
+                                        <ChildIcon className="w-3 h-3 text-muted-foreground dark:text-zinc-500" />
+                                        {child.label}
                                       </Link>
                                     </li>
-                                  ))}
+                                  );
+                                })
+                                : accessibleDepartments.map((category) => (
+                                  <li key={`mobile-${category.id}`}>
+                                    <Link
+                                      href={
+                                        category.link ||
+                                        `/data/${category.id}`
+                                      }
+                                      className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${pathname ===
+                                          (category.link ||
+                                            `/data/${category.id}`)
+                                          ? "bg-secondary dark:bg-zinc-800 text-foreground font-medium"
+                                          : "text-foreground-secondary dark:text-zinc-400 hover:bg-secondary dark:hover:bg-zinc-800 hover:text-primary dark:hover:text-foreground"
+                                        }`}
+                                      onClick={() =>
+                                        setIsMobileMenuOpen(false)
+                                      }
+                                    >
+                                      <Database className="w-3 h-3 text-muted-foreground dark:text-zinc-500" />
+                                      {category.name}
+                                    </Link>
+                                  </li>
+                                ))}
                             </ul>
                           )}
                         </div>
                       ) : (
                         <Link
                           href={route.href}
-                          className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                            route.active
+                          className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${route.active
                               ? "bg-accent text-foreground border-l-4 border-primary dark:border-muted-foreground"
                               : "text-foreground dark:text-zinc-300 hover:bg-secondary dark:hover:bg-zinc-800 hover:border-l-4 hover:border-foreground dark:hover:border-primary"
-                          }`}
+                            }`}
                           onClick={() => setIsMobileMenuOpen(false)}
                         >
                           <IconComponent
-                            className={`h-4 w-4 ${
-                              route.active
+                            className={`h-4 w-4 ${route.active
                                 ? "text-muted-foreground"
                                 : "text-foreground-secondary dark:text-zinc-400"
-                            }`}
+                              }`}
                           />
                           <span className="text-foreground dark:text-zinc-200">
                             {route.label}
@@ -452,9 +440,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <div className="p-2 transition-all duration-300 transform rounded-full cursor-pointer hover:bg-white/20 hover:scale-110">
                 <Link
                   href="/dashboard"
-                  className={`${
-                    pathname === "/dashboard" ? "bg-white/20" : ""
-                  }`}
+                  className={`${pathname === "/dashboard" ? "bg-white/20" : ""
+                    }`}
                 >
                   <Home size={29} className="drop-shadow-md" />
                 </Link>
@@ -462,9 +449,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <div className="p-2 transition-all duration-300 transform rounded-full cursor-pointer hover:bg-white/20 hover:scale-110">
                 <Link
                   href="/checklist"
-                  className={`${
-                    pathname === "/checklist" ? "bg-white/20" : ""
-                  }`}
+                  className={`${pathname === "/checklist" ? "bg-white/20" : ""
+                    }`}
                 >
                   <CalendarCheck size={29} className="drop-shadow-md" />
                 </Link>
@@ -472,9 +458,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <div className="p-3 -mt-6 text-primary transition-all duration-300 transform bg-white dark:bg-zinc-800 dark:text-muted-foreground rounded-full shadow-lg cursor-pointer hover:bg-muted dark:hover:bg-zinc-700 hover:scale-110">
                 <Link
                   href="/assign-task"
-                  className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${
-                    pathname === "/assign-task" ? "bg-white/20" : ""
-                  }`}
+                  className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${pathname === "/assign-task" ? "bg-white/20" : ""
+                    }`}
                 >
                   <CirclePlus size={29} className="drop-shadow-md" />
                 </Link>
@@ -482,9 +467,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <div className="p-2 transition-all duration-300 transform rounded-full cursor-pointer hover:bg-white/20 hover:scale-110">
                 <Link
                   href="/delegation"
-                  className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${
-                    pathname === "/delegation" ? "bg-white/20" : ""
-                  }`}
+                  className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${pathname === "/delegation" ? "bg-white/20" : ""
+                    }`}
                 >
                   <BookmarkCheck size={29} className="drop-shadow-md" />
                 </Link>

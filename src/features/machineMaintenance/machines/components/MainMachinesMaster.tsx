@@ -161,6 +161,9 @@ export default function MainMachinesMaster() {
                 Machine Name
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                Machine Type
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                 Serial No
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
@@ -175,9 +178,7 @@ export default function MainMachinesMaster() {
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                 Status
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                Type
-              </th>
+
               <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
                 Actions
               </th>
@@ -203,6 +204,9 @@ export default function MainMachinesMaster() {
                     {machine.machine_name}
                   </td>
                   <td className="px-6 py-4 text-sm text-foreground">
+                    {machine.type || "-"}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-foreground">
                     {machine.serial_no || "-"}
                   </td>
                   <td className="px-6 py-4 text-sm text-foreground">
@@ -224,9 +228,7 @@ export default function MainMachinesMaster() {
                       {machine.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm text-foreground">
-                    {machine.type || "-"}
-                  </td>
+
                   <td className="px-6 py-4 text-right space-x-2">
                     {canEdit && (
                       <button
@@ -299,7 +301,7 @@ export default function MainMachinesMaster() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1">
-                    Type
+                    Machine Type *
                   </label>
                   <input
                     type="text"

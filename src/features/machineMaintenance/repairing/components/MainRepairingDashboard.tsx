@@ -273,7 +273,7 @@ export default function MainRepairingDashboard() {
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">
-                      {repair.machine_name || "Unknown Machine"}
+                      {repair.machine_name || "Unknown Machine"} {repair.machine_type ? `(${repair.machine_type})` : ""}
                     </p>
                     <p className="text-xs text-muted-foreground truncate">
                       {repair.issue_detail || "No issue details"}

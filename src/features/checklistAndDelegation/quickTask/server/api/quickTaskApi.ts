@@ -135,11 +135,7 @@ export const deleteChecklistTasksApi = async (
   tasks: ChecklistTask[],
 ): Promise<ChecklistTask[]> => {
   for (const task of tasks) {
-    let query = supabase.from("checklist").delete().is("submission_date", null);
-
-    // Strict composite match
-    if (task.department) query = query.eq("department", task.department);
-    else query = query.is("department", null);
+    let query = supabase.from("checklist").delete();
 
     if (task.name) query = query.eq("name", task.name);
     else query = query.is("name", null);
@@ -162,14 +158,7 @@ export const deleteDelegationTasksApi = async (
   tasks: DelegationTask[],
 ): Promise<DelegationTask[]> => {
   for (const task of tasks) {
-    let query = supabase
-      .from("delegation")
-      .delete()
-      .is("submission_date", null);
-
-    // Strict composite match
-    if (task.department) query = query.eq("department", task.department);
-    else query = query.is("department", null);
+    let query = supabase.from("delegation").delete();
 
     if (task.name) query = query.eq("name", task.name);
     else query = query.is("name", null);

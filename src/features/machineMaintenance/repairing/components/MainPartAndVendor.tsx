@@ -168,11 +168,10 @@ export default function MainPartAndVendor() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border rounded-lg transition-colors ${
-              isFilterOpen || vendorFilter || partFilter
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border rounded-lg transition-colors ${isFilterOpen || vendorFilter || partFilter
                 ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800"
                 : "bg-white text-foreground border-neutral-300 hover:bg-neutral-50 dark:bg-neutral-800 dark:border-neutral-600 dark:hover:bg-neutral-700"
-            }`}
+              }`}
           >
             <Filter className="w-4 h-4" />
             {(vendorFilter || partFilter || typeFilter) && (
@@ -305,15 +304,15 @@ export default function MainPartAndVendor() {
             {(vendorFilter !== "" ||
               partFilter !== "" ||
               typeFilter !== "") && (
-              <div className="col-span-1 md:col-span-3 flex justify-end mt-2">
-                <button
-                  onClick={clearFilters}
-                  className="text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-medium px-2 py-1"
-                >
-                  Clear filters
-                </button>
-              </div>
-            )}
+                <div className="col-span-1 md:col-span-3 flex justify-end mt-2">
+                  <button
+                    onClick={clearFilters}
+                    className="text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-medium px-2 py-1"
+                  >
+                    Clear filters
+                  </button>
+                </div>
+              )}
           </div>
         )}
       </div>
@@ -337,7 +336,7 @@ export default function MainPartAndVendor() {
                     ID
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                    Type
+                    Machine Type
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                     Machine

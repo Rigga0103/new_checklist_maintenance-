@@ -314,7 +314,7 @@ export default function RepairingList({
     }
     const headers = [
       "Task ID",
-      "Type",
+      "Machine Type",
       "Machine Name",
       "Issue Detail",
       "Requested By",

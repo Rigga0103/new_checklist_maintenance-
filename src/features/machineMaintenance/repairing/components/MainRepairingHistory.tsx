@@ -95,6 +95,7 @@ export default function MainRepairingHistory() {
       const headers = [
         "Task ID",
         "Machine Name",
+        "Machine Type",
         "Issue Detail",
         "Part Replaced",
         "Warranty",
@@ -111,6 +112,7 @@ export default function MainRepairingHistory() {
       const rows = allData.map((r) => [
         r.task_id,
         r.machine_name || "",
+        r.machine_type || "",
         r.issue_detail || "",
         r.part_replaced || "",
         r.warranty_start_date
@@ -281,6 +283,9 @@ export default function MainRepairingHistory() {
                     Machine
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Machine Type
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                     Work Done
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
@@ -317,6 +322,9 @@ export default function MainRepairingHistory() {
                     </td>
                     <td className="px-4 py-3 text-sm text-foreground">
                       {repair.machine_name || "-"}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-foreground">
+                      {repair.machine_type || "-"}
                     </td>
                     <td className="px-4 py-3 text-sm text-foreground max-w-xs truncate">
                       {repair.work_done || "-"}
@@ -408,7 +416,12 @@ export default function MainRepairingHistory() {
                 <div>
                   <p className="text-sm text-muted-foreground">Machine</p>
                   <p className="font-medium text-foreground">
-                    {selectedRepair.machine_name || "-"}
+                    {selectedRepair.machine_name || "-"}{" "}
+                    {selectedRepair.machine_type && (
+                      <span className="text-xs font-normal text-muted-foreground">
+                        ({selectedRepair.machine_type})
+                      </span>
+                    )}
                   </p>
                 </div>
                 <div>
