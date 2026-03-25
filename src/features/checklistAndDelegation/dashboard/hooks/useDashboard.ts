@@ -44,6 +44,9 @@ export function useDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   const [dashboardStaffFilter, setDashboardStaffFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
+  const [repairActiveTab, setRepairActiveTab] = useState<"repairing" | "amc">(
+    "repairing",
+  );
 
   const [dateRange, setDateRange] = useState<DateRange>({
     startDate: "",
@@ -244,6 +247,7 @@ export function useDashboard() {
     filteredTasks,
     staffTaskSummary: (staffTaskSummary as StaffTaskData[]) || [],
     isStaffSummaryLoading,
+    repairActiveTab,
 
     // Actions
     setDashboardType,
@@ -254,6 +258,7 @@ export function useDashboard() {
     setActiveTab,
     setDashboardStaffFilter,
     setDepartmentFilter,
+    setRepairActiveTab,
     handleDateRangeChange,
   };
 }

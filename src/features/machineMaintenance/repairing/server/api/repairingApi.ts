@@ -516,6 +516,33 @@ export const createRepairRequest = async (
   }
 };
 
+
+// ============ Delete Repair ============
+
+/**
+ * Delete repair record by task_id
+ */
+export const deleteRepair = async (
+  taskId: number,
+): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from("machine_repair")
+      .delete()
+      .eq("task_id", taskId);
+
+    if (error) {
+      console.error("Error deleting repair:", error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error from Supabase:", error);
+    return false;
+  }
+};
+
 // ============ Process Repair (Admin) ============
 
 /**

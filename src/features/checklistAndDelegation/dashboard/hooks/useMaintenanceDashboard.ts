@@ -9,6 +9,7 @@ import {
   useMaintenanceOverdueQuery,
   useMaintenanceUpcomingQuery,
   useUpdateMaintenanceTask,
+  useDeleteMaintenanceTasks,
 } from "../server/tanstackQuery/useRepairDashboardQuery";
 import { useUploadMaintenanceImage } from "../server/tanstackQuery/useMaintenanceUpload";
 import type { MachineMaintenanceTask } from "../server/api/repairDashboardApi";
@@ -127,6 +128,7 @@ export function useMaintenanceDashboard(
   } = useMaintenanceDataQuery();
 
   const updateTaskMutation = useUpdateMaintenanceTask();
+  const deleteTaskMutation = useDeleteMaintenanceTasks();
   const uploadImageMutation = useUploadMaintenanceImage();
 
   // ---- Loading & Error (based on active tab) ----
@@ -361,6 +363,7 @@ export function useMaintenanceDashboard(
 
     // Mutations
     updateTaskMutation,
+    deleteTaskMutation,
     uploadImageMutation,
 
     // Filter options

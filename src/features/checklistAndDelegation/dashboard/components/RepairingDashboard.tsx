@@ -572,7 +572,7 @@ export default function RepairingDashboard() {
               {filteredData.length > 0 ? (
                 filteredData.slice(0, 50).map((row) => (
                   <tr
-                    key={row.id}
+                    key={row.task_id}
                     className="transition-colors hover:bg-gray-50 dark:hover:bg-neutral-700/50"
                   >
                     <td className="px-5 py-4 text-sm font-medium text-gray-900 dark:text-white align-middle whitespace-nowrap">
@@ -675,7 +675,7 @@ export default function RepairingDashboard() {
           {filteredData.length > 0 ? (
             filteredData.slice(0, 30).map((row) => (
               <div
-                key={row.id}
+                key={row.task_id}
                 className="p-4 border border-gray-200 dark:border-neutral-700 rounded-xl bg-gray-50 dark:bg-neutral-700/50"
               >
                 <div className="flex items-start justify-between mb-3">

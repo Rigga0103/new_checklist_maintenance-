@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  Trash2,
 } from "lucide-react";
 import {
   BarChart,
@@ -91,6 +92,7 @@ export default function MaintenanceDashboard() {
     dashboardTasks,
     dashboardView,
     setDashboardView,
+    deleteTaskMutation,
   } = useMaintenanceDashboard();
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -168,6 +170,14 @@ export default function MaintenanceDashboard() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+  const handleDeleteTask = async (taskId: number) => {
+    if (!window.confirm("Are you sure you want to delete this task?")) return;
+    try {
+      await deleteTaskMutation.mutateAsync([taskId]);
+    } catch (error) {
+      console.error("Delete failed", error);
+    }
   };
 
   if (maintenanceLoading) {
@@ -401,13 +411,16 @@ export default function MaintenanceDashboard() {
                   <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground dark:text-gray-300 uppercase tracking-wider">
                     Status
                   </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground dark:text-gray-300 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-neutral-700">
                 {paginatedTasks.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={6}
+                      colSpan={7}
                       className="px-4 py-8 text-center text-muted-foreground dark:text-muted-foreground"
                     >
                       No tasks found
@@ -459,6 +472,14 @@ export default function MaintenanceDashboard() {
                               ? "Overdue"
                               : "Pending"}
                         </span>
+                      </td>
+                      <td className="px-4 py-4 text-right">
+                        <button
+                          onClick={() => handleDeleteTask(task.task_id)}
+                          className="p-1.5 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </td>
                     </tr>
                   ))

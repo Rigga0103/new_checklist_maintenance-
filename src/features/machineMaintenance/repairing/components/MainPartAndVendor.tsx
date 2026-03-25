@@ -13,6 +13,7 @@ import {
   X,
   Filter,
   FileText,
+  Trash2
 } from "lucide-react";
 import Image from "next/image";
 import {
@@ -22,6 +23,9 @@ import {
 import type { MachineRepair } from "../../types/types";
 import { useRBAC } from "@/hooks/useRBAC";
 import { useMachineTypesQuery } from "../server/tanstackQuery/useMachineTypes";
+import { deleteRepair } from "../server/api/repairingApi";
+import { toast } from "sonner";
+
 
 export default function MainPartAndVendor() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -71,6 +75,37 @@ export default function MainPartAndVendor() {
     setSearchTerm("");
     setPage(1);
   };
+
+  const handleDelete = async (id: number) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this record?",
+    );
+    if (!confirmDelete) return;
+
+    try {
+      toast.loading("Deleting...", { id: "delete" });
+
+      const success = await deleteRepair(id);
+
+      if (!success) {
+        toast.error("Failed to delete record", { id: "delete" });
+        return;
+      }
+
+      toast.success("Record deleted successfully", { id: "delete" });
+
+      // ✅ Best way (React Query)
+      // refetch();
+
+      // OR fallback
+      window.location.reload();
+    } catch (error) {
+      console.error(error);
+      toast.error("Something went wrong", { id: "delete" });
+    }
+  };
+
+
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "-";
@@ -169,8 +204,8 @@ export default function MainPartAndVendor() {
           <button
             onClick={() => setIsFilterOpen(!isFilterOpen)}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border rounded-lg transition-colors ${isFilterOpen || vendorFilter || partFilter
-                ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800"
-                : "bg-white text-foreground border-neutral-300 hover:bg-neutral-50 dark:bg-neutral-800 dark:border-neutral-600 dark:hover:bg-neutral-700"
+              ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800"
+              : "bg-white text-foreground border-neutral-300 hover:bg-neutral-50 dark:bg-neutral-800 dark:border-neutral-600 dark:hover:bg-neutral-700"
               }`}
           >
             <Filter className="w-4 h-4" />
@@ -356,7 +391,7 @@ export default function MainPartAndVendor() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                     Completed
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                  <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">
                     Action
                   </th>
                 </tr>
@@ -392,13 +427,25 @@ export default function MainPartAndVendor() {
                       {formatDate(repair.actual_date)}
                     </td>
                     <td className="px-4 py-3">
-                      <button
-                        onClick={() => setSelectedRepair(repair)}
-                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-foreground bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 rounded-lg transition-colors"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        Details
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {/* Details Button */}
+                        <button
+                          onClick={() => setSelectedRepair(repair)}
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-foreground bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 rounded-lg transition-colors"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          Details
+                        </button>
+
+                        {/* Delete Button */}
+                        <button
+                          onClick={() => handleDelete(repair.task_id)}
+                          className="flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-red-600 hover:text-red-700 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

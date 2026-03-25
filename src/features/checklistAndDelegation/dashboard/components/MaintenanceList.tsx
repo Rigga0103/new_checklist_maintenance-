@@ -15,6 +15,7 @@ import {
   Users,
   User,
   Download,
+  Trash2,
 } from "lucide-react";
 import { useMaintenanceDashboard } from "../hooks/useMaintenanceDashboard";
 import { toast } from "sonner";
@@ -68,6 +69,7 @@ export default function MaintenanceList({
     hasActiveFilters,
     resetFilters,
     updateTaskMutation,
+    deleteTaskMutation,
     uploadImageMutation,
   } = useMaintenanceDashboard({ role: effectiveRole, username });
 
@@ -413,6 +415,17 @@ export default function MaintenanceList({
     } catch (error) {
       console.error("Submit failed", error);
       toast.error("Failed to update tasks");
+    }
+  };
+
+  const handleDeleteTask = async (taskId: number) => {
+    if (!window.confirm("Are you sure you want to delete this task?")) return;
+    try {
+      await deleteTaskMutation.mutateAsync([taskId]);
+      toast.success("Task deleted successfully");
+    } catch (error) {
+      console.error("Delete failed", error);
+      toast.error("Failed to delete task");
     }
   };
 
@@ -811,6 +824,9 @@ export default function MaintenanceList({
                       </th>
                     </>
                   )}
+                  <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground uppercase">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-neutral-800 divide-y divide-gray-100 dark:divide-neutral-700">
@@ -1052,6 +1068,15 @@ export default function MaintenanceList({
                         </td>
                       </>
                     )}
+                    <td className="px-3 py-3 text-right whitespace-nowrap">
+                      <button
+                        onClick={() => handleDeleteTask(task.task_id)}
+                        className="p-1 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded transition-colors"
+                        title="Delete Task"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

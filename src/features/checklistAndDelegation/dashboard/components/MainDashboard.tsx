@@ -11,12 +11,14 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
+  ClockCheck
 } from "lucide-react";
 import { useDashboard } from "../hooks/useDashboard";
 import { StatCardSkeleton, StaffTableSkeleton } from "./DashboardSkeleton";
 import { useState } from "react";
 import { Task } from "../types/types";
 import RepairingDashboard from "./RepairingDashboard";
+import AMC from "@/features/machineMaintenance/repairing/components/AMC";
 
 const DASHBOARD_ITEMS_PER_PAGE = 20;
 
@@ -37,6 +39,7 @@ export default function MainDashboard() {
     taskView,
     staffTaskSummary,
     isStaffSummaryLoading,
+    repairActiveTab,
     setDashboardType,
     setFilterStatus,
     setSearchQuery,
@@ -44,6 +47,7 @@ export default function MainDashboard() {
     setDepartmentFilter,
     handleDateRangeChange,
     setTaskView,
+    setRepairActiveTab,
   } = useDashboard();
 
   const [showDateRangePicker, setShowDateRangePicker] = useState(false);
@@ -137,26 +141,24 @@ export default function MainDashboard() {
                     </td>
                     <td className="px-4 py-4 text-center">
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          staff.completion_score >= 80
-                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                            : staff.completion_score >= 50
-                              ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
-                              : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                        }`}
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${staff.completion_score >= 80
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                          : staff.completion_score >= 50
+                            ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                            : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                          }`}
                       >
                         {staff.completion_score}%
                       </span>
                     </td>
                     <td className="px-4 py-4 text-center">
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          staff.ontime_score >= 80
-                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                            : staff.ontime_score >= 50
-                              ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
-                              : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                        }`}
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${staff.ontime_score >= 80
+                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                          : staff.ontime_score >= 50
+                            ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                            : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                          }`}
                       >
                         {staff.ontime_score}%
                       </span>
@@ -275,13 +277,12 @@ export default function MainDashboard() {
                     </td>
                     <td className="px-4 py-4">
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          task.status === "completed"
-                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                            : task.status === "overdue"
-                              ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                              : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
-                        }`}
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${task.status === "completed"
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                          : task.status === "overdue"
+                            ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                            : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                          }`}
                       >
                         {task.status.charAt(0).toUpperCase() +
                           task.status.slice(1)}
@@ -419,31 +420,28 @@ export default function MainDashboard() {
           <div className="flex gap-1 bg-gray-100 dark:bg-neutral-800 p-1 rounded-lg">
             <button
               onClick={() => setDashboardType("checklist")}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                dashboardType === "checklist"
-                  ? "bg-white dark:bg-neutral-700 text-blue-600 dark:text-white shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${dashboardType === "checklist"
+                ? "bg-white dark:bg-neutral-700 text-blue-600 dark:text-white shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+                }`}
             >
               Checklist
             </button>
             <button
               onClick={() => setDashboardType("delegation")}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                dashboardType === "delegation"
-                  ? "bg-white dark:bg-neutral-700 text-blue-600 dark:text-white shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${dashboardType === "delegation"
+                ? "bg-white dark:bg-neutral-700 text-blue-600 dark:text-white shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+                }`}
             >
               Delegation
             </button>
             <button
               onClick={() => setDashboardType("repair")}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                dashboardType === "repair"
-                  ? "bg-white dark:bg-neutral-700 text-orange-600 dark:text-white shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${dashboardType === "repair"
+                ? "bg-white dark:bg-neutral-700 text-orange-600 dark:text-white shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+                }`}
             >
               Repair
             </button>
@@ -451,8 +449,35 @@ export default function MainDashboard() {
         </div>
       </div>
 
+      {dashboardType === "repair" && (
+        <div className="flex gap-1 bg-gray-100 dark:bg-neutral-800 p-1 rounded-lg w-fit">
+          <button
+            onClick={() => setRepairActiveTab("repairing")}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${repairActiveTab === "repairing"
+              ? "bg-white dark:bg-neutral-700 text-orange-600 dark:text-white shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+              }`}
+          >
+            Repairing
+          </button>
+          <button
+            onClick={() => setRepairActiveTab("amc")}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${repairActiveTab === "amc"
+              ? "bg-white dark:bg-neutral-700 text-orange-600 dark:text-white shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+              }`}
+          >
+            AMC
+          </button>
+        </div>
+      )}
+
       {dashboardType === "repair" ? (
-        <RepairingDashboard />
+        repairActiveTab === "repairing" ? (
+          <RepairingDashboard />
+        ) : (
+          <AMC />
+        )
       ) : (
         <>
           {/* Dashboard Stats & Completion Rate */}
@@ -735,11 +760,10 @@ export default function MainDashboard() {
           {!dateRange.filtered && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700 p-1.5 flex gap-1">
               <button
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  taskView === "recent"
-                    ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 shadow-sm"
-                    : "text-muted-foreground hover:bg-gray-50 dark:hover:bg-neutral-700 hover:text-foreground"
-                }`}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${taskView === "recent"
+                  ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 shadow-sm"
+                  : "text-muted-foreground hover:bg-gray-50 dark:hover:bg-neutral-700 hover:text-foreground"
+                  }`}
                 onClick={() => {
                   setTaskView("recent");
                   setTaskPage(1);
@@ -749,11 +773,10 @@ export default function MainDashboard() {
                 Recent & Today
               </button>
               <button
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  taskView === "upcoming"
-                    ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 shadow-sm"
-                    : "text-muted-foreground hover:bg-gray-50 dark:hover:bg-neutral-700 hover:text-foreground"
-                }`}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${taskView === "upcoming"
+                  ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 shadow-sm"
+                  : "text-muted-foreground hover:bg-gray-50 dark:hover:bg-neutral-700 hover:text-foreground"
+                  }`}
                 onClick={() => {
                   setTaskView("upcoming");
                   setTaskPage(1);
@@ -763,11 +786,10 @@ export default function MainDashboard() {
                 Upcoming
               </button>
               <button
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  taskView === "overdue"
-                    ? "bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 shadow-sm"
-                    : "text-muted-foreground hover:bg-gray-50 dark:hover:bg-neutral-700 hover:text-foreground"
-                }`}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${taskView === "overdue"
+                  ? "bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 shadow-sm"
+                  : "text-muted-foreground hover:bg-gray-50 dark:hover:bg-neutral-700 hover:text-foreground"
+                  }`}
                 onClick={() => {
                   setTaskView("overdue");
                   setTaskPage(1);

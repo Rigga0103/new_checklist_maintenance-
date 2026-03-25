@@ -31,6 +31,7 @@ import type {
 } from "../server/api/repairDashboardApi";
 import { useUsers } from "../../settings/server/tanstackQuery/useSettings";
 import { useMachinesQuery } from "../../../machineMaintenance/machines/server/tanstackQuery/useMachineQueries";
+import { MainRepairRequestForm } from "@/features/machineMaintenance";
 
 const PAGE_SIZE = 50;
 
@@ -102,7 +103,11 @@ export default function MainEditMachine() {
     taskId?: number;
     count?: number;
   } | null>(null);
+
+  // Modal State - Modified to use the new form
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isSubmittingForm, setIsSubmittingForm] = useState(false);
+
   const [maintenanceAddForm, setMaintenanceAddForm] = useState<Partial<MachineMaintenanceTask>>({
     machine_name: "",
     machine_type: "",
@@ -542,26 +547,19 @@ export default function MainEditMachine() {
     }
   };
 
-  const handleAddRepairSubmit = async () => {
-    try {
-      await createRepairMutation.mutateAsync(repairAddForm);
-      setIsAddModalOpen(false);
-      setRepairAddForm({
-        machine_name: "",
-        machine_type: "",
-        issue_detail: "",
-        assigned_to: "",
-        vendor_name: "",
-        part_replaced: "",
-        warranty: "",
-        remarks: "",
-        task_start_date: new Date().toISOString().split("T")[0],
-        status: "Pending",
-      });
-      toast.success("Repair task added successfully");
-    } catch {
-      toast.error("Failed to add repair task");
-    }
+  // Modified: Handle successful form submission from MainRepairRequestForm
+  const handleRepairFormSuccess = () => {
+    setIsAddModalOpen(false);
+    setIsSubmittingForm(false);
+    // Refresh the table data by resetting page to 0
+    setRepairPage(0);
+    toast.success("Repair request submitted successfully");
+  };
+
+  // Modified: Handle form submission error
+  const handleRepairFormError = () => {
+    setIsSubmittingForm(false);
+    toast.error("Failed to submit repair request");
   };
 
   // ============ Render ============
@@ -1417,13 +1415,13 @@ export default function MainEditMachine() {
         </div>
       )}
 
-      {/* Add Modal */}
+      {/* Add Modal - Modified to use MainRepairRequestForm for repairing tab */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-xl w-full max-w-2xl p-6 overflow-y-auto max-h-[90vh]">
-            <div className="flex items-center justify-between mb-6">
+          <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white dark:bg-neutral-800 z-10 flex items-center justify-between p-6 border-b border-gray-200 dark:border-neutral-700">
               <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                Add New {activeTab === "maintenance" ? "Maintenance" : "Repair"} Task
+                {activeTab === "maintenance" ? "Add New Maintenance Task" : "New Repair Request"}
               </h3>
               <button
                 onClick={() => setIsAddModalOpen(false)}
@@ -1433,9 +1431,9 @@ export default function MainEditMachine() {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-6">
               {activeTab === "maintenance" ? (
-                <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-sm font-medium">Machine Name</label>
                     <select
@@ -1515,119 +1513,32 @@ export default function MainEditMachine() {
                       <option value="no">No</option>
                     </select>
                   </div>
-                </>
+                </div>
               ) : (
-                <>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium">Machine Name</label>
-                    <select
-                      className={inputClass}
-                      value={repairAddForm.machine_name}
-                      onChange={(e) => setRepairAddForm({ ...repairAddForm, machine_name: e.target.value })}
-                    >
-                      <option value="">Select Machine</option>
-                      {uniqueMachines.map((m) => (
-                        <option key={m} value={m}>{m}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium">Machine Type</label>
-                    <select
-                      className={inputClass}
-                      value={repairAddForm.machine_type}
-                      onChange={(e) => setRepairAddForm({ ...repairAddForm, machine_type: e.target.value })}
-                    >
-                      <option value="">Select Type</option>
-                      {uniqueTypes.map((t) => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-1.5 md:col-span-2">
-                    <label className="text-sm font-medium">Issue Detail</label>
-                    <textarea
-                      className={inputClass}
-                      rows={3}
-                      value={repairAddForm.issue_detail}
-                      onChange={(e) => setRepairAddForm({ ...repairAddForm, issue_detail: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium">Assigned To</label>
-                    <input
-                      type="text"
-                      className={inputClass}
-                      value={repairAddForm.assigned_to}
-                      onChange={(e) => setRepairAddForm({ ...repairAddForm, assigned_to: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium">Vendor</label>
-                    <input
-                      type="text"
-                      className={inputClass}
-                      value={repairAddForm.vendor_name}
-                      onChange={(e) => setRepairAddForm({ ...repairAddForm, vendor_name: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium">Part Replaced</label>
-                    <input
-                      type="text"
-                      className={inputClass}
-                      value={repairAddForm.part_replaced}
-                      onChange={(e) => setRepairAddForm({ ...repairAddForm, part_replaced: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium">Warranty</label>
-                    <input
-                      type="text"
-                      className={inputClass}
-                      value={repairAddForm.warranty}
-                      onChange={(e) => setRepairAddForm({ ...repairAddForm, warranty: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium">Start Date</label>
-                    <input
-                      type="date"
-                      className={inputClass}
-                      value={repairAddForm.task_start_date}
-                      onChange={(e) => setRepairAddForm({ ...repairAddForm, task_start_date: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-1.5 md:col-span-2">
-                    <label className="text-sm font-medium">Remarks</label>
-                    <input
-                      type="text"
-                      className={inputClass}
-                      value={repairAddForm.remarks}
-                      onChange={(e) => setRepairAddForm({ ...repairAddForm, remarks: e.target.value })}
-                    />
-                  </div>
-                </>
+                // Use MainRepairRequestForm for repairing tab
+                <MainRepairRequestForm isPublic={false} />
               )}
             </div>
 
-            <div className="mt-8 flex justify-end gap-3">
+            <div className="sticky bottom-0 bg-white dark:bg-neutral-800 border-t border-gray-200 dark:border-neutral-700 p-6 flex justify-end gap-3">
               <button
                 onClick={() => setIsAddModalOpen(false)}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:bg-neutral-700 dark:text-gray-300 dark:hover:bg-neutral-600 rounded-lg"
               >
                 Cancel
               </button>
-              <button
-                onClick={activeTab === "maintenance" ? handleAddMaintenanceSubmit : handleAddRepairSubmit}
-                disabled={createMaintenanceMutation.isPending || createRepairMutation.isPending}
-                className="flex items-center gap-2 px-6 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-all disabled:opacity-50"
-              >
-                {(createMaintenanceMutation.isPending || createRepairMutation.isPending) && (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                )}
-                Save Task
-              </button>
+              {activeTab === "maintenance" && (
+                <button
+                  onClick={handleAddMaintenanceSubmit}
+                  disabled={createMaintenanceMutation.isPending}
+                  className="flex items-center gap-2 px-6 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-all disabled:opacity-50"
+                >
+                  {createMaintenanceMutation.isPending && (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  )}
+                  Save Task
+                </button>
+              )}
             </div>
           </div>
         </div>

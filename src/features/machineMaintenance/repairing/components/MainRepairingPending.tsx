@@ -23,6 +23,8 @@ import {
 import type { MachineRepair, RepairProcessFormData } from "../../types/types";
 import { toast } from "sonner";
 import { useRBAC } from "@/hooks/useRBAC";
+import { Trash2 } from "lucide-react";
+import { deleteRepair } from "../server/api/repairingApi"; // adjust path if needed
 
 // Predefined Work Done options (English / Hindi)
 const WORK_DONE_OPTIONS: { value: string; label: string }[] = [
@@ -117,6 +119,7 @@ export default function MainRepairingPending() {
     setSearchTerm(term);
     setPage(1);
   };
+
 
   const openProcessModal = (repair: MachineRepair) => {
     setSelectedRepair(repair);
@@ -293,21 +296,19 @@ export default function MainRepairingPending() {
           <div className="flex items-center gap-1 bg-gray-100 dark:bg-neutral-700 rounded-lg p-1">
             <button
               onClick={() => setViewMyTasksOnly(false)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                !viewMyTasksOnly
-                  ? "bg-white dark:bg-neutral-600 text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${!viewMyTasksOnly
+                ? "bg-white dark:bg-neutral-600 text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+                }`}
             >
               ✨ All Tasks
             </button>
             <button
               onClick={() => setViewMyTasksOnly(true)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                viewMyTasksOnly
-                  ? "bg-white dark:bg-neutral-600 text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMyTasksOnly
+                ? "bg-white dark:bg-neutral-600 text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+                }`}
             >
               👤 My Tasks
             </button>
@@ -336,11 +337,10 @@ export default function MainRepairingPending() {
             setActiveTab("pending");
             setPage(1);
           }}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === "pending"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "pending"
+            ? "border-primary text-primary"
+            : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
         >
           Pending
         </button>
@@ -349,11 +349,10 @@ export default function MainRepairingPending() {
             setActiveTab("overdue");
             setPage(1);
           }}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === "overdue"
-              ? "border-red-500 text-red-600 dark:text-red-400"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "overdue"
+            ? "border-red-500 text-red-600 dark:text-red-400"
+            : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
         >
           All Overdue
         </button>
@@ -769,19 +768,19 @@ export default function MainRepairingPending() {
                     {!WORK_DONE_OPTIONS.some(
                       (opt) => opt.value === processForm.workDone,
                     ) && (
-                      <input
-                        type="text"
-                        value={processForm.workDone}
-                        onChange={(e) =>
-                          setProcessForm((prev) => ({
-                            ...prev,
-                            workDone: e.target.value,
-                          }))
-                        }
-                        placeholder="Describe the work performed..."
-                        className="mt-2 w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground"
-                      />
-                    )}
+                        <input
+                          type="text"
+                          value={processForm.workDone}
+                          onChange={(e) =>
+                            setProcessForm((prev) => ({
+                              ...prev,
+                              workDone: e.target.value,
+                            }))
+                          }
+                          placeholder="Describe the work performed..."
+                          className="mt-2 w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground"
+                        />
+                      )}
                   </div>
 
                   {/* Vendor & Cost */}

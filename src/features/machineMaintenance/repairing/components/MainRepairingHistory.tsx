@@ -12,6 +12,7 @@ import {
   FileText,
   IndianRupee,
   X,
+  Trash2
 } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
@@ -19,6 +20,7 @@ import { useRepairHistoryQuery } from "../server/tanstackQuery/useRepairingQueri
 import { fetchAllRepairHistory } from "../server/api/repairingApi";
 import type { MachineRepair } from "../../types/types";
 import { useRBAC } from "@/hooks/useRBAC";
+import { deleteRepair } from "../server/api/repairingApi";
 
 export default function MainRepairingHistory() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -30,6 +32,35 @@ export default function MainRepairingHistory() {
   );
 
   const limit = 20;
+
+  const handleDelete = async (id: number) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this record?",
+    );
+    if (!confirmDelete) return;
+
+    try {
+      toast.loading("Deleting...", { id: "delete" });
+
+      const success = await deleteRepair(id);
+
+      if (!success) {
+        toast.error("Failed to delete record", { id: "delete" });
+        return;
+      }
+
+      toast.success("Record deleted successfully", { id: "delete" });
+
+      // ✅ Best way (React Query)
+      // refetch();
+
+      // OR fallback
+      window.location.reload();
+    } catch (error) {
+      console.error(error);
+      toast.error("Something went wrong", { id: "delete" });
+    }
+  };
 
   const role =
     typeof window !== "undefined" ? localStorage.getItem("role") : null;
@@ -350,13 +381,25 @@ export default function MainRepairingHistory() {
                       {formatDate(repair.actual_date)}
                     </td>
                     <td className="px-4 py-3">
-                      <button
-                        onClick={() => setSelectedRepair(repair)}
-                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-foreground bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 rounded-lg transition-colors"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        View
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {/* View Button */}
+                        <button
+                          onClick={() => setSelectedRepair(repair)}
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-foreground bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 rounded-lg transition-colors"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          View
+                        </button>
+
+                        {/* Delete Button */}
+                        <button
+                          onClick={() => handleDelete(repair.task_id)}
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-200 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
