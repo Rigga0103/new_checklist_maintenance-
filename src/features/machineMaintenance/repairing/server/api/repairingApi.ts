@@ -500,6 +500,7 @@ export const createRepairRequest = async (
         issue_detail: formData.issueDetail,
         motor_name: formData.motorName || null,
         status: "pending",
+        task_start_date: formData.task_start_date || new Date().toISOString().split("T")[0],
       })
       .select()
       .single();
@@ -515,7 +516,6 @@ export const createRepairRequest = async (
     return null;
   }
 };
-
 
 // ============ Delete Repair ============
 

@@ -63,6 +63,7 @@ export interface RepairRequestFormData {
   machineName: string;
   motorName?: string;
   issueDetail: string;
+  task_start_date?: string;
 }
 
 export interface RepairProcessFormData {

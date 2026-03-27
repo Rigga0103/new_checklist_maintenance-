@@ -215,6 +215,19 @@ export default function MainRepairRequestForm({
               />
             </div>
 
+            {/* Row 4: Task Start Date */}
+            <div className="mb-3">
+              <label className={labelClass}>Task Start Date *</label>
+              <input
+                type="date"
+                name="task_start_date"
+                value={formData.task_start_date}
+                onChange={handleChange}
+                required
+                className={inputClass}
+              />
+            </div>
+
             {/* Action Buttons */}
             <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-neutral-700">
               <button

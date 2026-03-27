@@ -113,10 +113,12 @@ export default function MainEditMachine() {
     machine_type: "",
     task_description: "",
     frequency: "daily",
-    assigned_to: "",
     doer_name: "",
     enable_reminder: "no",
     require_attachment: "no",
+    status: "Pending",
+    department: "Maintenance",
+    task_start_date: new Date().toISOString().split("T")[0],
   });
   const [repairAddForm, setRepairAddForm] = useState<Partial<MachineRepairTask>>({
     machine_name: "",
@@ -463,6 +465,7 @@ export default function MainEditMachine() {
           work_done: repairEditForm.work_done,
           warranty: repairEditForm.warranty,
           remarks: repairEditForm.remarks,
+          task_start_date: repairEditForm.task_start_date,
         },
       });
       setEditingRepairId(null);
@@ -528,7 +531,6 @@ export default function MainEditMachine() {
     try {
       await createMaintenanceMutation.mutateAsync({
         ...maintenanceAddForm,
-        task_start_date: new Date().toISOString().split("T")[0],
       });
       setIsAddModalOpen(false);
       setMaintenanceAddForm({
@@ -536,14 +538,17 @@ export default function MainEditMachine() {
         machine_type: "",
         task_description: "",
         frequency: "daily",
-        assigned_to: "",
         doer_name: "",
         enable_reminder: "no",
         require_attachment: "no",
+        status: "Pending",
+        department: "Maintenance",
+        task_start_date: new Date().toISOString().split("T")[0],
       });
       toast.success("Maintenance task added successfully");
-    } catch {
-      toast.error("Failed to add maintenance task");
+    } catch (error: any) {
+      console.error("Mutation failed:", error);
+      toast.error("Failed to add maintenance task: " + (error?.message || "Unknown error"));
     }
   };
 
@@ -1067,7 +1072,18 @@ export default function MainEditMachine() {
                 )}
               </td>
               <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap bg-yellow-50 dark:bg-yellow-900/10">
-                {formatDate(task.task_start_date)}
+                {isEditing ? (
+                  <input
+                    type="date"
+                    value={repairEditForm.task_start_date ? repairEditForm.task_start_date.split("T")[0] : ""}
+                    onChange={(e) =>
+                      handleRepairFieldChange("task_start_date", e.target.value)
+                    }
+                    className={inputClass}
+                  />
+                ) : (
+                  formatDate(task.task_start_date)
+                )}
               </td>
               <td className="px-3 py-3 text-sm whitespace-nowrap">
                 <span
@@ -1435,19 +1451,6 @@ export default function MainEditMachine() {
               {activeTab === "maintenance" ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-sm font-medium">Machine Name</label>
-                    <select
-                      className={inputClass}
-                      value={maintenanceAddForm.machine_name}
-                      onChange={(e) => setMaintenanceAddForm({ ...maintenanceAddForm, machine_name: e.target.value })}
-                    >
-                      <option value="">Select Machine</option>
-                      {uniqueMachines.map((m) => (
-                        <option key={m} value={m}>{m}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
                     <label className="text-sm font-medium">Machine Type</label>
                     <select
                       className={inputClass}
@@ -1460,6 +1463,20 @@ export default function MainEditMachine() {
                       ))}
                     </select>
                   </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">Machine Name</label>
+                    <select
+                      className={inputClass}
+                      value={maintenanceAddForm.machine_name}
+                      onChange={(e) => setMaintenanceAddForm({ ...maintenanceAddForm, machine_name: e.target.value })}
+                    >
+                      <option value="">Select Machine</option>
+                      {uniqueMachines.map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+
                   <div className="space-y-1.5 md:col-span-2">
                     <label className="text-sm font-medium">Task Description</label>
                     <textarea
@@ -1488,7 +1505,7 @@ export default function MainEditMachine() {
                       type="text"
                       className={inputClass}
                       value={maintenanceAddForm.doer_name}
-                      onChange={(e) => setMaintenanceAddForm({ ...maintenanceAddForm, doer_name: e.target.value, assigned_to: e.target.value })}
+                      onChange={(e) => setMaintenanceAddForm({ ...maintenanceAddForm, doer_name: e.target.value })}
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -1512,6 +1529,15 @@ export default function MainEditMachine() {
                       <option value="yes">Yes</option>
                       <option value="no">No</option>
                     </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">Task Start Date</label>
+                    <input
+                      type="date"
+                      className={inputClass}
+                      value={maintenanceAddForm.task_start_date || ""}
+                      onChange={(e) => setMaintenanceAddForm({ ...maintenanceAddForm, task_start_date: e.target.value })}
+                    />
                   </div>
                 </div>
               ) : (

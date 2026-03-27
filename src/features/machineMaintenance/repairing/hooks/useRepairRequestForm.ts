@@ -18,6 +18,7 @@ interface RepairRequestFormState {
   machineName: string;
   customMachine: string;
   issueDetail: string;
+  task_start_date: string;
 }
 
 const initialFormData: RepairRequestFormState = {
@@ -27,6 +28,7 @@ const initialFormData: RepairRequestFormState = {
   machineName: "",
   customMachine: "",
   issueDetail: "",
+  task_start_date: new Date().toISOString().split("T")[0],
 };
 
 const STATIC_USERS = [
@@ -140,6 +142,7 @@ export function useRepairRequestForm() {
           machineType: formData.machineType,
           machineName,
           issueDetail: formData.issueDetail,
+          task_start_date: formData.task_start_date,
         },
         {
           onSuccess: (result) => {

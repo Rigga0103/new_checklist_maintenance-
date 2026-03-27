@@ -158,8 +158,8 @@ export default function AMC() {
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-foreground tracking-tight">
-            AMC
+          <h1 className="text-4xl font-bold text-foreground tracking-tight">
+            Demo AMC data
           </h1>
           <p className="text-muted-foreground mt-1 flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-green-500" />
@@ -179,8 +179,8 @@ export default function AMC() {
             setSearchTerm("");
           }}
           className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all relative overflow-hidden ${activeTab === "vendor"
-              ? "bg-green-600 text-white shadow-md shadow-green-600/20"
-              : "text-muted-foreground hover:text-foreground hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50"
+            ? "bg-green-600 text-white shadow-md shadow-green-600/20"
+            : "text-muted-foreground hover:text-foreground hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50"
             }`}
         >
           <span className="relative z-10 flex items-center justify-center gap-2">
@@ -195,8 +195,8 @@ export default function AMC() {
             setSearchTerm("");
           }}
           className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all relative overflow-hidden ${activeTab === "machine"
-              ? "bg-green-600 text-white shadow-md shadow-green-600/20"
-              : "text-muted-foreground hover:text-foreground hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50"
+            ? "bg-green-600 text-white shadow-md shadow-green-600/20"
+            : "text-muted-foreground hover:text-foreground hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50"
             }`}
         >
           <span className="relative z-10 flex items-center justify-center gap-2">

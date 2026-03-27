@@ -103,12 +103,12 @@ const routes: Route[] = [
         showFor: ["admin"] as const,
         permissionResource: "settings",
       },
-      // {
-      //   href: "/repairing/amc",
-      //   label: "AMC",
-      //   icon: "Settings",
-      //   showFor: ["admin"] as const,
-      // },
+      {
+        href: "/repairing/amc",
+        label: "AMC",
+        icon: "Settings",
+        showFor: ["admin"] as const,
+      },
     ],
   },
   {
