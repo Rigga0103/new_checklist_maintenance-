@@ -106,6 +106,7 @@ export default function RepairingDashboard() {
     endDate,
     setEndDate,
     selectedMachines,
+    selectedMachineTypes,
     selectedStatus,
     setSelectedStatus,
     selectedAssignedTo,
@@ -118,8 +119,12 @@ export default function RepairingDashboard() {
     setSelectedPart,
     showMachineDropdown,
     setShowMachineDropdown,
+    showMachineTypeDropdown,
+    setShowMachineTypeDropdown,
     machineDropdownRef,
+    machineTypeDropdownRef,
     machinesList,
+    machineTypesList,
     statusList,
     assignedToList,
     vendorsList,
@@ -132,6 +137,7 @@ export default function RepairingDashboard() {
     monthlyTrendData,
     assignedToChartData,
     handleMachineSelection,
+    handleMachineTypeSelection,
     resetFilters,
   } = useRepairingDashboard();
 
@@ -270,7 +276,7 @@ export default function RepairingDashboard() {
           >
             <label className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
               <Wrench size={14} className="inline mr-1" />
-              Machine
+              Machine Name
             </label>
             <div
               onClick={() => setShowMachineDropdown(!showMachineDropdown)}
@@ -292,7 +298,6 @@ export default function RepairingDashboard() {
                     onClick={(e) => {
                       e.stopPropagation();
                       handleMachineSelection("");
-                      resetFilters();
                     }}
                     className="text-xs font-medium text-orange-600 hover:text-orange-700 dark:text-orange-400"
                   >
@@ -317,8 +322,70 @@ export default function RepairingDashboard() {
                       onChange={() => { }}
                       className="w-4 h-4 text-orange-600 border-gray-300 dark:border-neutral-600 rounded focus:ring-orange-500"
                     />
-                    <span className="text-sm text-gray-700 dark:text-gray-200 truncate">
+                    <span className="text-sm text-gray-700 dark:text-gray-200 truncate" title={machine}>
                       {machine}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Machine Type Multi-select */}
+          <div
+            ref={machineTypeDropdownRef}
+            className="flex flex-col min-w-50 relative"
+          >
+            <label className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+              <Filter size={14} className="inline mr-1" />
+              Machine Type
+            </label>
+            <div
+              onClick={() => setShowMachineTypeDropdown(!showMachineTypeDropdown)}
+              className="px-3 py-2 border border-gray-200 dark:border-neutral-600 rounded-lg cursor-pointer bg-white dark:bg-neutral-700 flex items-center justify-between min-h-10.5"
+            >
+              <span className="text-gray-700 dark:text-gray-200 truncate">
+                {selectedMachineTypes.length > 0
+                  ? `${selectedMachineTypes.length} selected`
+                  : "All Machine Types"}
+              </span>
+              <ChevronDown
+                className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform ${showMachineTypeDropdown ? "rotate-180" : ""}`}
+              />
+            </div>
+            {showMachineTypeDropdown && (
+              <div className="absolute z-20 w-full mt-1 overflow-y-auto bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-600 rounded-lg shadow-lg max-h-60 top-full">
+                <div className="sticky top-0 p-2 bg-white dark:bg-neutral-800 border-b border-gray-200 dark:border-neutral-700">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleMachineTypeSelection("");
+                    }}
+                    className="text-xs font-medium text-orange-600 hover:text-orange-700 dark:text-orange-400"
+                  >
+                    Clear Selection
+                  </button>
+                </div>
+                {machineTypesList.map((machineType) => (
+                  <div
+                    key={machineType}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleMachineTypeSelection(machineType);
+                    }}
+                    className={`px-3 py-2 cursor-pointer hover:bg-orange-50 dark:hover:bg-neutral-700 flex items-center gap-2 ${selectedMachineTypes.includes(machineType)
+                      ? "bg-orange-100 dark:bg-orange-900/20"
+                      : ""
+                      }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedMachineTypes.includes(machineType)}
+                      onChange={() => { }}
+                      className="w-4 h-4 text-orange-600 border-gray-300 dark:border-neutral-600 rounded focus:ring-orange-500"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-200 truncate" title={machineType}>
+                      {machineType}
                     </span>
                   </div>
                 ))}
@@ -447,28 +514,56 @@ export default function RepairingDashboard() {
           </button>
         </div>
 
-        {/* Selected Machine Tags */}
-        {selectedMachines.length > 0 && (
+        {/* Selected Filter Tags */}
+        {(selectedMachines.length > 0 || selectedMachineTypes.length > 0) && (
           <div className="flex flex-wrap gap-2 pt-3 mt-3 border-t border-gray-200 dark:border-neutral-700">
-            <span className="self-center text-xs text-muted-foreground">
-              Selected Machines:
-            </span>
-            {selectedMachines.map((machine) => (
-              <span
-                key={machine}
-                className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-900/30 rounded-full"
-              >
-                {machine.length > 20
-                  ? machine.substring(0, 20) + "..."
-                  : machine}
-                <button
-                  onClick={() => handleMachineSelection(machine)}
-                  className="hover:text-orange-900 dark:hover:text-orange-100"
-                >
-                  <X size={12} />
-                </button>
-              </span>
-            ))}
+            {selectedMachines.length > 0 && (
+              <>
+                <span className="self-center text-xs text-muted-foreground">
+                  Machines:
+                </span>
+                {selectedMachines.map((machine) => (
+                  <span
+                    key={machine}
+                    className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-900/30 rounded-full"
+                  >
+                    {machine.length > 20
+                      ? machine.substring(0, 20) + "..."
+                      : machine}
+                    <button
+                      onClick={() => handleMachineSelection(machine)}
+                      className="hover:text-orange-900 dark:hover:text-orange-100"
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                ))}
+              </>
+            )}
+
+            {selectedMachineTypes.length > 0 && (
+              <>
+                <span className="self-center ml-2 text-xs text-muted-foreground">
+                  Types:
+                </span>
+                {selectedMachineTypes.map((machineType) => (
+                  <span
+                    key={machineType}
+                    className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-900/30 rounded-full"
+                  >
+                    {machineType.length > 20
+                      ? machineType.substring(0, 20) + "..."
+                      : machineType}
+                    <button
+                      onClick={() => handleMachineTypeSelection(machineType)}
+                      className="hover:text-orange-900 dark:hover:text-orange-100"
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                ))}
+              </>
+            )}
           </div>
         )}
       </div>

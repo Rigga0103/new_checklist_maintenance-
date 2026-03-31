@@ -107,13 +107,16 @@ export function useRepairingDashboard() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [selectedMachines, setSelectedMachines] = useState<string[]>([]);
+  const [selectedMachineTypes, setSelectedMachineTypes] = useState<string[]>([]);
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [selectedAssignedTo, setSelectedAssignedTo] = useState("all");
   const [selectedMonth, setSelectedMonth] = useState("all");
   const [selectedVendor, setSelectedVendor] = useState("all");
   const [selectedPart, setSelectedPart] = useState("all");
   const [showMachineDropdown, setShowMachineDropdown] = useState(false);
+  const [showMachineTypeDropdown, setShowMachineTypeDropdown] = useState(false);
   const machineDropdownRef = useRef<HTMLDivElement>(null);
+  const machineTypeDropdownRef = useRef<HTMLDivElement>(null);
 
   // ---- Data Queries (TanStack Query) ----
   const {
@@ -132,6 +135,12 @@ export function useRepairingDashboard() {
       ) {
         setShowMachineDropdown(false);
       }
+      if (
+        machineTypeDropdownRef.current &&
+        !machineTypeDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowMachineTypeDropdown(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -142,6 +151,14 @@ export function useRepairingDashboard() {
     const set = new Set<string>();
     repairData.forEach((r) => {
       if (r.machine_name) set.add(r.machine_name);
+    });
+    return Array.from(set).sort();
+  }, [repairData]);
+
+  const machineTypesList = useMemo(() => {
+    const set = new Set<string>();
+    repairData.forEach((r) => {
+      if (r.machine_type) set.add(r.machine_type);
     });
     return Array.from(set).sort();
   }, [repairData]);
@@ -222,6 +239,11 @@ export function useRepairingDashboard() {
           ? selectedMachines.includes(item.machine_name || "")
           : true;
 
+      const matchesMachineType =
+        selectedMachineTypes.length > 0
+          ? selectedMachineTypes.includes(item.machine_type || "")
+          : true;
+
       const matchesStatus =
         selectedStatus !== "all" ? item.status === selectedStatus : true;
 
@@ -266,6 +288,7 @@ export function useRepairingDashboard() {
       return (
         matchesSearch &&
         matchesMachine &&
+        matchesMachineType &&
         matchesMonth &&
         matchesStatus &&
         matchesAssignedTo &&
@@ -278,6 +301,7 @@ export function useRepairingDashboard() {
     repairData,
     searchTerm,
     selectedMachines,
+    selectedMachineTypes,
     selectedStatus,
     selectedAssignedTo,
     selectedMonth,
@@ -388,6 +412,7 @@ export function useRepairingDashboard() {
   const hasActiveFilters = useMemo(() => {
     return (
       selectedMachines.length > 0 ||
+      selectedMachineTypes.length > 0 ||
       selectedStatus !== "all" ||
       selectedAssignedTo !== "all" ||
       selectedMonth !== "all" ||
@@ -399,6 +424,7 @@ export function useRepairingDashboard() {
     );
   }, [
     selectedMachines,
+    selectedMachineTypes,
     selectedStatus,
     selectedAssignedTo,
     selectedMonth,
@@ -411,6 +437,10 @@ export function useRepairingDashboard() {
 
   // ---- Handlers ----
   const handleMachineSelection = useCallback((machine: string) => {
+    if (!machine) {
+      setSelectedMachines([]);
+      return;
+    }
     setSelectedMachines((prev) =>
       prev.includes(machine)
         ? prev.filter((item) => item !== machine)
@@ -418,9 +448,22 @@ export function useRepairingDashboard() {
     );
   }, []);
 
+  const handleMachineTypeSelection = useCallback((machineType: string) => {
+    if (!machineType) {
+      setSelectedMachineTypes([]);
+      return;
+    }
+    setSelectedMachineTypes((prev) =>
+      prev.includes(machineType)
+        ? prev.filter((item) => item !== machineType)
+        : [...prev, machineType],
+    );
+  }, []);
+
   const resetFilters = useCallback(() => {
     setSearchTerm("");
     setSelectedMachines([]);
+    setSelectedMachineTypes([]);
     setSelectedStatus("all");
     setSelectedAssignedTo("all");
     setSelectedMonth("all");
@@ -429,6 +472,7 @@ export function useRepairingDashboard() {
     setStartDate("");
     setEndDate("");
     setShowMachineDropdown(false);
+    setShowMachineTypeDropdown(false);
   }, []);
 
   return {
@@ -453,6 +497,7 @@ export function useRepairingDashboard() {
     endDate,
     setEndDate,
     selectedMachines,
+    selectedMachineTypes,
     selectedStatus,
     setSelectedStatus,
     selectedAssignedTo,
@@ -465,10 +510,14 @@ export function useRepairingDashboard() {
     setSelectedPart,
     showMachineDropdown,
     setShowMachineDropdown,
+    showMachineTypeDropdown,
+    setShowMachineTypeDropdown,
     machineDropdownRef,
+    machineTypeDropdownRef,
 
     // Filter options
     machinesList,
+    machineTypesList,
     statusList,
     assignedToList,
     monthsList,
@@ -487,6 +536,7 @@ export function useRepairingDashboard() {
 
     // Actions
     handleMachineSelection,
+    handleMachineTypeSelection,
     resetFilters,
   };
 }
