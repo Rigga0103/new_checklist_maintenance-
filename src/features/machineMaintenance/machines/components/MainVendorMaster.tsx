@@ -55,6 +55,19 @@ export default function MainVendorMaster() {
 
   const { canWrite, canEdit, canDelete } = useRBAC("machines");
 
+  // Derive unique suggestions from all vendors
+  const getUniqueValues = (key: keyof Vendor) => {
+    return Array.from(new Set(vendors.map(v => v[key]).filter(Boolean))).sort();
+  };
+
+  const suggestions = {
+    vendorCodes: getUniqueValues("VENDOR CODE"),
+    vendorNames: getUniqueValues("Vendro Name"),
+    vendorTypes: getUniqueValues("Venodr Type"),
+    partsNames: getUniqueValues("Parts Name"),
+    workTypes: getUniqueValues("Work Type"),
+  };
+
   // Filter & Search
   const filteredVendors = vendors.filter((vendor) =>
     (vendor["VENDOR CODE"] || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -136,7 +149,7 @@ export default function MainVendorMaster() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 pt-0 space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -161,9 +174,9 @@ export default function MainVendorMaster() {
       <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-700 overflow-hidden">
 
 
-        <div className="overflow-x-auto">
+        <div className="max-h-[63vh] overflow-y-auto relative">
           <table className="w-full text-left">
-            <thead>
+            <thead className="sticky top-0 z-10 bg-black-50/90 backdrop-blur">
               <tr className="bg-neutral-50/50 dark:bg-neutral-900/50 border-b border-neutral-200 dark:border-neutral-700">
                 <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Vendor Code</th>
                 <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Vendor Name</th>
@@ -331,11 +344,17 @@ export default function MainVendorMaster() {
                   <label className="block text-xs text-muted-foreground mb-1">Vendor Code</label>
                   <input
                     type="text"
+                    list="vendor-codes"
                     value={formData["VENDOR CODE"]}
                     onChange={(e) => setFormData({ ...formData, "VENDOR CODE": e.target.value })}
-                    className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none transition-all text-sm"
+                    className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none transition-all text-sm uppercase"
                     placeholder="e.g., V-001, SUP-001"
                   />
+                  <datalist id="vendor-codes">
+                    {suggestions.vendorCodes.map((code, idx) => (
+                      <option key={idx} value={code as string} />
+                    ))}
+                  </datalist>
                 </div>
 
                 <div>
@@ -343,11 +362,17 @@ export default function MainVendorMaster() {
                   <input
                     type="text"
                     required
+                    list="vendor-names"
                     value={formData["Vendro Name"]}
                     onChange={(e) => setFormData({ ...formData, "Vendro Name": e.target.value })}
                     className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none transition-all text-sm"
                     placeholder="Enter company or vendor name"
                   />
+                  <datalist id="vendor-names">
+                    {suggestions.vendorNames.map((name, idx) => (
+                      <option key={idx} value={name as string} />
+                    ))}
+                  </datalist>
                 </div>
 
                 <div className="col-span-2">
@@ -365,33 +390,51 @@ export default function MainVendorMaster() {
                   <label className="block text-xs text-muted-foreground mb-1">Vendor Type</label>
                   <input
                     type="text"
+                    list="vendor-types"
                     value={formData["Venodr Type"]}
                     onChange={(e) => setFormData({ ...formData, "Venodr Type": e.target.value })}
                     className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none transition-all text-sm"
                     placeholder="e.g., Electrical, Mechanical, Hardware"
                   />
+                  <datalist id="vendor-types">
+                    {suggestions.vendorTypes.map((type, idx) => (
+                      <option key={idx} value={type as string} />
+                    ))}
+                  </datalist>
                 </div>
 
                 <div>
                   <label className="block text-xs text-muted-foreground mb-1">Parts / Products Supplied</label>
                   <input
                     type="text"
+                    list="parts-names"
                     value={formData["Parts Name"]}
                     onChange={(e) => setFormData({ ...formData, "Parts Name": e.target.value })}
                     className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none transition-all text-sm"
                     placeholder="Bearings, Motors, Tools, etc."
                   />
+                  <datalist id="parts-names">
+                    {suggestions.partsNames.map((part, idx) => (
+                      <option key={idx} value={part as string} />
+                    ))}
+                  </datalist>
                 </div>
 
                 <div>
                   <label className="block text-xs text-muted-foreground mb-1">Work / Service Type</label>
                   <input
                     type="text"
+                    list="work-types"
                     value={formData["Work Type"]}
                     onChange={(e) => setFormData({ ...formData, "Work Type": e.target.value })}
                     className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none transition-all text-sm"
                     placeholder="Repair, Maintenance, Supply, Installation"
                   />
+                  <datalist id="work-types">
+                    {suggestions.workTypes.map((work, idx) => (
+                      <option key={idx} value={work as string} />
+                    ))}
+                  </datalist>
                 </div>
 
                 <div>

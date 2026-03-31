@@ -106,7 +106,7 @@ const routes: Route[] = [
       {
         href: "/repairing/amc",
         label: "AMC",
-        icon: "Settings",
+        icon: "FileTask",
         showFor: ["admin"] as const,
       },
     ],

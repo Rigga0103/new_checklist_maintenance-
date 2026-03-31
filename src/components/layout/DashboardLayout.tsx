@@ -24,7 +24,8 @@ import {
   UserRound,
   Users,
   Wrench,
-  Zap
+  Zap,
+  ShieldCheck
 } from "lucide-react";
 import Link from "next/link";
 import { useDashboardLayout } from "./useDashboardLayout";
@@ -43,6 +44,7 @@ const iconMap: Record<string, LucideIcon> = {
   Calendar,
   Users,
   Package,
+  ShieldCheck
 };
 
 interface DashboardLayoutProps {

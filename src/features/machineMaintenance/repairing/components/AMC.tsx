@@ -77,7 +77,9 @@ export default function AMC() {
 
   // State for machine repair data
   const [repairs, setRepairs] = useState<MachineRepair[]>([]);
+  const [itemDetails, setItemDetails] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [vendorLoading, setVendorLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Fetch machine repair data when the machine tab is active or year changes
@@ -85,6 +87,8 @@ export default function AMC() {
     if (activeTab === "machine") {
       fetchRepairs();
       fetchTotalStats();
+    } else if (activeTab === "vendor") {
+      fetchItemDetails();
     }
     // Reset to first page when tab or year changes
     setCurrentPage(1);
@@ -125,6 +129,24 @@ export default function AMC() {
       setError(err.message || "Failed to load repair data");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchItemDetails = async () => {
+    setVendorLoading(true);
+    setError(null);
+    try {
+      const { data, error } = await supabase
+        .from("itemdetails")
+        .select("*");
+
+      if (error) throw error;
+      setItemDetails(data || []);
+    } catch (err: any) {
+      console.error("Error fetching item details:", err);
+      setError(err.message || "Failed to load vendor data");
+    } finally {
+      setVendorLoading(false);
     }
   };
 
@@ -214,6 +236,35 @@ export default function AMC() {
       .sort((a, b) => b.value - a.value);
   }, [activeTab, repairs]);
 
+  // Aggregate costs by Vendor (Item Details)
+  const vendorCostsAggregate = useMemo(() => {
+    if (activeTab !== "vendor" || itemDetails.length === 0) return [];
+
+    const costsMap: Record<string, number> = {};
+    itemDetails.forEach((item) => {
+      const name = (item["VENDOR NAME"] || "Unknown Vendor").trim();
+      const rateVal = parseFloat(String(item.RATE).replace(/[^0-9.]/g, "")) || 0;
+      costsMap[name] = (costsMap[name] || 0) + rateVal;
+    });
+
+    return Object.entries(costsMap)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [activeTab, itemDetails]);
+
+  const vendorChartData = useMemo(() => {
+    if (vendorCostsAggregate.length > 6) {
+      const top5 = vendorCostsAggregate.slice(0, 5);
+      const othersValue = vendorCostsAggregate.slice(5).reduce((sum, item) => sum + item.value, 0);
+      return [...top5, { name: "Others", value: othersValue }];
+    }
+    return vendorCostsAggregate;
+  }, [vendorCostsAggregate]);
+
+  const totalVendorCost = useMemo(() => {
+    return vendorCostsAggregate.reduce((sum, item) => sum + item.value, 0);
+  }, [vendorCostsAggregate]);
+
   // Colors for the pie chart
   const COLORS = [
     "#0ea5e9", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6",
@@ -250,13 +301,13 @@ export default function AMC() {
             setStatusFilter("all");
             setSearchTerm("");
           }}
-          className={`flex-1 py-3 px-10 text-sm font-medium rounded-md transition-all ${activeTab === "vendor"
+          className={`flex-1 py-4.5 px-4 text-xs font-bold rounded-md transition-all ${activeTab === "vendor"
             ? "bg-green-600 text-white shadow-sm"
             : "text-muted-foreground hover:text-foreground hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50"
             }`}
         >
           <span className="flex items-center justify-center gap-2">
-            <Building2 className="w-4 h-4" />
+            <Building2 className="w-3.5 h-3.5" />
             Vendor AMC
           </span>
         </button>
@@ -266,13 +317,13 @@ export default function AMC() {
             setStatusFilter("all");
             setSearchTerm("");
           }}
-          className={`flex-1 py-3 px-10 text-sm font-medium rounded-md transition-all ${activeTab === "machine"
+          className={`flex-1 py-1.5 px-4 text-xs font-bold rounded-md transition-all ${activeTab === "machine"
             ? "bg-green-600 text-white shadow-sm"
             : "text-muted-foreground hover:text-foreground hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50"
             }`}
         >
           <span className="flex items-center justify-center gap-2">
-            <Settings2 className="w-4 h-4" />
+            <Settings2 className="w-3.5 h-3.5" />
             Machine AMC
           </span>
         </button>
@@ -645,12 +696,152 @@ export default function AMC() {
           </div>
         </>
       ) : (
-        /* Simple Message for Vendor AMC */
-        <div className="flex flex-col items-center justify-center min-h-[400px] bg-white dark:bg-neutral-800 rounded-lg border border-neutral-200/60 dark:border-neutral-700/60 shadow-sm">
-          <Building2 className="w-20 h-20 text-muted-foreground mb-4 opacity-30" />
-          <h3 className="text-xl font-semibold text-foreground mb-2">Vendor AMC Module</h3>
-          <p className="text-muted-foreground text-sm">Coming soon...</p>
-        </div>
+        /* Vendor AMC Content */
+        <>
+          {/* Header Section for Vendor AMC */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 items-start mt-6">
+            <div className="lg:col-span-1">
+              <h1 className="text-2xl font-bold text-foreground tracking-tight">
+                Vendor Analysis
+              </h1>
+              <p className="text-muted-foreground flex items-center gap-2 text-xs mt-1">
+                <Building2 className="w-4 h-4 text-green-500" />
+                Aggregated expenditure per vendor
+              </p>
+            </div>
+
+            <div className="lg:col-span-3">
+              <div className="flex gap-3">
+                <div className="flex-1 bg-white dark:bg-neutral-800 p-3 rounded-lg border border-neutral-200/60 dark:border-neutral-700/60 shadow-sm border-l-2 border-l-green-500">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="p-1.5 bg-green-50 dark:bg-green-900/20 rounded-md">
+                      <IndianRupee className="w-4 h-4 text-green-600 dark:text-green-400" />
+                    </div>
+                    <span className="text-[10px] font-bold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/40 px-2 py-0.5 rounded uppercase font-bold text-[10px]">
+                      Total Vendor Expense
+                    </span>
+                  </div>
+                  <p className="text-xl font-bold truncate">
+                    {formatCurrency(totalVendorCost)}
+                  </p>
+                </div>
+
+                <div className="flex-1 bg-white dark:bg-neutral-800 p-3 rounded-lg border border-neutral-200/60 dark:border-neutral-700/60 shadow-sm">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="p-1.5 bg-indigo-50 dark:bg-indigo-900/20 rounded-md">
+                      <FileText className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    </div>
+                    <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/40 px-2 py-0.5 rounded uppercase font-bold text-[10px]">
+                      Unique Vendors
+                    </span>
+                  </div>
+                  <p className="text-xl font-bold truncate">
+                    {vendorCostsAggregate.length}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {vendorLoading ? (
+            <div className="flex justify-center items-center py-20">
+              <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+              {/* Vendor Cost Table */}
+              <div className="bg-white dark:bg-neutral-800 p-4 rounded-lg border border-neutral-200/60 dark:border-neutral-700/60 shadow-sm h-[340px] flex flex-col">
+                <h3 className="text-sm font-bold mb-3 flex items-center gap-2 text-foreground uppercase tracking-wider">
+                  <Building2 className="w-4 h-4 text-blue-500" />
+                  Costs per Vendor
+                </h3>
+                <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="sticky top-0 bg-white dark:bg-neutral-800 z-10">
+                      <tr className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold border-b border-neutral-100 dark:border-neutral-700">
+                        <th className="pb-2">Vendor Name</th>
+                        <th className="pb-2 text-right">Total Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
+                      {vendorCostsAggregate.length > 0 ? (
+                        vendorCostsAggregate.map((item, index) => (
+                          <tr key={item.name} className="group hover:bg-neutral-50/50 dark:hover:bg-neutral-700/30 transition-colors">
+                            <td className="py-2.5">
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="w-2 h-2 rounded-full"
+                                  style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                                />
+                                <span className="text-xs font-semibold text-foreground truncate max-w-[200px]">{item.name}</span>
+                              </div>
+                            </td>
+                            <td className="py-2.5 text-right">
+                              <span className="text-sm font-bold text-foreground">
+                                {formatCurrency(item.value)}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={2} className="py-12 text-center text-muted-foreground text-xs italic">
+                            No vendor data available
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Vendor Distribution Chart */}
+              <div className="bg-white dark:bg-neutral-800 p-4 rounded-lg border border-neutral-200/60 dark:border-neutral-700/60 shadow-sm h-[340px]">
+                <h3 className="text-sm font-bold mb-3 flex items-center gap-2 text-foreground uppercase tracking-wider">
+                  <PieIcon className="w-4 h-4 text-orange-500" />
+                  Vendor Distribution
+                </h3>
+                <div className="h-[260px] w-full">
+                  {vendorChartData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={vendorChartData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={90}
+                          paddingAngle={3}
+                          dataKey="value"
+                        >
+                          {vendorChartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          formatter={(value: number | undefined) => formatCurrency(value || 0)}
+                          contentStyle={{
+                            backgroundColor: "rgba(255, 255, 255, 0.98)",
+                            borderRadius: "8px",
+                            border: "none",
+                            fontSize: "12px",
+                            boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)"
+                          }}
+                        />
+                        <Legend iconType="circle" wrapperStyle={{ fontSize: "11px", paddingTop: "10px" }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground/40">
+                      <PieIcon className="w-12 h-12 mb-3" />
+                      <p className="text-xs font-medium">No distribution data</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

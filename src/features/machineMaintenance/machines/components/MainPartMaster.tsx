@@ -11,12 +11,13 @@ import {
   ChevronRight,
   Search,
   Package,
-
   Hash,
   DollarSign,
-  Layers,
-  Users,
+  IndianRupee,
+  Calendar,
   Box,
+  Building2,
+  Tag,
 } from "lucide-react";
 import { useRBAC } from "@/hooks/useRBAC";
 import {
@@ -52,10 +53,23 @@ export default function MainPartMaster() {
 
   const { canWrite, canEdit, canDelete } = useRBAC("machines");
 
+  // Derive unique suggestions from all parts
+  const getUniqueValues = (key: keyof Part) => {
+    return Array.from(new Set(parts.map(p => p[key]).filter(Boolean))).sort();
+  };
+
+  const suggestions = {
+    vendorCodes: getUniqueValues("VENDOR CODE"),
+    itemNames: getUniqueValues("ITEM NAME"),
+    vendorNames: getUniqueValues("VENDOR NAME"),
+    units: ["Pcs", "Set", "Ltr", "Kg", "Box", "Mtr"],
+  };
+
   // Filter & Search
   const filteredParts = parts.filter((part) =>
     (part["VENDOR CODE"] || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (part["ITEM NAME"] || "").toLowerCase().includes(searchTerm.toLowerCase())
+    (part["ITEM NAME"] || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (part["VENDOR NAME"] || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const totalPages = Math.ceil(filteredParts.length / ITEMS_PER_PAGE);
@@ -131,7 +145,7 @@ export default function MainPartMaster() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 pt-0 space-y-6 p">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -139,6 +153,17 @@ export default function MainPartMaster() {
           <p className="text-sm text-muted-foreground mt-1">Registry of all spare parts and inventory items</p>
         </div>
         <div className="flex items-center gap-3">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search by code, item or vendor..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 pr-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm w-64"
+            />
+          </div>
           {canWrite && (
             <button
               onClick={() => handleOpenModal()}
@@ -151,101 +176,114 @@ export default function MainPartMaster() {
         </div>
       </div>
 
-
       {/* Main Table */}
       <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-700 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-neutral-50/50 dark:bg-neutral-900/50 border-b border-neutral-200 dark:border-neutral-700">
-                <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Vendor Code</th>
-                <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Item Name</th>
-                <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Date of Purchase</th>
-                <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Rate</th>
-                <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Qty</th>
-                <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Unit</th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
-              {paginatedParts.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
-                    No item records found.
-                  </td>
+          <div className="max-h-[63vh] overflow-y-auto relative">
+            <table className="w-full text-left">
+              <thead className="sticky top-0 z-10 bg-neutral-50/50 dark:bg-neutral-900/50 backdrop-blur-sm">
+                <tr className="border-b border-neutral-200 dark:border-neutral-700">
+                  <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Vendor Code</th>
+                  <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Item Name</th>
+                  <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Vendor Name</th>
+                  <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Date of Purchase</th>
+                  <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Rate</th>
+                  <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Qty</th>
+                  <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Unit</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
                 </tr>
-              ) : (
-                paginatedParts.map((part) => (
-                  <tr key={part.id} className="hover:bg-neutral-50/40 dark:hover:bg-neutral-800/20 transition-colors group">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5">
-                        <Hash className="w-3.5 h-3.5 text-muted-foreground" />
-                        <span className="text-sm text-foreground font-mono">
-                          {part["VENDOR CODE"] || "-"}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-sm font-medium text-foreground">
-                        {part["ITEM NAME"] || "-"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5">
-
-                        <span className="text-sm text-foreground">
-                          {part["DATE OF PURCHASE"] || "-"}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-
-                        <span className="text-sm text-foreground font-medium">
-                          {formatRate(part.RATE)}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-sm text-foreground">
-                        {part.QTY || "0"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5">
-
-                        <span className="text-sm text-foreground">
-                          {part.UNIT || "Pcs"}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {canEdit && (
-                          <button
-                            onClick={() => handleOpenModal(part)}
-                            className="p-1.5 text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
-                            title="Edit Item"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                        )}
-                        {canDelete && (
-                          <button
-                            onClick={() => handleDelete(part.id)}
-                            className="p-1.5 text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                            title="Delete Item"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
+              </thead>
+              <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+                {paginatedParts.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">
+                      No item records found.
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  paginatedParts.map((part) => (
+                    <tr key={part.id} className="hover:bg-neutral-50/40 dark:hover:bg-neutral-800/20 transition-colors group">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5">
+                          <Hash className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span className="text-sm text-foreground font-mono">
+                            {part["VENDOR CODE"] || "-"}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5">
+                          <Package className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span className="text-sm font-medium text-foreground">
+                            {part["ITEM NAME"] || "-"}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5">
+                          <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span className="text-sm text-foreground">
+                            {part["VENDOR NAME"] || "-"}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span className="text-sm text-foreground">
+                            {part["DATE OF PURCHASE"] || "-"}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <IndianRupee className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span className="text-sm text-foreground font-medium">
+                            {formatRate(part.RATE)}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm text-foreground">
+                          {part.QTY || "0"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5">
+                          <Box className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span className="text-sm text-foreground">
+                            {part.UNIT || "Pcs"}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {canEdit && (
+                            <button
+                              onClick={() => handleOpenModal(part)}
+                              className="p-1.5 text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                              title="Edit Item"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button
+                              onClick={() => handleDelete(part.id)}
+                              className="p-1.5 text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                              title="Delete Item"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Pagination */}
@@ -327,11 +365,17 @@ export default function MainPartMaster() {
                   <label className="block text-xs text-muted-foreground mb-1">Vendor Code</label>
                   <input
                     type="text"
-                    value={formData["VENDOR CODE"] || ""}
+                    list="vendor-codes"
+                    value={formData["VENDOR CODE"]}
                     onChange={(e) => setFormData({ ...formData, "VENDOR CODE": e.target.value })}
                     className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
-                    placeholder="e.g. SUP-001"
+                    placeholder="e.g. V-001, SUP-001"
                   />
+                  <datalist id="vendor-codes">
+                    {suggestions.vendorCodes.map((code, idx) => (
+                      <option key={idx} value={code as string} />
+                    ))}
+                  </datalist>
                 </div>
 
                 <div>
@@ -339,27 +383,36 @@ export default function MainPartMaster() {
                   <input
                     type="text"
                     required
-                    value={formData["ITEM NAME"] || ""}
+                    list="item-names"
+                    value={formData["ITEM NAME"]}
                     onChange={(e) => setFormData({ ...formData, "ITEM NAME": e.target.value })}
                     className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
-                    placeholder="e.g. V-Belt A42"
+                    placeholder="e.g. V-Belt A42, Bearing 6204"
                   />
+                  <datalist id="item-names">
+                    {suggestions.itemNames.map((name, idx) => (
+                      <option key={idx} value={name as string} />
+                    ))}
+                  </datalist>
                 </div>
 
                 <div>
                   <label className="block text-xs text-muted-foreground mb-1">Date of Purchase</label>
-                  <input
-                    type="date"
-                    value={formData["DATE OF PURCHASE"] || ""}
-                    onChange={(e) => setFormData({ ...formData, "DATE OF PURCHASE": e.target.value })}
-                    className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
-                  />
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <input
+                      type="date"
+                      value={formData["DATE OF PURCHASE"] || ""}
+                      onChange={(e) => setFormData({ ...formData, "DATE OF PURCHASE": e.target.value })}
+                      className="w-full pl-9 pr-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
+                    />
+                  </div>
                 </div>
 
                 <div>
                   <label className="block text-xs text-muted-foreground mb-1">Rate / Price</label>
                   <div className="relative">
-
+                    <IndianRupee className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <input
                       type="number"
                       step="0.01"
@@ -385,29 +438,38 @@ export default function MainPartMaster() {
 
                 <div>
                   <label className="block text-xs text-muted-foreground mb-1">Unit</label>
-                  <select
-                    value={formData.UNIT || "Pcs"}
-                    onChange={(e) => setFormData({ ...formData, UNIT: e.target.value })}
-                    className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
-                  >
-                    <option value="Pcs">Pieces (Pcs)</option>
-                    <option value="Set">Set</option>
-                    <option value="Ltr">Liter (Ltr)</option>
-                    <option value="Kg">Kilogram (Kg)</option>
-                    <option value="Box">Box</option>
-                    <option value="Mtr">Meter (Mtr)</option>
-                  </select>
+                  <div className="relative">
+                    <Box className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <select
+                      value={formData.UNIT || "Pcs"}
+                      onChange={(e) => setFormData({ ...formData, UNIT: e.target.value })}
+                      className="w-full pl-9 pr-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm appearance-none"
+                    >
+                      {suggestions.units.map((unit, idx) => (
+                        <option key={idx} value={unit}>{unit}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 <div className="md:col-span-2">
                   <label className="block text-xs text-muted-foreground mb-1">Vendor Name</label>
-                  <input
-                    type="text"
-                    value={formData["VENDOR NAME"] || ""}
-                    onChange={(e) => setFormData({ ...formData, "VENDOR NAME": e.target.value })}
-                    className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
-                    placeholder="e.g. Acme Industrial"
-                  />
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <input
+                      type="text"
+                      list="vendor-names"
+                      value={formData["VENDOR NAME"]}
+                      onChange={(e) => setFormData({ ...formData, "VENDOR NAME": e.target.value })}
+                      className="w-full pl-9 pr-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
+                      placeholder="e.g. Acme Industrial"
+                    />
+                    <datalist id="vendor-names">
+                      {suggestions.vendorNames.map((name, idx) => (
+                        <option key={idx} value={name as string} />
+                      ))}
+                    </datalist>
+                  </div>
                 </div>
               </div>
 
