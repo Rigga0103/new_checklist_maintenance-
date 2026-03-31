@@ -14,6 +14,8 @@ import {
   ChevronRight,
   Download,
   Trash2,
+  Calendar,
+  History,
 } from "lucide-react";
 import {
   BarChart,
@@ -93,38 +95,58 @@ export default function MaintenanceDashboard() {
     dashboardView,
     setDashboardView,
     deleteTaskMutation,
+
   } = useMaintenanceDashboard();
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedDate, setSelectedDate] = useState<string>("");
 
   // Reset page when view changes
   useEffect(() => {
     setCurrentPage(1);
   }, [dashboardView]);
 
+  // Filter tasks based on selected date
+  const filteredTasks = selectedDate
+    ? dashboardTasks.filter((task) => {
+      if (!task.task_start_date) return false;
+      return task.task_start_date >= selectedDate;
+    })
+    : dashboardTasks;
+
   // Safety check for pagination bounds
   useEffect(() => {
-    const total = Math.ceil(dashboardTasks.length / ITEMS_PER_PAGE);
+    const total = Math.ceil(filteredTasks.length / ITEMS_PER_PAGE);
     if (total > 0 && currentPage > total) {
       setCurrentPage(total);
     }
-  }, [dashboardTasks.length, currentPage]);
+  }, [filteredTasks.length, currentPage]);
 
   // Pagination Logic
-  const totalPages = Math.ceil(dashboardTasks.length / ITEMS_PER_PAGE);
-  const paginatedTasks = dashboardTasks.slice(
+  const totalPages = Math.ceil(filteredTasks.length / ITEMS_PER_PAGE);
+  const paginatedTasks = filteredTasks.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE,
   );
   const showingStart =
-    dashboardTasks.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0;
+    filteredTasks.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0;
   const showingEnd = Math.min(
     currentPage * ITEMS_PER_PAGE,
-    dashboardTasks.length,
+    filteredTasks.length,
   );
 
+  const handleDateFilter = (date: string) => {
+    setSelectedDate(date);
+    setCurrentPage(1); // Reset to first page when filter changes
+  };
+
+  const clearDateFilter = () => {
+    setSelectedDate("");
+    setCurrentPage(1);
+  };
+
   const exportToCSV = () => {
-    if (dashboardTasks.length === 0) {
+    if (filteredTasks.length === 0) {
       alert("No data to export");
       return;
     }
@@ -139,7 +161,7 @@ export default function MaintenanceDashboard() {
       "Status",
     ];
 
-    const csvRows = dashboardTasks.map((t) => {
+    const csvRows = filteredTasks.map((t) => {
       let statusStr = "Pending";
       if (t.actual_date && t.actual_date.trim() !== "") {
         statusStr = "Completed";
@@ -171,6 +193,7 @@ export default function MaintenanceDashboard() {
     link.click();
     document.body.removeChild(link);
   };
+
   const handleDeleteTask = async (taskId: number) => {
     if (!window.confirm("Are you sure you want to delete this task?")) return;
     try {
@@ -332,53 +355,96 @@ export default function MaintenanceDashboard() {
         </div>
       </div>
 
-      {/* Task View Toggles */}
+      {/* Task View Toggles with Date Filter */}
       <div className="mt-8">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700 p-1.5 flex gap-1 mb-6 max-w-2xl">
-          <button
-            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${dashboardView === "recent"
-              ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 shadow-sm"
-              : "text-muted-foreground hover:bg-gray-50 dark:hover:bg-neutral-700 hover:text-foreground"
-              }`}
-            onClick={() => setDashboardView("recent")}
-          >
-            <Clock className="w-4 h-4" />
-            Recent & Today
-          </button>
-          <button
-            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${dashboardView === "upcoming"
-              ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 shadow-sm"
-              : "text-muted-foreground hover:bg-gray-50 dark:hover:bg-neutral-700 hover:text-foreground"
-              }`}
-            onClick={() => setDashboardView("upcoming")}
-          >
-            <Settings className="w-4 h-4" />
-            Upcoming
-          </button>
-          <button
-            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${dashboardView === "overdue"
-              ? "bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 shadow-sm"
-              : "text-muted-foreground hover:bg-gray-50 dark:hover:bg-neutral-700 hover:text-foreground"
-              }`}
-            onClick={() => setDashboardView("overdue")}
-          >
-            <AlertTriangle className="w-4 h-4" />
-            Overdue
-          </button>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700 p-4 mb-6">
+          <div className="flex flex-wrap gap-4 items-center justify-between">
+            <div className="flex gap-1 flex-1 max-w-2xl">
+              <button
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${dashboardView === "recent"
+                  ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 shadow-sm"
+                  : "text-muted-foreground hover:bg-gray-50 dark:hover:bg-neutral-700 hover:text-foreground"
+                  }`}
+                onClick={() => setDashboardView("recent")}
+              >
+                <Clock className="w-4 h-4" />
+                Recent & Today
+              </button>
+              <button
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${dashboardView === "upcoming"
+                  ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 shadow-sm"
+                  : "text-muted-foreground hover:bg-gray-50 dark:hover:bg-neutral-700 hover:text-foreground"
+                  }`}
+                onClick={() => setDashboardView("upcoming")}
+              >
+                <Settings className="w-4 h-4" />
+                Upcoming
+              </button>
+              <button
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${dashboardView === "overdue"
+                  ? "bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 shadow-sm"
+                  : "text-muted-foreground hover:bg-gray-50 dark:hover:bg-neutral-700 hover:text-foreground"
+                  }`}
+                onClick={() => setDashboardView("overdue")}
+              >
+                <AlertTriangle className="w-4 h-4" />
+                Overdue
+              </button>
+              <button
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${dashboardView === "history"
+                  ? "bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400 shadow-sm"
+                  : "text-muted-foreground hover:bg-gray-50 dark:hover:bg-neutral-700 hover:text-foreground"
+                  }`}
+                onClick={() => setDashboardView("history")}
+              >
+                <History className="w-4 h-4" />
+                History
+              </button>
+            </div>
+
+            {/* Date Filter */}
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => handleDateFilter(e.target.value)}
+                  className="pl-9 pr-3 py-2 text-sm border border-gray-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              {selectedDate && (
+                <button
+                  onClick={clearDateFilter}
+                  className="px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Tasks Table */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700 overflow-hidden">
-          <div className="p-4 border-b border-gray-100 dark:border-neutral-700 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {dashboardView === "recent" && "Recent & Today's Tasks"}
-              {dashboardView === "upcoming" && "Upcoming Tasks"}
-              {dashboardView === "overdue" && "Overdue Tasks"}
-            </h2>
+          <div className="p-4 border-b border-gray-100 dark:border-neutral-700 flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                {dashboardView === "recent" && "Recent & Today's Tasks"}
+                {dashboardView === "upcoming" && "Upcoming Tasks"}
+                {dashboardView === "overdue" && "Overdue Tasks"}
+                {dashboardView === "history" && "History Tasks"}
+              </h2>
+              {selectedDate && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Showing tasks from {new Date(selectedDate).toLocaleDateString()} onwards
+                </p>
+              )}
+            </div>
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <span>
-                {dashboardTasks.length} task
-                {dashboardTasks.length !== 1 ? "s" : ""}
+                {filteredTasks.length} task
+                {filteredTasks.length !== 1 ? "s" : ""}
               </span>
               <button
                 onClick={exportToCSV}
@@ -423,7 +489,9 @@ export default function MaintenanceDashboard() {
                       colSpan={7}
                       className="px-4 py-8 text-center text-muted-foreground dark:text-muted-foreground"
                     >
-                      No tasks found
+                      {selectedDate
+                        ? `No tasks found from ${new Date(selectedDate).toLocaleDateString()} onwards`
+                        : "No tasks found"}
                     </td>
                   </tr>
                 ) : (
@@ -492,7 +560,7 @@ export default function MaintenanceDashboard() {
           {totalPages > 1 && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-neutral-700 bg-gray-50/50 dark:bg-neutral-800/50 flex-wrap gap-y-2">
               <p className="text-xs text-muted-foreground">
-                Showing {showingStart}-{showingEnd} of {dashboardTasks.length}
+                Showing {showingStart}-{showingEnd} of {filteredTasks.length}
               </p>
               <div className="flex gap-1.5">
                 <button

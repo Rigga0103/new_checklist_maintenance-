@@ -282,7 +282,7 @@ export function useMaintenanceDashboard(
 
   // ---- Dashboard Task Views (Recent / Upcoming / Overdue) ----
   const [dashboardView, setDashboardView] = useState<
-    "recent" | "upcoming" | "overdue"
+    "recent" | "upcoming" | "overdue" | "history"
   >("recent");
 
   const dashboardTasks = useMemo(() => {
@@ -301,9 +301,17 @@ export function useMaintenanceDashboard(
         if (!t.task_start_date) return false;
         return t.task_start_date < today;
       });
+    } else if (dashboardView === "history") {
+      data = data.filter((t) => t.actual_date && t.actual_date.trim() !== "");
     }
 
     return data.sort((a, b) => {
+      if (dashboardView === "history") {
+        const dateA = a.actual_date || a.task_start_date || "";
+        const dateB = b.actual_date || b.task_start_date || "";
+        return dateB.localeCompare(dateA);
+      }
+      
       const dateA = a.task_start_date || "";
       const dateB = b.task_start_date || "";
       if (dashboardView === "recent") {
