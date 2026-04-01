@@ -22,6 +22,8 @@ import {
   ChevronRight,
   Filter,
   Download,
+  Edit,
+  Trash2,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -654,10 +656,11 @@ export default function RepairingDashboard() {
                   "Bill Copy",
                   "Photo",
                   "Status",
+                  "Action",
                 ].map((header, i) => (
                   <th
                     key={header}
-                    className={`px-5 py-4 text-xs font-semibold tracking-wider text-muted-foreground dark:text-gray-300 uppercase ${i === 8 || i === 9 ? "text-center" : "text-left"
+                    className={`px-5 py-4 text-xs font-semibold tracking-wider text-muted-foreground dark:text-gray-300 uppercase ${i === 8 || i === 9 || i === 13 ? "text-center" : "text-left"
                       }`}
                   >
                     {header}
@@ -751,12 +754,30 @@ export default function RepairingDashboard() {
                         {row.status || "Pending"}
                       </span>
                     </td>
+                    <td className="px-5 py-4 text-center align-middle whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => console.log("Edit", row.task_id)}
+                          className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                          title="Edit"
+                        >
+                          <Edit size={16} />
+                        </button>
+                        <button
+                          onClick={() => console.log("Delete", row.task_id)}
+                          className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
                   <td
-                    colSpan={12}
+                    colSpan={14}
                     className="px-5 py-16 text-center text-muted-foreground"
                   >
                     No repair records found
@@ -839,9 +860,27 @@ export default function RepairingDashboard() {
                       </a>
                     )}
                   </div>
-                  <span className="font-bold text-gray-900 dark:text-white">
-                    {row.bill_amount ? formatCurrency(row.bill_amount) : "—"}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="font-bold text-gray-900 dark:text-white">
+                      {row.bill_amount ? formatCurrency(row.bill_amount) : "—"}
+                    </span>
+                    <div className="flex items-center gap-1 border-l pl-3 border-gray-200 dark:border-neutral-600">
+                      <button
+                        onClick={() => console.log("Edit", row.task_id)}
+                        className="p-1 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30 rounded transition-colors"
+                        title="Edit"
+                      >
+                        <Edit size={14} />
+                      </button>
+                      <button
+                        onClick={() => console.log("Delete", row.task_id)}
+                        className="p-1 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 rounded transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             ))

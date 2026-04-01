@@ -13,6 +13,8 @@ import {
   Filter,
   User,
   ChevronDown,
+  LayoutGrid,
+  CalendarDays,
 } from "lucide-react";
 import { useRBAC } from "@/hooks/useRBAC";
 import supabase from "@/utils/supabaseClient";
@@ -22,6 +24,7 @@ import { useQuery } from "@tanstack/react-query";
 
 type EventStatus = "completed" | "overdue" | "pending";
 type EventType = "Maintenance" | "Repair" | "Checklist" | "Delegation";
+type ViewMode = "month" | "week";
 
 interface CalendarEvent {
   id: string | number;
@@ -140,6 +143,8 @@ export default function MainMaintenanceCalendar() {
   const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false);
   const [currentRole, setCurrentRole] = useState<string | null>(null);
   const [currentUsername, setCurrentUsername] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>("month");
+  const [selectedWeek, setSelectedWeek] = useState<number>(0); // 0‑based index into weeks array
 
   // Ref for dropdown container
   const typeDropdownRef = useRef<HTMLDivElement>(null);
@@ -474,6 +479,7 @@ export default function MainMaintenanceCalendar() {
 
     return filteredEvents;
   }, [gridRawData, isAdmin, currentUsername, selectedUser, selectedTypes]);
+
   // ============ Build modal events ============
   const modalEvents = useMemo((): CalendarEvent[] => {
     if (!dayRawData) return [];
@@ -602,9 +608,42 @@ export default function MainMaintenanceCalendar() {
   ).getDay();
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-  const calendarDays: (number | null)[] = [];
-  for (let i = 0; i < firstDayOfMonth; i++) calendarDays.push(null);
-  for (let day = 1; day <= daysInMonth; day++) calendarDays.push(day);
+  const calendarDays = useMemo(() => {
+    const days: (number | null)[] = [];
+    for (let i = 0; i < firstDayOfMonth; i++) days.push(null);
+    for (let day = 1; day <= daysInMonth; day++) days.push(day);
+    return days;
+  }, [firstDayOfMonth, daysInMonth]);
+
+  // ============ Weeks computation for week view ============
+  const weeks = useMemo(() => {
+    const weeksArray: (number | null)[][] = [];
+    for (let i = 0; i < calendarDays.length; i += 7) {
+      weeksArray.push(calendarDays.slice(i, i + 7));
+    }
+    return weeksArray;
+  }, [calendarDays]);
+
+  // Set initial selected week to the week containing today's date
+  useEffect(() => {
+    if (weeks.length > 0) {
+      const today = new Date();
+      if (
+        today.getMonth() === currentDate.getMonth() &&
+        today.getFullYear() === currentDate.getFullYear()
+      ) {
+        const todayDay = today.getDate();
+        for (let i = 0; i < weeks.length; i++) {
+          if (weeks[i].includes(todayDay)) {
+            setSelectedWeek(i);
+            break;
+          }
+        }
+      } else {
+        setSelectedWeek(0);
+      }
+    }
+  }, [weeks, currentDate]);
 
   const openDay = (day: number) => {
     const dateStr = getDayDateStr(day);
@@ -664,6 +703,41 @@ export default function MainMaintenanceCalendar() {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* View Mode Toggle */}
+          <div className="flex items-center gap-1 p-1 bg-neutral-100 dark:bg-neutral-700 rounded-xl">
+            <div
+              onClick={() => setViewMode("month")}
+              className={`p-2 rounded-lg transition-all ${viewMode === "month"
+                ? "bg-white dark:bg-neutral-800 shadow-sm text-primary"
+                : "text-muted-foreground hover:bg-neutral-200 dark:hover:bg-neutral-600"
+                }`}> Month view</div>
+            <button
+              onClick={() => setViewMode("month")}
+              className={`p-2 rounded-lg transition-all ${viewMode === "month"
+                ? "bg-white dark:bg-neutral-800 shadow-sm text-primary"
+                : "text-muted-foreground hover:bg-neutral-200 dark:hover:bg-neutral-600"
+                }`}
+              title="Month view"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode("week")}
+              className={`p-2 rounded-lg transition-all ${viewMode === "week"
+                ? "bg-white dark:bg-neutral-800 shadow-sm text-primary"
+                : "text-muted-foreground hover:bg-neutral-200 dark:hover:bg-neutral-600"
+                }`}
+              title="Week view"
+            >
+              <CalendarDays className="w-4 h-4" />
+            </button>
+            <div
+              onClick={() => setViewMode("week")}
+              className={`p-2 rounded-lg transition-all ${viewMode === "week"
+                ? "bg-white dark:bg-neutral-800 shadow-sm text-primary"
+                : "text-muted-foreground hover:bg-neutral-200 dark:hover:bg-neutral-600"
+                }`}> Week view</div>
+          </div>
           {/* Type Filter Dropdown */}
           <div ref={typeDropdownRef} className="relative">
             <button
@@ -673,7 +747,8 @@ export default function MainMaintenanceCalendar() {
               <Filter className="w-4 h-4 text-muted-foreground" />
               <span className="text-sm text-foreground">Type Filter</span>
               <ChevronDown
-                className={`w-4 h-4 text-muted-foreground transition-transform ${isTypeDropdownOpen ? "rotate-180" : ""}`}
+                className={`w-4 h-4 text-muted-foreground transition-transform ${isTypeDropdownOpen ? "rotate-180" : ""
+                  }`}
               />
             </button>
 
@@ -779,143 +854,288 @@ export default function MainMaintenanceCalendar() {
 
       {/* Calendar Card */}
       <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-700 overflow-hidden">
-        {/* Month Nav */}
+        {/* Month Nav + Week Selector (for week view) */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-700">
           <button
-            onClick={() =>
+            onClick={() => {
               setCurrentDate(
                 new Date(
                   currentDate.getFullYear(),
                   currentDate.getMonth() - 1,
                   1,
                 ),
-              )
-            }
+              );
+              if (viewMode === "week") setSelectedWeek(0);
+            }}
             className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
+
           <div className="flex items-center gap-4">
             <h2 className="text-lg font-semibold text-foreground">
               {formatMonthYear(currentDate)}
             </h2>
             <button
-              onClick={() => setCurrentDate(new Date())}
+              onClick={() => {
+                setCurrentDate(new Date());
+                if (viewMode === "week") {
+                  // reset week to current week (handled by useEffect)
+                }
+              }}
               className="px-3 py-1 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 rounded-lg hover:bg-green-100 transition-colors"
             >
               Today
             </button>
           </div>
+
           <button
-            onClick={() =>
+            onClick={() => {
               setCurrentDate(
                 new Date(
                   currentDate.getFullYear(),
                   currentDate.getMonth() + 1,
                   1,
                 ),
-              )
-            }
+              );
+              if (viewMode === "week") setSelectedWeek(0);
+            }}
             className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
           >
             <ChevronRight className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Day Headers */}
-        <div className="grid grid-cols-7 border-b border-neutral-200 dark:border-neutral-700">
-          {dayNames.map((d) => (
-            <div
-              key={d}
-              className="px-2 py-3 text-center text-xs font-medium text-muted-foreground uppercase"
-            >
-              {d}
-            </div>
-          ))}
-        </div>
-
-        {/* Calendar Grid */}
-        <div className="grid grid-cols-7">
-          {calendarDays.map((day, index) => {
-            const tasksForDay = day ? getGridTasksForDay(day) : [];
-            const overdueCount = tasksForDay.filter(
-              (t) => t.status === "overdue",
-            ).length;
-            const pendingCount = tasksForDay.filter(
-              (t) => t.status === "pending",
-            ).length;
-            const completedCount = tasksForDay.filter(
-              (t) => t.status === "completed",
-            ).length;
-            // Always show up to 3 tasks to keep the grid populated
-            const visible = tasksForDay.slice(0, 3);
-            const extra = tasksForDay.length - 3;
-
-            return (
-              <div
-                key={index}
-                onClick={() => day && openDay(day)}
-                className={`min-h-[120px] p-2 border-b border-r border-neutral-200 dark:border-neutral-700 transition-colors ${!day
-                  ? "bg-neutral-50 dark:bg-neutral-900/50 cursor-default"
-                  : "cursor-pointer hover:bg-blue-50/30 dark:hover:bg-neutral-800/60"
-                  } ${isToday(day || 0) ? "bg-green-50 dark:bg-green-900/20" : ""}`}
-              >
-                {day && (
-                  <>
-                    <div className="flex items-center justify-between mb-1">
-                      <span
-                        className={
-                          isToday(day)
-                            ? "w-6 h-6 flex items-center justify-center rounded-full bg-green-500 text-white text-xs font-bold"
-                            : "text-sm font-semibold text-foreground"
-                        }
-                      >
-                        {day}
-                      </span>
-                      {tasksForDay.length > 0 && (
-                        <div className="flex gap-0.5">
-                          {overdueCount > 0 && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                          )}
-                          {pendingCount > 0 && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                          )}
-                          {completedCount > 0 && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-0.5">
-                      {visible.map((event) => {
-                        const tc = TYPE_CONFIG[event.type];
-                        const sc = STATUS_CONFIG[event.status];
-                        return (
-                          <div
-                            key={event.id}
-                            className={`px-1.5 py-0.5 text-[10px] sm:text-[11px] rounded truncate border ${tc.bg} ${tc.darkBg} ${tc.color} ${sc.border}`}
-                            title={`[${event.type}] ${event.title}: ${event.description}`}
-                          >
-                            <span className="font-bold mr-0.5">
-                              {tc.letter}
-                            </span>
-                            {event.title}
-                          </div>
-                        );
-                      })}
-                      {extra > 0 && (
-                        <div className="text-[10px] text-primary font-bold pl-1 mt-1">
-                          +{extra} more — click to see all
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
+        {/* Week Selector (visible only in week view) */}
+        {viewMode === "week" && weeks.length > 0 && (
+          <div className="px-6 pt-3 pb-2 border-b border-neutral-200 dark:border-neutral-700">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Week of month:</span>
+              <div className="flex gap-2">
+                {weeks.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedWeek(idx)}
+                    className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${selectedWeek === idx
+                      ? "bg-primary text-white dark:bg-primary"
+                      : "bg-neutral-100 dark:bg-neutral-700 text-foreground hover:bg-neutral-200 dark:hover:bg-neutral-600"
+                      }`}
+                  >
+                    {idx + 1}
+                  </button>
+                ))}
               </div>
-            );
-          })}
-        </div>
+            </div>
+          </div>
+        )}
+
+        {/* Calendar Content */}
+        {viewMode === "month" ? (
+          <>
+            {/* Day Headers */}
+            <div className="grid grid-cols-7 border-b border-neutral-200 dark:border-neutral-700">
+              {dayNames.map((d) => (
+                <div
+                  key={d}
+                  className="px-2 py-3 text-center text-xs font-medium text-muted-foreground uppercase"
+                >
+                  {d}
+                </div>
+              ))}
+            </div>
+
+            {/* Calendar Grid */}
+            <div className="grid grid-cols-7">
+              {calendarDays.map((day, index) => {
+                const tasksForDay = day ? getGridTasksForDay(day) : [];
+                const overdueCount = tasksForDay.filter(
+                  (t) => t.status === "overdue",
+                ).length;
+                const pendingCount = tasksForDay.filter(
+                  (t) => t.status === "pending",
+                ).length;
+                const completedCount = tasksForDay.filter(
+                  (t) => t.status === "completed",
+                ).length;
+                // Always show up to 3 tasks to keep the grid populated
+                const visible = tasksForDay.slice(0, 3);
+                const extra = tasksForDay.length - 3;
+
+                return (
+                  <div
+                    key={index}
+                    onClick={() => day && openDay(day)}
+                    className={`min-h-[120px] p-2 border-b border-r border-neutral-200 dark:border-neutral-700 transition-colors ${!day
+                      ? "bg-neutral-50 dark:bg-neutral-900/50 cursor-default"
+                      : "cursor-pointer hover:bg-blue-50/30 dark:hover:bg-neutral-800/60"
+                      } ${isToday(day || 0) ? "bg-green-50 dark:bg-green-900/20" : ""
+                      }`}
+                  >
+                    {day && (
+                      <>
+                        <div className="flex items-center justify-between mb-1">
+                          <span
+                            className={
+                              isToday(day)
+                                ? "w-6 h-6 flex items-center justify-center rounded-full bg-green-500 text-white text-xs font-bold"
+                                : "text-sm font-semibold text-foreground"
+                            }
+                          >
+                            {day}
+                          </span>
+                          {tasksForDay.length > 0 && (
+                            <div className="flex gap-0.5">
+                              {overdueCount > 0 && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                              )}
+                              {pendingCount > 0 && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                              )}
+                              {completedCount > 0 && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-0.5">
+                          {visible.map((event) => {
+                            const tc = TYPE_CONFIG[event.type];
+                            const sc = STATUS_CONFIG[event.status];
+                            return (
+                              <div
+                                key={event.id}
+                                className={`px-1.5 py-0.5 text-[10px] sm:text-[11px] rounded truncate border ${tc.bg} ${tc.darkBg} ${tc.color} ${sc.border}`}
+                                title={`[${event.type}] ${event.title}: ${event.description}`}
+                              >
+                                <span className="font-bold mr-0.5">
+                                  {tc.letter}
+                                </span>
+                                {event.title}
+                              </div>
+                            );
+                          })}
+                          {extra > 0 && (
+                            <div className="text-[10px] text-primary font-bold pl-1 mt-1">
+                              +{extra} more — click to see all
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          // Week View – Enhanced with description and larger cells
+          <>
+            {/* Day Headers */}
+            <div className="grid grid-cols-7 border-b border-neutral-200 dark:border-neutral-700">
+              {dayNames.map((d) => (
+                <div
+                  key={d}
+                  className="px-2 py-3 text-center text-xs font-medium text-muted-foreground uppercase"
+                >
+                  {d}
+                </div>
+              ))}
+            </div>
+
+            {/* Week Row – with larger min-width columns */}
+            <div
+              className="grid grid-cols-7"
+              style={{ gridTemplateColumns: "repeat(7, minmax(160px, 1fr))" }}
+            >
+              {weeks[selectedWeek]?.map((day, idx) => {
+                const tasksForDay = day ? getGridTasksForDay(day) : [];
+                const overdueCount = tasksForDay.filter(
+                  (t) => t.status === "overdue",
+                ).length;
+                const pendingCount = tasksForDay.filter(
+                  (t) => t.status === "pending",
+                ).length;
+                const completedCount = tasksForDay.filter(
+                  (t) => t.status === "completed",
+                ).length;
+                // Show up to 3 tasks per day, but each now includes a description line
+                const visible = tasksForDay.slice(0, 7);
+                const extra = tasksForDay.length - 3;
+
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => day && openDay(day)}
+                    className={`min-h-[250px] p-2 border-b border-r border-neutral-200 dark:border-neutral-700 transition-colors ${!day
+                      ? "bg-neutral-50 dark:bg-neutral-900/50 cursor-default"
+                      : "cursor-pointer hover:bg-blue-50/30 dark:hover:bg-neutral-800/60"
+                      } ${isToday(day || 0) ? "bg-green-50 dark:bg-green-900/20" : ""
+                      }`}
+                  >
+                    {day && (
+                      <>
+                        <div className="flex items-center justify-between mb-1">
+                          <span
+                            className={
+                              isToday(day)
+                                ? "w-6 h-6 flex items-center justify-center rounded-full bg-green-500 text-white text-xs font-bold"
+                                : "text-sm font-semibold text-foreground"
+                            }
+                          >
+                            {day}
+                          </span>
+                          {tasksForDay.length > 0 && (
+                            <div className="flex gap-0.5">
+                              {overdueCount > 0 && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                              )}
+                              {pendingCount > 0 && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                              )}
+                              {completedCount > 0 && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-1">
+                          {visible.map((event) => {
+                            const tc = TYPE_CONFIG[event.type];
+                            const sc = STATUS_CONFIG[event.status];
+                            return (
+                              <div
+                                key={event.id}
+                                className={`px-1.5 py-1 rounded border text-[10px] sm:text-[11px] ${tc.bg} ${tc.darkBg} ${tc.color} ${sc.border}`}
+                                title={`[${event.type}] ${event.title}: ${event.description}`}
+                              >
+                                <div className="flex items-center gap-0.5 truncate font-medium">
+                                  <span className="font-bold">{tc.letter}</span>
+                                  <span className="truncate">{event.title}</span>
+                                </div>
+                                {event.description && (
+                                  <div className="text-[9px] truncate opacity-80 mt-0.5">
+                                    {event.description}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                          {extra > 0 && (
+                            <div className="text-[10px] text-primary font-bold pl-1 mt-1">
+                              +{extra} more
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Legend */}
