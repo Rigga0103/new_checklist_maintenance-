@@ -41,7 +41,7 @@ export default function MainVendorMaster() {
   const deleteMutation = useDeleteVendorMutation();
 
   const [formData, setFormData] = useState<CreateVendorDTO>({
-    "VENDOR CODE": "",
+
     "Vendro Name": "",
     "Contact No": "",
     Location: "",
@@ -61,7 +61,7 @@ export default function MainVendorMaster() {
   };
 
   const suggestions = {
-    vendorCodes: getUniqueValues("VENDOR CODE"),
+
     vendorNames: getUniqueValues("Vendro Name"),
     vendorTypes: getUniqueValues("Venodr Type"),
     partsNames: getUniqueValues("Parts Name"),
@@ -70,7 +70,7 @@ export default function MainVendorMaster() {
 
   // Filter & Search
   const filteredVendors = vendors.filter((vendor) =>
-    (vendor["VENDOR CODE"] || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+
     (vendor["Vendro Name"] || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     (vendor.Location || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     (vendor["Venodr Type"] || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -88,7 +88,7 @@ export default function MainVendorMaster() {
     if (vendor) {
       setEditingId(vendor.id);
       setFormData({
-        "VENDOR CODE": vendor["VENDOR CODE"] || "",
+
         "Vendro Name": vendor["Vendro Name"] || "",
         "Contact No": vendor["Contact No"] || "",
         Location: vendor.Location || "",
@@ -102,7 +102,7 @@ export default function MainVendorMaster() {
     } else {
       setEditingId(null);
       setFormData({
-        "VENDOR CODE": "",
+
         "Vendro Name": "",
         "Contact No": "",
         Location: "",
@@ -178,7 +178,7 @@ export default function MainVendorMaster() {
           <table className="w-full text-left">
             <thead className="sticky top-0 z-10 bg-black-50/90 backdrop-blur">
               <tr className="bg-neutral-50/50 dark:bg-neutral-900/50 border-b border-neutral-200 dark:border-neutral-700">
-                <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Vendor Code</th>
+
                 <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Vendor Name</th>
                 <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Location</th>
                 <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Vendor Type</th>
@@ -197,14 +197,7 @@ export default function MainVendorMaster() {
               ) : (
                 paginatedVendors.map((vendor) => (
                   <tr key={vendor.id} className="hover:bg-neutral-50/40 dark:hover:bg-neutral-800/20 transition-colors group">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5">
-                        <Hash className="w-3.5 h-3.5 text-muted-foreground" />
-                        <span className="text-sm text-foreground font-mono">
-                          {vendor["VENDOR CODE"] || "-"}
-                        </span>
-                      </div>
-                    </td>
+
                     <td className="px-4 py-3">
                       <span className="text-sm text-foreground">
                         {vendor["Vendro Name"] || "-"}
@@ -219,8 +212,8 @@ export default function MainVendorMaster() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="inline-flex px-2 py-0.5 text-xs bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded border border-indigo-100 dark:border-indigo-900/30">
-                        {vendor["Venodr Type"] || "General"}
+                      <span className="inline-flex px-2 py-0.5 text-xs bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-white rounded border border-indigo-100 dark:border-indigo-900/30">
+                        {vendor["Venodr Type"] || "-"}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -340,22 +333,7 @@ export default function MainVendorMaster() {
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs text-muted-foreground mb-1">Vendor Code</label>
-                  <input
-                    type="text"
-                    list="vendor-codes"
-                    value={formData["VENDOR CODE"]}
-                    onChange={(e) => setFormData({ ...formData, "VENDOR CODE": e.target.value })}
-                    className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none transition-all text-sm uppercase"
-                    placeholder="e.g., V-001, SUP-001"
-                  />
-                  <datalist id="vendor-codes">
-                    {suggestions.vendorCodes.map((code, idx) => (
-                      <option key={idx} value={code as string} />
-                    ))}
-                  </datalist>
-                </div>
+
 
                 <div>
                   <label className="block text-xs text-muted-foreground mb-1">Vendor Name *</label>

@@ -127,6 +127,21 @@ export function useMaintenanceDashboard(
     refetch: refetchAllMaintenance,
   } = useMaintenanceDataQuery();
 
+  // ---- Dashboard Global Date Filter ----
+  // We filter allMaintenanceTasks by startDate and endDate.
+  const filteredAllMaintenanceTasks = useMemo(() => {
+    let tasks = allMaintenanceTasks;
+
+    if (startDate) {
+      tasks = tasks.filter((t) => t.task_start_date && t.task_start_date >= startDate);
+    }
+    if (endDate) {
+      tasks = tasks.filter((t) => t.task_start_date && t.task_start_date <= endDate);
+    }
+
+    return tasks;
+  }, [allMaintenanceTasks, startDate, endDate]);
+
   const updateTaskMutation = useUpdateMaintenanceTask();
   const deleteTaskMutation = useDeleteMaintenanceTasks();
   const uploadImageMutation = useUploadMaintenanceImage();
@@ -224,8 +239,8 @@ export function useMaintenanceDashboard(
 
   // ---- Stats Calculation (uses ALL data for dashboard) ----
   const maintenanceStats = useMemo<MaintenanceStats>(() => {
-    const totalTasks = allMaintenanceTasks.length;
-    const completedTasks = allMaintenanceTasks.filter(
+    const totalTasks = filteredAllMaintenanceTasks.length;
+    const completedTasks = filteredAllMaintenanceTasks.filter(
       (t) => t.actual_date && t.actual_date.trim() !== "",
     ).length;
     const pendingTasksCount = totalTasks - completedTasks;
@@ -233,7 +248,7 @@ export function useMaintenanceDashboard(
     const today = new Date().toISOString().split("T")[0];
 
     // Overdue: Start date < today and not completed
-    const overdueTasks = allMaintenanceTasks.filter((t) => {
+    const overdueTasks = filteredAllMaintenanceTasks.filter((t) => {
       if (t.actual_date && t.actual_date.trim() !== "") return false;
       if (!t.task_start_date) return false;
       return t.task_start_date < today;
@@ -241,7 +256,7 @@ export function useMaintenanceDashboard(
 
     // Unique machines
     const distinctMachines = new Set(
-      allMaintenanceTasks.map((t) => t.machine_name).filter(Boolean),
+      filteredAllMaintenanceTasks.map((t) => t.machine_name).filter(Boolean),
     ).size;
 
     return {
@@ -251,12 +266,12 @@ export function useMaintenanceDashboard(
       pendingTasks: pendingTasksCount,
       overdueTasks,
     };
-  }, [allMaintenanceTasks]);
+  }, [filteredAllMaintenanceTasks]);
 
   // ---- Chart Data: Frequency Distribution ----
   const frequencyChartData = useMemo<FrequencyChartItem[]>(() => {
     const counts: Record<string, number> = {};
-    allMaintenanceTasks.forEach((t) => {
+    filteredAllMaintenanceTasks.forEach((t) => {
       const freq = t.frequency || "Unknown";
       counts[freq] = (counts[freq] || 0) + 1;
     });
@@ -264,12 +279,12 @@ export function useMaintenanceDashboard(
     return Object.entries(counts)
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count);
-  }, [allMaintenanceTasks]);
+  }, [filteredAllMaintenanceTasks]);
 
   // ---- Chart Data: Machines with most tasks ----
   const machineChartData = useMemo(() => {
     const counts: Record<string, number> = {};
-    allMaintenanceTasks.forEach((t) => {
+    filteredAllMaintenanceTasks.forEach((t) => {
       const name = t.machine_name || "Unknown";
       counts[name] = (counts[name] || 0) + 1;
     });
@@ -278,7 +293,7 @@ export function useMaintenanceDashboard(
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
-  }, [allMaintenanceTasks]);
+  }, [filteredAllMaintenanceTasks]);
 
   // ---- Dashboard Task Views (Recent / Upcoming / Overdue) ----
   const [dashboardView, setDashboardView] = useState<
@@ -287,7 +302,7 @@ export function useMaintenanceDashboard(
 
   const dashboardTasks = useMemo(() => {
     const today = new Date().toISOString().split("T")[0];
-    let data = allMaintenanceTasks;
+    let data = filteredAllMaintenanceTasks;
 
     if (dashboardView === "recent") {
       data = data.filter(
@@ -319,7 +334,7 @@ export function useMaintenanceDashboard(
       }
       return dateA.localeCompare(dateB);
     });
-  }, [allMaintenanceTasks, dashboardView]);
+  }, [filteredAllMaintenanceTasks, dashboardView]);
 
   // ---- Handlers ----
   const handleMachineSelection = useCallback((machine: string) => {

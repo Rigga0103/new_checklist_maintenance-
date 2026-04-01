@@ -157,11 +157,12 @@ export default function MainMachinesMaster() {
         <table className="w-full">
           <thead>
             <tr className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                Machine Name
-              </th>
+
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                 Machine Type
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                Machine Name
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                 Serial No
@@ -200,12 +201,13 @@ export default function MainMachinesMaster() {
                   key={machine.id}
                   className="hover:bg-neutral-50 dark:hover:bg-neutral-700/50"
                 >
-                  <td className="px-6 py-4 text-sm font-medium text-foreground">
-                    {machine.machine_name}
-                  </td>
                   <td className="px-6 py-4 text-sm text-foreground">
                     {machine.type || "-"}
                   </td>
+                  <td className="px-6 py-4 text-sm font-medium text-foreground">
+                    {machine.machine_name}
+                  </td>
+
                   <td className="px-6 py-4 text-sm text-foreground">
                     {machine.serial_no || "-"}
                   </td>

@@ -92,6 +92,7 @@ export default function MaintenanceList({
       const headers = [
         "Task ID",
         "Machine Name",
+        "Machine Type",
         "Task Description",
         "Assigned To",
         "Frequency",
@@ -104,6 +105,7 @@ export default function MaintenanceList({
         const row = [
           task.task_id,
           `"${task.machine_name || ""}"`,
+          `"${task.machine_type || ""}"`,
           `"${task.task_description || ""}"`,
           `"${task.doer_name || ""}"`,
           `"${task.frequency || ""}"`,
@@ -116,6 +118,7 @@ export default function MaintenanceList({
       const headers = [
         "Task ID",
         "Machine Name",
+        "Machine Type",
         "Task Description",
         "Assigned To",
         "Frequency",
@@ -132,6 +135,7 @@ export default function MaintenanceList({
         const row = [
           task.task_id,
           `"${task.machine_name || ""}"`,
+          `"${task.machine_type || ""}"`,
           `"${task.task_description || ""}"`,
           `"${task.doer_name || ""}"`,
           `"${task.frequency || ""}"`,
@@ -148,6 +152,7 @@ export default function MaintenanceList({
       const headers = [
         "Task ID",
         "Machine Name",
+        "Machine Type",
         "Task Description",
         "Assigned To",
         "Frequency",
@@ -168,6 +173,7 @@ export default function MaintenanceList({
         const row = [
           task.task_id,
           `"${task.machine_name || ""}"`,
+          `"${task.machine_type || ""}"`,
           `"${task.task_description || ""}"`,
           `"${task.doer_name || ""}"`,
           `"${task.frequency || ""}"`,
@@ -182,6 +188,7 @@ export default function MaintenanceList({
       const headers = [
         "Task ID",
         "Machine Name",
+        "Machine Type",
         "Task Description",
         "Assigned To",
         "Frequency",
@@ -194,6 +201,7 @@ export default function MaintenanceList({
         const row = [
           task.task_id,
           `"${task.machine_name || ""}"`,
+          `"${task.machine_type || ""}"`,
           `"${task.task_description || ""}"`,
           `"${task.doer_name || ""}"`,
           `"${task.frequency || ""}"`,
@@ -473,22 +481,20 @@ export default function MaintenanceList({
             <div className="flex p-1 bg-gray-100 dark:bg-neutral-700 rounded-lg">
               <button
                 onClick={() => setViewMyTasksOnly(false)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                  !viewMyTasksOnly
-                    ? "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 shadow-sm"
-                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${!viewMyTasksOnly
+                  ? "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 shadow-sm"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                  }`}
               >
                 <Users className="w-3.5 h-3.5" />
                 All Tasks
               </button>
               <button
                 onClick={() => setViewMyTasksOnly(true)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                  viewMyTasksOnly
-                    ? "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 shadow-sm"
-                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${viewMyTasksOnly
+                  ? "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 shadow-sm"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                  }`}
               >
                 <User className="w-3.5 h-3.5" />
                 My Tasks
@@ -514,51 +520,46 @@ export default function MaintenanceList({
           <div className="flex gap-2">
             <button
               onClick={() => setActiveTab("pending")}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === "pending"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
-              }`}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${activeTab === "pending"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
+                }`}
             >
               Pending
             </button>
             <button
               onClick={() => setActiveTab("history")}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === "history"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
-              }`}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${activeTab === "history"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
+                }`}
             >
               History
             </button>
             <button
               onClick={() => setActiveTab("last7days")}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === "last7days"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
-              }`}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${activeTab === "last7days"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
+                }`}
             >
               Last 7 Days
             </button>
             <button
               onClick={() => setActiveTab("overdue")}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === "overdue"
-                  ? "bg-red-600 text-white"
-                  : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
-              }`}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${activeTab === "overdue"
+                ? "bg-red-600 text-white"
+                : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
+                }`}
             >
               All Overdue
             </button>
             <button
               onClick={() => setActiveTab("upcoming")}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === "upcoming"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
-              }`}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${activeTab === "upcoming"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
+                }`}
             >
               Upcoming 7 Days Task
             </button>
@@ -608,11 +609,10 @@ export default function MaintenanceList({
         <div className="relative" ref={machineDropdownRef}>
           <button
             onClick={() => setShowMachineDropdown(!showMachineDropdown)}
-            className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors ${
-              selectedMachines.length > 0
-                ? "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400"
-                : "bg-white border-gray-200 text-gray-700 dark:bg-neutral-800 dark:border-neutral-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-700"
-            }`}
+            className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors ${selectedMachines.length > 0
+              ? "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400"
+              : "bg-white border-gray-200 text-gray-700 dark:bg-neutral-800 dark:border-neutral-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-700"
+              }`}
           >
             <Filter className="w-4 h-4" />
             Machines{" "}
@@ -710,6 +710,7 @@ export default function MaintenanceList({
               <div key={i} className="flex gap-4 animate-pulse">
                 <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-12" />
                 <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-24" />
+                <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-24" />
                 <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded flex-1" />
                 <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-20" />
                 <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-16" />
@@ -736,25 +737,29 @@ export default function MaintenanceList({
                     activeTab === "overdue" ||
                     activeTab === "upcoming" ||
                     activeTab === "last7days") && (
-                    <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase w-10">
-                      <input
-                        type="checkbox"
-                        checked={
-                          selectedTasks.size === paginatedTasks.length &&
-                          paginatedTasks.length > 0
-                        }
-                        onChange={
-                          selectedTasks.size === paginatedTasks.length
-                            ? deselectAllTasks
-                            : selectAllTasks
-                        }
-                        className="w-4 h-4 rounded border-gray-300 text-blue-600"
-                      />
-                    </th>
-                  )}
+                      <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase w-10">
+                        <input
+                          type="checkbox"
+                          checked={
+                            selectedTasks.size === paginatedTasks.length &&
+                            paginatedTasks.length > 0
+                          }
+                          onChange={
+                            selectedTasks.size === paginatedTasks.length
+                              ? deselectAllTasks
+                              : selectAllTasks
+                          }
+                          className="w-4 h-4 rounded border-gray-300 text-blue-600"
+                        />
+                      </th>
+                    )}
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
-                    Machine
+                    Machine Type
                   </th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Machine Name
+                  </th>
+
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase min-w-50">
                     Description
                   </th>
@@ -769,8 +774,8 @@ export default function MaintenanceList({
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase bg-yellow-50 dark:bg-yellow-900/20">
                     {activeTab === "pending" ||
-                    activeTab === "overdue" ||
-                    activeTab === "upcoming"
+                      activeTab === "overdue" ||
+                      activeTab === "upcoming"
                       ? "End/Due Date"
                       : "Completed Date"}
                   </th>
@@ -778,10 +783,10 @@ export default function MaintenanceList({
                     activeTab === "overdue" ||
                     activeTab === "upcoming" ||
                     activeTab === "last7days") && (
-                    <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase bg-blue-50 dark:bg-blue-900/20">
-                      Status
-                    </th>
-                  )}
+                      <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase bg-blue-50 dark:bg-blue-900/20">
+                        Status
+                      </th>
+                    )}
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
                     Sample Image
                   </th>
@@ -833,11 +838,10 @@ export default function MaintenanceList({
                 {paginatedTasks.map((task, index) => (
                   <tr
                     key={task.task_id}
-                    className={`hover:bg-gray-50 dark:hover:bg-neutral-700/50 ${
-                      selectedTasks.has(task.task_id)
-                        ? "bg-blue-50 dark:bg-blue-900/20"
-                        : ""
-                    }`}
+                    className={`hover:bg-gray-50 dark:hover:bg-neutral-700/50 ${selectedTasks.has(task.task_id)
+                      ? "bg-blue-50 dark:bg-blue-900/20"
+                      : ""
+                      }`}
                   >
                     <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
                       {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
@@ -846,18 +850,22 @@ export default function MaintenanceList({
                       activeTab === "overdue" ||
                       activeTab === "upcoming" ||
                       activeTab === "last7days") && (
-                      <td className="px-3 py-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedTasks.has(task.task_id)}
-                          onChange={() => toggleTaskSelection(task.task_id)}
-                          className="w-4 h-4 rounded border-gray-300 text-blue-600"
-                        />
-                      </td>
-                    )}
+                        <td className="px-3 py-3">
+                          <input
+                            type="checkbox"
+                            checked={selectedTasks.has(task.task_id)}
+                            onChange={() => toggleTaskSelection(task.task_id)}
+                            className="w-4 h-4 rounded border-gray-300 text-blue-600"
+                          />
+                        </td>
+                      )}
+                    <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
+                      {task.machine_type || "—"}
+                    </td>
                     <td className="px-3 py-3 text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap">
                       {task.machine_name}
                     </td>
+
                     <td className="px-3 py-3 text-sm text-foreground dark:text-gray-300 min-w-50">
                       <div
                         className="whitespace-normal wrap-break-word"
@@ -881,9 +889,9 @@ export default function MaintenanceList({
                     </td>
                     <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap bg-yellow-50 dark:bg-yellow-900/10">
                       {activeTab === "pending" ||
-                      activeTab === "overdue" ||
-                      activeTab === "upcoming" ||
-                      activeTab === "last7days"
+                        activeTab === "overdue" ||
+                        activeTab === "upcoming" ||
+                        activeTab === "last7days"
                         ? "—"
                         : formatDate(task.actual_date)}
                     </td>
@@ -893,26 +901,26 @@ export default function MaintenanceList({
                       activeTab === "overdue" ||
                       activeTab === "upcoming" ||
                       activeTab === "last7days") && (
-                      <td className="px-3 py-3 whitespace-nowrap bg-blue-50 dark:bg-blue-900/10">
-                        <select
-                          disabled={!selectedTasks.has(task.task_id)}
-                          value={taskStatuses[task.task_id] || "Select"}
-                          onChange={(e) =>
-                            updateTaskStatus(task.task_id, e.target.value)
-                          }
-                          className="min-w-32 border border-gray-300 dark:border-neutral-600 rounded-md px-2 py-1 w-full disabled:bg-gray-100 dark:disabled:bg-neutral-800 disabled:cursor-not-allowed text-xs bg-white dark:bg-neutral-700 text-gray-900 dark:text-white"
-                        >
-                          <option value="Select">Select</option>
-                          <option value="Done">Done</option>
-                          <option value="Hold">Hold</option>
-                          <option value="Machine Breakdown">
-                            Machine Breakdown
-                          </option>
-                          <option value="Not Plan">Not Plan</option>
-                          <option value="Cancel">Cancel</option>
-                        </select>
-                      </td>
-                    )}
+                        <td className="px-3 py-3 whitespace-nowrap bg-blue-50 dark:bg-blue-900/10">
+                          <select
+                            disabled={!selectedTasks.has(task.task_id)}
+                            value={taskStatuses[task.task_id] || "Select"}
+                            onChange={(e) =>
+                              updateTaskStatus(task.task_id, e.target.value)
+                            }
+                            className="min-w-32 border border-gray-300 dark:border-neutral-600 rounded-md px-2 py-1 w-full disabled:bg-gray-100 dark:disabled:bg-neutral-800 disabled:cursor-not-allowed text-xs bg-white dark:bg-neutral-700 text-gray-900 dark:text-white"
+                          >
+                            <option value="Select">Select</option>
+                            <option value="Done">Done</option>
+                            <option value="Hold">Hold</option>
+                            <option value="Machine Breakdown">
+                              Machine Breakdown
+                            </option>
+                            <option value="Not Plan">Not Plan</option>
+                            <option value="Cancel">Cancel</option>
+                          </select>
+                        </td>
+                      )}
                     <td className="px-3 py-3">
                       {task.sample_image ? (
                         <div className="w-10 h-10 rounded border border-gray-200 dark:border-neutral-700 overflow-hidden">
@@ -953,11 +961,10 @@ export default function MaintenanceList({
                         </td>
                         <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
                           <span
-                            className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                              task.require_attachment?.toLowerCase() === "yes"
-                                ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                                : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
-                            }`}
+                            className={`px-2 py-0.5 rounded-full text-xs font-medium ${task.require_attachment?.toLowerCase() === "yes"
+                              ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                              : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                              }`}
                           >
                             {task.require_attachment?.toLowerCase() === "yes"
                               ? "Yes"
@@ -1009,11 +1016,10 @@ export default function MaintenanceList({
                       <>
                         <td className="px-3 py-3">
                           <span
-                            className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                              task.status === "Done"
-                                ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                                : "bg-gray-100 text-gray-800"
-                            }`}
+                            className={`px-2 py-0.5 rounded-full text-xs font-medium ${task.status === "Done"
+                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                              : "bg-gray-100 text-gray-800"
+                              }`}
                           >
                             {task.status || "Done"}
                           </span>
@@ -1046,19 +1052,18 @@ export default function MaintenanceList({
                       <>
                         <td className="px-3 py-3">
                           <span
-                            className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                              task.actual_date
-                                ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                                : task.task_start_date &&
-                                    new Date(task.task_start_date) < new Date()
-                                  ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                                  : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
-                            }`}
+                            className={`px-2 py-0.5 rounded-full text-xs font-medium ${task.actual_date
+                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                              : task.task_start_date &&
+                                new Date(task.task_start_date) < new Date()
+                                ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                                : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                              }`}
                           >
                             {task.actual_date
                               ? "Completed"
                               : task.task_start_date &&
-                                  new Date(task.task_start_date) < new Date()
+                                new Date(task.task_start_date) < new Date()
                                 ? "Overdue"
                                 : "Pending"}
                           </span>

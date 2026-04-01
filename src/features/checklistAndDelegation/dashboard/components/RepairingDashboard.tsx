@@ -269,6 +269,68 @@ export default function RepairingDashboard() {
             </select>
           </div>
 
+          {/* Machine Type Multi-select */}
+          <div
+            ref={machineTypeDropdownRef}
+            className="flex flex-col min-w-50 relative"
+          >
+            <label className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+              <Filter size={14} className="inline mr-1" />
+              Machine Type
+            </label>
+            <div
+              onClick={() => setShowMachineTypeDropdown(!showMachineTypeDropdown)}
+              className="px-3 py-2 border border-gray-200 dark:border-neutral-600 rounded-lg cursor-pointer bg-white dark:bg-neutral-700 flex items-center justify-between min-h-10.5"
+            >
+              <span className="text-gray-700 dark:text-gray-200 truncate">
+                {selectedMachineTypes.length > 0
+                  ? `${selectedMachineTypes.length} selected`
+                  : "All Machine Types"}
+              </span>
+              <ChevronDown
+                className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform ${showMachineTypeDropdown ? "rotate-180" : ""}`}
+              />
+            </div>
+            {showMachineTypeDropdown && (
+              <div className="absolute z-20 w-full mt-1 overflow-y-auto bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-600 rounded-lg shadow-lg max-h-60 top-full">
+                <div className="sticky top-0 p-2 bg-white dark:bg-neutral-800 border-b border-gray-200 dark:border-neutral-700">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleMachineTypeSelection("");
+                    }}
+                    className="text-xs font-medium text-orange-600 hover:text-orange-700 dark:text-orange-400"
+                  >
+                    Clear Selection
+                  </button>
+                </div>
+                {machineTypesList.map((machineType) => (
+                  <div
+                    key={machineType}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleMachineTypeSelection(machineType);
+                    }}
+                    className={`px-3 py-2 cursor-pointer hover:bg-orange-50 dark:hover:bg-neutral-700 flex items-center gap-2 ${selectedMachineTypes.includes(machineType)
+                      ? "bg-orange-100 dark:bg-orange-900/20"
+                      : ""
+                      }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedMachineTypes.includes(machineType)}
+                      onChange={() => { }}
+                      className="w-4 h-4 text-orange-600 border-gray-300 dark:border-neutral-600 rounded focus:ring-orange-500"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-200 truncate" title={machineType}>
+                      {machineType}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Machine Multi-select */}
           <div
             ref={machineDropdownRef}
@@ -331,67 +393,7 @@ export default function RepairingDashboard() {
             )}
           </div>
 
-          {/* Machine Type Multi-select */}
-          <div
-            ref={machineTypeDropdownRef}
-            className="flex flex-col min-w-50 relative"
-          >
-            <label className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-              <Filter size={14} className="inline mr-1" />
-              Machine Type
-            </label>
-            <div
-              onClick={() => setShowMachineTypeDropdown(!showMachineTypeDropdown)}
-              className="px-3 py-2 border border-gray-200 dark:border-neutral-600 rounded-lg cursor-pointer bg-white dark:bg-neutral-700 flex items-center justify-between min-h-10.5"
-            >
-              <span className="text-gray-700 dark:text-gray-200 truncate">
-                {selectedMachineTypes.length > 0
-                  ? `${selectedMachineTypes.length} selected`
-                  : "All Machine Types"}
-              </span>
-              <ChevronDown
-                className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform ${showMachineTypeDropdown ? "rotate-180" : ""}`}
-              />
-            </div>
-            {showMachineTypeDropdown && (
-              <div className="absolute z-20 w-full mt-1 overflow-y-auto bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-600 rounded-lg shadow-lg max-h-60 top-full">
-                <div className="sticky top-0 p-2 bg-white dark:bg-neutral-800 border-b border-gray-200 dark:border-neutral-700">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleMachineTypeSelection("");
-                    }}
-                    className="text-xs font-medium text-orange-600 hover:text-orange-700 dark:text-orange-400"
-                  >
-                    Clear Selection
-                  </button>
-                </div>
-                {machineTypesList.map((machineType) => (
-                  <div
-                    key={machineType}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleMachineTypeSelection(machineType);
-                    }}
-                    className={`px-3 py-2 cursor-pointer hover:bg-orange-50 dark:hover:bg-neutral-700 flex items-center gap-2 ${selectedMachineTypes.includes(machineType)
-                      ? "bg-orange-100 dark:bg-orange-900/20"
-                      : ""
-                      }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedMachineTypes.includes(machineType)}
-                      onChange={() => { }}
-                      className="w-4 h-4 text-orange-600 border-gray-300 dark:border-neutral-600 rounded focus:ring-orange-500"
-                    />
-                    <span className="text-sm text-gray-700 dark:text-gray-200 truncate" title={machineType}>
-                      {machineType}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+
 
           {/* Status */}
           <div className="flex flex-col min-w-37.5">
@@ -641,8 +643,8 @@ export default function RepairingDashboard() {
                 {[
                   "Task ID",
                   "Date",
-                  "Machine Name",
                   "Machine Type",
+                  "Machine Name",
                   "Issue",
                   "Part Replaced",
                   "Assigned To",
@@ -676,11 +678,11 @@ export default function RepairingDashboard() {
                     <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-300 align-middle whitespace-nowrap">
                       {formatDate(row.created_at)}
                     </td>
-                    <td className="px-5 py-4 text-sm font-semibold text-orange-700 dark:text-orange-400 align-middle">
-                      {row.machine_name || "—"}
-                    </td>
                     <td className="px-5 py-4 text-sm text-gray-700 dark:text-gray-300 align-middle whitespace-nowrap">
                       {row.machine_type || "—"}
+                    </td>
+                    <td className="px-5 py-4 text-sm font-semibold text-orange-700 dark:text-orange-400 align-middle">
+                      {row.machine_name || "—"}
                     </td>
                     <td
                       className="px-5 py-4 text-sm text-gray-600 dark:text-gray-300 align-middle max-w-45 truncate"

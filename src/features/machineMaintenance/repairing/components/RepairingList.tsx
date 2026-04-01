@@ -396,7 +396,7 @@ export default function RepairingList({
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 pt-0 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -556,10 +556,10 @@ export default function RepairingList({
                     ID
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                    Type
+                    Machine Type
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                    Machine
+                    Machine Name
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                     Issue

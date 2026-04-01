@@ -129,7 +129,7 @@ export default function MainMaintenanceSchedule() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 pt-0 space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-foreground">
@@ -171,7 +171,7 @@ export default function MainMaintenanceSchedule() {
           <thead>
             <tr className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                Machine
+                Machine Name
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                 Task
@@ -211,13 +211,12 @@ export default function MainMaintenanceSchedule() {
                   </td>
                   <td className="px-6 py-4">
                     <span
-                      className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        schedule.frequency === "daily"
-                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                          : schedule.frequency === "weekly"
-                            ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                            : "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400"
-                      }`}
+                      className={`px-2 py-1 text-xs font-medium rounded-full ${schedule.frequency === "daily"
+                        ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                        : schedule.frequency === "weekly"
+                          ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                          : "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400"
+                        }`}
                     >
                       {schedule.frequency}
                     </span>

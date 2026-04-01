@@ -203,7 +203,7 @@ export default function MainRepairingHistory() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 pt-0 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -311,10 +311,10 @@ export default function MainRepairingHistory() {
                     ID
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                    Machine
+                    Machine Type
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                    Machine Type
+                    Machine Name
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                     Work Done
@@ -352,10 +352,10 @@ export default function MainRepairingHistory() {
                       {repair.task_id}
                     </td>
                     <td className="px-4 py-3 text-sm text-foreground">
-                      {repair.machine_name || "-"}
+                      {repair.machine_type || "-"}
                     </td>
                     <td className="px-4 py-3 text-sm text-foreground">
-                      {repair.machine_type || "-"}
+                      {repair.machine_name || "-"}
                     </td>
                     <td className="px-4 py-3 text-sm text-foreground max-w-xs truncate">
                       {repair.work_done || "-"}

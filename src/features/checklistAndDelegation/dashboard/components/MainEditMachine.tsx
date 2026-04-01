@@ -592,11 +592,11 @@ export default function MainEditMachine() {
           <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
             ID
           </th>
-          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-40">
-            Machine Name
-          </th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">
             Machine Type
+          </th>
+          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-40">
+            Machine Name
           </th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
             Task Description
@@ -669,24 +669,6 @@ export default function MainEditMachine() {
                 <td className="px-3 py-3 text-sm text-gray-900 dark:text-white whitespace-nowrap">
                   {isEditing ? (
                     <select
-                      value={maintenanceEditForm.machine_name || ""}
-                      onChange={(e) =>
-                        handleMaintenanceFieldChange("machine_name", e.target.value)
-                      }
-                      className={inputClass}
-                    >
-                      <option value="">Select Machine</option>
-                      {uniqueMachines.map((m) => (
-                        <option key={m} value={m}>{m}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    task.machine_name || "—"
-                  )}
-                </td>
-                <td className="px-3 py-3 text-sm text-gray-900 dark:text-white whitespace-nowrap">
-                  {isEditing ? (
-                    <select
                       value={maintenanceEditForm.machine_type || ""}
                       onChange={(e) =>
                         handleMaintenanceFieldChange("machine_type", e.target.value)
@@ -702,6 +684,25 @@ export default function MainEditMachine() {
                     task.machine_type || "—"
                   )}
                 </td>
+                <td className="px-3 py-3 text-sm text-gray-900 dark:text-white whitespace-nowrap">
+                  {isEditing ? (
+                    <select
+                      value={maintenanceEditForm.machine_name || ""}
+                      onChange={(e) =>
+                        handleMaintenanceFieldChange("machine_name", e.target.value)
+                      }
+                      className={inputClass}
+                    >
+                      <option value="">Select Machine</option>
+                      {uniqueMachines.map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    task.machine_name || "—"
+                  )}
+                </td>
+
                 <td className="px-3 py-3 text-sm text-foreground dark:text-gray-300 min-w-50 max-w-75">
                   {isEditing ? (
                     <textarea
@@ -900,10 +901,10 @@ export default function MainEditMachine() {
             Task ID
           </th>
           <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
-            Machine Name
+            Machine Type
           </th>
           <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
-            Machine Type
+            Machine Name
           </th>
           <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase min-w-48">
             Issue Detail
@@ -966,24 +967,6 @@ export default function MainEditMachine() {
               <td className="px-3 py-3 text-sm text-gray-900 dark:text-white whitespace-nowrap">
                 {isEditing ? (
                   <select
-                    value={repairEditForm.machine_name || ""}
-                    onChange={(e) =>
-                      handleRepairFieldChange("machine_name", e.target.value)
-                    }
-                    className={inputClass}
-                  >
-                    <option value="">Select Machine</option>
-                    {uniqueMachines.map((m) => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
-                ) : (
-                  task.machine_name || "—"
-                )}
-              </td>
-              <td className="px-3 py-3 text-sm text-gray-900 dark:text-white whitespace-nowrap">
-                {isEditing ? (
-                  <select
                     value={repairEditForm.machine_type || ""}
                     onChange={(e) =>
                       handleRepairFieldChange("machine_type", e.target.value)
@@ -999,6 +982,25 @@ export default function MainEditMachine() {
                   task.machine_type || "—"
                 )}
               </td>
+              <td className="px-3 py-3 text-sm text-gray-900 dark:text-white whitespace-nowrap">
+                {isEditing ? (
+                  <select
+                    value={repairEditForm.machine_name || ""}
+                    onChange={(e) =>
+                      handleRepairFieldChange("machine_name", e.target.value)
+                    }
+                    className={inputClass}
+                  >
+                    <option value="">Select Machine</option>
+                    {uniqueMachines.map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                ) : (
+                  task.machine_name || "—"
+                )}
+              </td>
+
               <td className="px-3 py-3 text-sm text-foreground dark:text-gray-300 min-w-50 max-w-75">
                 {isEditing ? (
                   <textarea

@@ -95,24 +95,36 @@ export default function MaintenanceDashboard() {
     dashboardView,
     setDashboardView,
     deleteTaskMutation,
-
+    startDate,
+    setStartDate,
+    endDate,
+    setEndDate,
   } = useMaintenanceDashboard();
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedDate, setSelectedDate] = useState<string>("");
 
   // Reset page when view changes
   useEffect(() => {
     setCurrentPage(1);
   }, [dashboardView]);
 
-  // Filter tasks based on selected date
-  const filteredTasks = selectedDate
-    ? dashboardTasks.filter((task) => {
-      if (!task.task_start_date) return false;
-      return task.task_start_date >= selectedDate;
-    })
-    : dashboardTasks;
+  // Filter tasks based on selected date range
+  const filteredTasks = dashboardTasks.filter((task) => {
+    if (!task.task_start_date) return false;
+
+    // If no date range selected, show all
+    if (!startDate && !endDate) return true;
+
+    const taskDate = task.task_start_date;
+
+    // Check start date
+    if (startDate && taskDate < startDate) return false;
+
+    // Check end date
+    if (endDate && taskDate > endDate) return false;
+
+    return true;
+  });
 
   // Safety check for pagination bounds
   useEffect(() => {
@@ -135,13 +147,19 @@ export default function MaintenanceDashboard() {
     filteredTasks.length,
   );
 
-  const handleDateFilter = (date: string) => {
-    setSelectedDate(date);
-    setCurrentPage(1); // Reset to first page when filter changes
+  const handleStartDate = (date: string) => {
+    setStartDate(date);
+    setCurrentPage(1);
+  };
+
+  const handleEndDate = (date: string) => {
+    setEndDate(date);
+    setCurrentPage(1);
   };
 
   const clearDateFilter = () => {
-    setSelectedDate("");
+    setStartDate("");
+    setEndDate("");
     setCurrentPage(1);
   };
 
@@ -221,14 +239,61 @@ export default function MaintenanceDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
-          Maintenance Dashboard
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Overview of machine maintenance activities
-        </p>
+      {/* Header with Date Range Filter - Same Row */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+            Maintenance Dashboard
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Overview of machine maintenance activities
+          </p>
+        </div>
+
+        {/* Date Range Filter - Aligned Right */}
+        <div>
+          <div className="flex items-center gap-2">
+            <div className="font-bold pr-5">SELECT RANGE</div>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <span className="absolute -top-2 left-2 px-1 text-[10px] bg-white dark:bg-neutral-800 text-muted-foreground">From</span>
+                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => handleStartDate(e.target.value)}
+                  className="pl-9 pr-3 py-2 text-sm border border-gray-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="relative">
+                <span className="absolute -top-2 left-2 px-1 text-[10px] bg-white dark:bg-neutral-800 text-muted-foreground">To</span>
+                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => handleEndDate(e.target.value)}
+                  min={startDate}
+                  className="pl-9 pr-3 py-2 text-sm border border-gray-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            {(startDate || endDate) && (
+              <button
+                onClick={clearDateFilter}
+                className="px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          {(startDate || endDate) && (
+            <p className="text-xs text-muted-foreground mt-1 text-right">
+              Showing tasks {startDate ? `from ${new Date(startDate).toLocaleDateString()}` : ""}
+              {startDate && endDate ? " to " : endDate ? " up to " : ""}
+              {endDate ? new Date(endDate).toLocaleDateString() : ""}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Stats Grid */}
@@ -355,7 +420,7 @@ export default function MaintenanceDashboard() {
         </div>
       </div>
 
-      {/* Task View Toggles with Date Filter */}
+      {/* Task View Toggles */}
       <div className="mt-8">
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700 p-4 mb-6">
           <div className="flex flex-wrap gap-4 items-center justify-between">
@@ -401,27 +466,6 @@ export default function MaintenanceDashboard() {
                 History
               </button>
             </div>
-
-            {/* Date Filter */}
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => handleDateFilter(e.target.value)}
-                  className="pl-9 pr-3 py-2 text-sm border border-gray-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              {selectedDate && (
-                <button
-                  onClick={clearDateFilter}
-                  className="px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
           </div>
         </div>
 
@@ -435,11 +479,6 @@ export default function MaintenanceDashboard() {
                 {dashboardView === "overdue" && "Overdue Tasks"}
                 {dashboardView === "history" && "History Tasks"}
               </h2>
-              {selectedDate && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Showing tasks from {new Date(selectedDate).toLocaleDateString()} onwards
-                </p>
-              )}
             </div>
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <span>
@@ -460,10 +499,10 @@ export default function MaintenanceDashboard() {
               <thead className="bg-gray-50 dark:bg-neutral-700">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground dark:text-gray-300 uppercase tracking-wider">
-                    Machine
+                    Machine Type
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground dark:text-gray-300 uppercase tracking-wider">
-                    Machine Type
+                    Machine Name
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground dark:text-gray-300 uppercase tracking-wider">
                     Description
@@ -489,8 +528,8 @@ export default function MaintenanceDashboard() {
                       colSpan={7}
                       className="px-4 py-8 text-center text-muted-foreground dark:text-muted-foreground"
                     >
-                      {selectedDate
-                        ? `No tasks found from ${new Date(selectedDate).toLocaleDateString()} onwards`
+                      {(startDate || endDate)
+                        ? "No tasks found for the selected date range"
                         : "No tasks found"}
                     </td>
                   </tr>
@@ -501,13 +540,13 @@ export default function MaintenanceDashboard() {
                       className="hover:bg-gray-50 dark:hover:bg-neutral-700/50"
                     >
                       <td className="px-4 py-4">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          {task.machine_name}
+                        <p className="text-sm text-foreground-secondary dark:text-gray-300">
+                          {task.machine_type || "—"}
                         </p>
                       </td>
                       <td className="px-4 py-4">
-                        <p className="text-sm text-foreground-secondary dark:text-gray-300">
-                          {task.machine_type || "—"}
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          {task.machine_name}
                         </p>
                       </td>
                       <td className="px-4 py-4">
