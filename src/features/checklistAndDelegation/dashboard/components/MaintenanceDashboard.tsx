@@ -425,6 +425,7 @@ export default function MaintenanceDashboard() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-neutral-800 dark:border-neutral-700 p-4 mb-6">
           <div className="flex flex-wrap gap-4 items-center justify-between">
             <div className="flex gap-1 flex-1 max-w-2xl">
+
               <button
                 className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${dashboardView === "recent"
                   ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 shadow-sm"
@@ -432,9 +433,10 @@ export default function MaintenanceDashboard() {
                   }`}
                 onClick={() => setDashboardView("recent")}
               >
-                <Clock className="w-4 h-4" />
+                <TrendingUp className="w-4 h-4" />
                 Recent & Today
               </button>
+
               <button
                 className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${dashboardView === "upcoming"
                   ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 shadow-sm"
@@ -465,6 +467,16 @@ export default function MaintenanceDashboard() {
                 <History className="w-4 h-4" />
                 History
               </button>
+              <button
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${dashboardView === "pending"
+                  ? "bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 shadow-sm"
+                  : "text-muted-foreground hover:bg-gray-50 dark:hover:bg-neutral-700 hover:text-foreground"
+                  }`}
+                onClick={() => setDashboardView("pending")}
+              >
+                <Clock className="w-4 h-4" />
+                Pending
+              </button>
             </div>
           </div>
         </div>
@@ -474,6 +486,7 @@ export default function MaintenanceDashboard() {
           <div className="p-4 border-b border-gray-100 dark:border-neutral-700 flex items-center justify-between flex-wrap gap-2">
             <div>
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                {dashboardView === "pending" && "All Pending Tasks"}
                 {dashboardView === "recent" && "Recent & Today's Tasks"}
                 {dashboardView === "upcoming" && "Upcoming Tasks"}
                 {dashboardView === "overdue" && "Overdue Tasks"}

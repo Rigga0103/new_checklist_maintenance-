@@ -24,7 +24,7 @@ import { formatDate } from "../hooks/useMaintenanceDashboard";
 const ITEMS_PER_PAGE = 50;
 
 interface MaintenanceListProps {
-  initialTab?: "pending" | "history" | "last7days" | "overdue" | "upcoming";
+  initialTab?: "pending" | "history" | "last7days" | "upcoming";
   showTabs?: boolean;
 }
 
@@ -184,7 +184,7 @@ export default function MaintenanceList({
         ];
         csvRows.push(row.join(","));
       });
-    } else if (activeTab === "overdue" || activeTab === "upcoming") {
+    } else if (activeTab === "upcoming") {
       const headers = [
         "Task ID",
         "Machine Name",
@@ -467,12 +467,10 @@ export default function MaintenanceList({
             {viewMyTasksOnly && username
               ? `Showing your tasks only (${username})`
               : activeTab === "pending"
-                ? "Manage pending maintenance tasks"
+                ? "Manage pending maintenance tasks (including overdue)"
                 : activeTab === "last7days"
                   ? "All tasks from Monday to Saturday"
-                  : activeTab === "overdue"
-                    ? "View overdue maintenance tasks"
-                    : "Maintenance tasks scheduled for the next 7 days"}
+                  : "Maintenance tasks scheduled for the next 7 days"}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -544,15 +542,6 @@ export default function MaintenanceList({
                 }`}
             >
               Last 7 Days
-            </button>
-            <button
-              onClick={() => setActiveTab("overdue")}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${activeTab === "overdue"
-                ? "bg-red-600 text-white"
-                : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
-                }`}
-            >
-              All Overdue
             </button>
             <button
               onClick={() => setActiveTab("upcoming")}
@@ -664,7 +653,6 @@ export default function MaintenanceList({
         </div>
 
         {(activeTab === "pending" ||
-          activeTab === "overdue" ||
           activeTab === "upcoming" ||
           activeTab === "last7days") &&
           filteredMaintenanceData.length > 0 && (
@@ -734,7 +722,7 @@ export default function MaintenanceList({
                     Seq
                   </th>
                   {(activeTab === "pending" ||
-                    activeTab === "overdue" ||
+
                     activeTab === "upcoming" ||
                     activeTab === "last7days") && (
                       <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase w-10">
@@ -774,13 +762,12 @@ export default function MaintenanceList({
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase bg-yellow-50 dark:bg-yellow-900/20">
                     {activeTab === "pending" ||
-                      activeTab === "overdue" ||
                       activeTab === "upcoming"
                       ? "End/Due Date"
                       : "Completed Date"}
                   </th>
                   {(activeTab === "pending" ||
-                    activeTab === "overdue" ||
+
                     activeTab === "upcoming" ||
                     activeTab === "last7days") && (
                       <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase bg-blue-50 dark:bg-blue-900/20">
@@ -790,7 +777,7 @@ export default function MaintenanceList({
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
                     Sample Image
                   </th>
-                  {(activeTab === "pending" || activeTab === "overdue") && (
+                  {(activeTab === "pending") && (
                     <>
                       <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
                         Reminders
@@ -847,7 +834,7 @@ export default function MaintenanceList({
                       {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
                     </td>
                     {(activeTab === "pending" ||
-                      activeTab === "overdue" ||
+
                       activeTab === "upcoming" ||
                       activeTab === "last7days") && (
                         <td className="px-3 py-3">
@@ -889,7 +876,6 @@ export default function MaintenanceList({
                     </td>
                     <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap bg-yellow-50 dark:bg-yellow-900/10">
                       {activeTab === "pending" ||
-                        activeTab === "overdue" ||
                         activeTab === "upcoming" ||
                         activeTab === "last7days"
                         ? "—"
@@ -898,7 +884,7 @@ export default function MaintenanceList({
 
                     {/* Pending Actions */}
                     {(activeTab === "pending" ||
-                      activeTab === "overdue" ||
+
                       activeTab === "upcoming" ||
                       activeTab === "last7days") && (
                         <td className="px-3 py-3 whitespace-nowrap bg-blue-50 dark:bg-blue-900/10">
@@ -946,7 +932,7 @@ export default function MaintenanceList({
                         </span>
                       )}
                     </td>
-                    {(activeTab === "pending" || activeTab === "overdue") && (
+                    {activeTab === "pending" && (
                       <>
                         <td className="px-3 py-3 whitespace-nowrap">
                           {task.enable_reminder?.toLowerCase() === "yes" ? (

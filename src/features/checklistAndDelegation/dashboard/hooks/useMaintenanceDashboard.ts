@@ -50,7 +50,7 @@ export interface FrequencyChartItem {
 
 // ============ Main Hook ============
 
-export type MaintenanceTab = "pending" | "history" | "last7days" | "overdue" | "upcoming";
+export type MaintenanceTab = "pending" | "history" | "last7days" | "upcoming";
 
 interface UseMaintenanceDashboardOptions {
   role?: string | null;
@@ -149,12 +149,12 @@ export function useMaintenanceDashboard(
   // ---- Loading & Error (based on active tab) ----
   const maintenanceLoading =
     activeTab === "pending"
-      ? pendingLoading
+      ? pendingLoading || overdueLoading
       : activeTab === "history"
         ? historyLoading
         : activeTab === "last7days"
           ? last7DaysLoading
-          : overdueLoading;
+          : upcomingLoading;
   const maintenanceError =
     pendingError ||
     historyError ||
@@ -194,10 +194,18 @@ export function useMaintenanceDashboard(
 
   // ---- Active data based on tab ----
   const currentTabData = useMemo(() => {
-    if (activeTab === "pending") return pendingTasks;
+    if (activeTab === "pending") {
+      // Combine and deduplicate overdue + pending tasks
+      const combined = [...overdueTasks, ...pendingTasks];
+      const seen = new Set();
+      return combined.filter((t) => {
+        if (seen.has(t.task_id)) return false;
+        seen.add(t.task_id);
+        return true;
+      });
+    }
     if (activeTab === "history") return historyTasks;
     if (activeTab === "last7days") return last7DaysTasks;
-    if (activeTab === "overdue") return overdueTasks;
     return upcomingTasks;
   }, [
     activeTab,
@@ -297,7 +305,7 @@ export function useMaintenanceDashboard(
 
   // ---- Dashboard Task Views (Recent / Upcoming / Overdue) ----
   const [dashboardView, setDashboardView] = useState<
-    "recent" | "upcoming" | "overdue" | "history"
+    "recent" | "upcoming" | "overdue" | "history" | "pending"
   >("recent");
 
   const dashboardTasks = useMemo(() => {
@@ -318,6 +326,8 @@ export function useMaintenanceDashboard(
       });
     } else if (dashboardView === "history") {
       data = data.filter((t) => t.actual_date && t.actual_date.trim() !== "");
+    } else if (dashboardView === "pending") {
+      data = data.filter((t) => !t.actual_date || t.actual_date.trim() === "");
     }
 
     return data.sort((a, b) => {
@@ -326,7 +336,7 @@ export function useMaintenanceDashboard(
         const dateB = b.actual_date || b.task_start_date || "";
         return dateB.localeCompare(dateA);
       }
-      
+
       const dateA = a.task_start_date || "";
       const dateB = b.task_start_date || "";
       if (dashboardView === "recent") {

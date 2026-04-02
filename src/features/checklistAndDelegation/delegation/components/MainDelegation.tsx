@@ -102,23 +102,23 @@ export default function MainDelegation() {
 
   const rawHistoryTasks =
     (activeTab === "history" || activeTab === "last7days") &&
-    (historyFromDate || historyToDate)
+      (historyFromDate || historyToDate)
       ? historyTasks.filter((t) => {
-          const dateStr = t.submission_date || t.created_at || null;
-          if (!dateStr) return false;
-          const d = new Date(dateStr).setHours(0, 0, 0, 0);
-          if (
-            historyFromDate &&
-            d < new Date(historyFromDate).setHours(0, 0, 0, 0)
-          )
-            return false;
-          if (
-            historyToDate &&
-            d > new Date(historyToDate).setHours(23, 59, 59, 999)
-          )
-            return false;
-          return true;
-        })
+        const dateStr = t.submission_date || t.created_at || null;
+        if (!dateStr) return false;
+        const d = new Date(dateStr).setHours(0, 0, 0, 0);
+        if (
+          historyFromDate &&
+          d < new Date(historyFromDate).setHours(0, 0, 0, 0)
+        )
+          return false;
+        if (
+          historyToDate &&
+          d > new Date(historyToDate).setHours(23, 59, 59, 999)
+        )
+          return false;
+        return true;
+      })
       : historyTasks;
 
   const tasks =
@@ -228,22 +228,20 @@ export default function MainDelegation() {
             <div className="flex p-1 bg-gray-100 dark:bg-neutral-700 rounded-lg">
               <button
                 onClick={() => setViewMyTasksOnly(false)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                  !viewMyTasksOnly
-                    ? "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 shadow-sm"
-                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${!viewMyTasksOnly
+                  ? "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 shadow-sm"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                  }`}
               >
                 <Users className="w-3.5 h-3.5" />
                 All Tasks
               </button>
               <button
                 onClick={() => setViewMyTasksOnly(true)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                  viewMyTasksOnly
-                    ? "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 shadow-sm"
-                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${viewMyTasksOnly
+                  ? "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 shadow-sm"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                  }`}
               >
                 <User className="w-3.5 h-3.5" />
                 My Tasks
@@ -324,31 +322,28 @@ export default function MainDelegation() {
         <div className="flex gap-2">
           <button
             onClick={() => handleTabChange("pending")}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === "pending"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
-            }`}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${activeTab === "pending"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
+              }`}
           >
             Today Pending
           </button>
           <button
             onClick={() => handleTabChange("history")}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === "history"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
-            }`}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${activeTab === "history"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
+              }`}
           >
             History
           </button>
           <button
             onClick={() => handleTabChange("last7days")}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === "last7days"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
-            }`}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${activeTab === "last7days"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
+              }`}
           >
             Last 7 Days
           </button>
@@ -596,9 +591,19 @@ export default function MainDelegation() {
                       Status
                     </th>
                   )}
+                  {activeTab === "pending" && isAdmin && (
+                    <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase bg-blue-50 dark:bg-blue-900/20">
+                      Close Task
+                    </th>
+                  )}
                   {(activeTab === "history" || activeTab === "last7days") && (
                     <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase">
                       Status
+                    </th>
+                  )}
+                  {(activeTab === "history" || activeTab === "last7days") && isAdmin && (
+                    <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase">
+                      Close Task
                     </th>
                   )}
 
@@ -634,15 +639,14 @@ export default function MainDelegation() {
                 {tasks.map((task, index) => (
                   <tr
                     key={task.task_id || index}
-                    className={`hover:bg-gray-50 dark:hover:bg-neutral-700/50 ${
-                      selectedTasks.has(task.task_id)
-                        ? "bg-blue-50 dark:bg-blue-900/20"
-                        : isOverdue(task)
-                          ? "bg-orange-50 dark:bg-orange-900/20"
-                          : task.status === "extend"
-                            ? "bg-red-50 dark:bg-red-900/20"
-                            : ""
-                    }`}
+                    className={`hover:bg-gray-50 dark:hover:bg-neutral-700/50 ${selectedTasks.has(task.task_id)
+                      ? "bg-blue-50 dark:bg-blue-900/20"
+                      : isOverdue(task)
+                        ? "bg-orange-50 dark:bg-orange-900/20"
+                        : task.status === "extend"
+                          ? "bg-red-50 dark:bg-red-900/20"
+                          : ""
+                      }`}
                   >
                     {activeTab === "pending" && (
                       <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
@@ -725,21 +729,76 @@ export default function MainDelegation() {
                         </div>
                       </td>
                     )}
+                    {activeTab === "pending" && isAdmin && (
+                      <td className="px-3 py-3 bg-blue-50 dark:bg-blue-900/10 border-l border-gray-200 dark:border-neutral-700">
+                        <div className="flex flex-col gap-2">
+                          <select
+                            disabled={!selectedTasks.has(task.task_id)}
+                            value={taskStatuses[task.task_id] || ""}
+                            onChange={(e) =>
+                              updateTaskStatus(task.task_id, e.target.value)
+                            }
+                            className="min-w-32 border border-gray-300 dark:border-neutral-600 rounded-md px-2 py-1 w-full disabled:bg-gray-100 dark:disabled:bg-neutral-800 disabled:cursor-not-allowed text-xs sm:text-sm bg-white dark:bg-neutral-700 text-gray-900 dark:text-white"
+                          >
+                            <option value="">Select</option>
+                            <option value="Done">Done</option>
+                            <option value="Extend date">Extend date</option>
+                          </select>
+                          {taskStatuses[task.task_id] === "Extend date" && (
+                            <input
+                              type="date"
+                              value={nextTargetDates[task.task_id] || ""}
+                              onChange={(e) =>
+                                updateNextTargetDate(
+                                  task.task_id,
+                                  e.target.value,
+                                )
+                              }
+                              className="min-w-32 border border-gray-300 dark:border-neutral-600 rounded-md px-2 py-1 w-full text-xs sm:text-sm bg-white dark:bg-neutral-700 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                            />
+                          )}
+                        </div>
+                      </td>
+                    )}
 
                     {/* History & Last 7 Days Status Badge */}
                     {(activeTab === "history" || activeTab === "last7days") && (
                       <td className="px-3 py-3">
                         <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                            task.status === "done" ||
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${task.status === "done" ||
                             task.status === "completed"
-                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                              : task.status === "extend"
-                                ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                                : task.status === "no" || isOverdue(task)
-                                  ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                                  : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
-                          }`}
+                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                            : task.status === "extend"
+                              ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                              : task.status === "no" || isOverdue(task)
+                                ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                                : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                            }`}
+                        >
+                          {task.status === "done" || task.status === "completed"
+                            ? "Done"
+                            : task.status === "extend"
+                              ? "Extended"
+                              : task.status === "no"
+                                ? "Not Done"
+                                : isOverdue(task)
+                                  ? "Overdue"
+                                  : "Pending"}
+                        </span>
+                      </td>
+                    )}
+                    {(activeTab === "history" || activeTab === "last7days") && isAdmin && (
+                      <td className="px-3 py-3 border-l border-gray-200 dark:border-neutral-700">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${task.status === "done" ||
+                            task.status === "completed"
+                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                            : task.status === "extend"
+                              ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                              : task.status === "no" || isOverdue(task)
+                                ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                                : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                            }`}
                         >
                           {task.status === "done" || task.status === "completed"
                             ? "Done"
@@ -791,11 +850,10 @@ export default function MainDelegation() {
                     <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
                       {activeTab === "pending" ? (
                         <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                            task.require_attachment?.toLowerCase() === "yes"
-                              ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                              : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
-                          }`}
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${task.require_attachment?.toLowerCase() === "yes"
+                            ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                            : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                            }`}
                         >
                           {task.require_attachment?.toLowerCase() === "yes"
                             ? "Yes"
@@ -857,11 +915,10 @@ export default function MainDelegation() {
                                   task.image!
                                 }
                                 alt="attachment"
-                                className={`w-10 h-10 object-cover rounded border ${
-                                  taskImages[task.task_id]?.previewUrl
-                                    ? "border-green-300"
-                                    : "border-gray-300 dark:border-neutral-600"
-                                } hover:border-blue-500 hover:opacity-80 transition-all`}
+                                className={`w-10 h-10 object-cover rounded border ${taskImages[task.task_id]?.previewUrl
+                                  ? "border-green-300"
+                                  : "border-gray-300 dark:border-neutral-600"
+                                  } hover:border-blue-500 hover:opacity-80 transition-all`}
                                 title="Click to replace image"
                               />
                             </label>
@@ -1051,8 +1108,8 @@ export default function MainDelegation() {
                     value={
                       editFormData.task_start_date
                         ? new Date(editFormData.task_start_date)
-                            .toISOString()
-                            .split("T")[0]
+                          .toISOString()
+                          .split("T")[0]
                         : ""
                     }
                     onChange={(e) =>
@@ -1073,8 +1130,8 @@ export default function MainDelegation() {
                     value={
                       editFormData.planned_date
                         ? new Date(editFormData.planned_date)
-                            .toISOString()
-                            .split("T")[0]
+                          .toISOString()
+                          .split("T")[0]
                         : ""
                     }
                     onChange={(e) =>
