@@ -21,6 +21,7 @@ interface RepairRequestFormState {
   issueDetail: string;
   task_start_date: string;
   part_replaced: string[];
+  customPart: string;
 }
 
 const initialFormData: RepairRequestFormState = {
@@ -32,6 +33,7 @@ const initialFormData: RepairRequestFormState = {
   issueDetail: "",
   task_start_date: new Date().toISOString().split("T")[0],
   part_replaced: [],
+  customPart: "",
 };
 
 const STATIC_USERS = [
@@ -120,11 +122,20 @@ export function useRepairRequestForm() {
   const handlePartChange = useCallback((partName: string) => {
     setFormData((prev) => {
       const currentParts = prev.part_replaced || [];
-      if (currentParts.includes(partName)) {
-        return { ...prev, part_replaced: currentParts.filter((p) => p !== partName) };
+      const isSelected = currentParts.includes(partName);
+      
+      let nextParts: string[];
+      if (isSelected) {
+        nextParts = currentParts.filter((p) => p !== partName);
       } else {
-        return { ...prev, part_replaced: [...currentParts, partName] };
+        nextParts = [...currentParts, partName];
       }
+
+      return {
+        ...prev,
+        part_replaced: nextParts,
+        customPart: nextParts.includes("other") ? prev.customPart : "",
+      };
     });
   }, []);
 
@@ -152,6 +163,29 @@ export function useRepairRequestForm() {
         return;
       }
 
+      let partsList = [...(formData.part_replaced || [])];
+      
+      // Handle the "other" manual entry
+      if (partsList.includes("other")) {
+        // Remove the placeholder "other"
+        partsList = partsList.filter((p) => p !== "other");
+        
+        // Split custom parts by comma and add them individually
+        if (formData.customPart.trim()) {
+          const manualParts = formData.customPart
+            .split(",")
+            .map(p => p.trim())
+            .filter(p => p !== "");
+          partsList = [...partsList, ...manualParts];
+        }
+      }
+
+      // If still empty, ensure we send at least one entry (the backend handles null/empty if handled there, 
+      // but the API I saw maps onto the array length)
+      if (partsList.length === 0) {
+        partsList = []; // Backend createRepairRequest uses [null] if empty
+      }
+
       createMutation.mutate(
         {
           formFilledBy: formData.formFilledBy,
@@ -160,7 +194,7 @@ export function useRepairRequestForm() {
           machineName,
           issueDetail: formData.issueDetail,
           task_start_date: formData.task_start_date,
-          part_replaced: formData.part_replaced,
+          part_replaced: partsList,
         },
         {
           onSuccess: (result) => {

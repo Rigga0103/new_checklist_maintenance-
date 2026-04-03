@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRepairRequestForm } from "../hooks/useRepairRequestForm";
-import { Loader2, Send, X, Wrench, QrCode } from "lucide-react";
+import { Loader2, Send, X, Wrench, QrCode, ChevronDown } from "lucide-react";
 import { useRBAC } from "@/hooks/useRBAC";
 
 const inputClass =
@@ -19,6 +19,7 @@ export default function MainRepairRequestForm({
 }) {
   const [showQR, setShowQR] = useState(false);
   const [publicUrl, setPublicUrl] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -220,23 +221,91 @@ export default function MainRepairRequestForm({
             {/* Row 3.5: Parts Replaced */}
             <div className="mb-3">
               <label className={labelClass}>Parts to Replace (Select one or more)</label>
-              <div className="max-h-48 overflow-y-auto border border-gray-200 dark:border-neutral-700 rounded-md p-2 bg-white dark:bg-neutral-900 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {partsData.filter(p => p["ITEM NAME"]).map((part) => (
-                  <label key={part.id} className="flex items-center space-x-2 text-sm text-foreground hover:bg-gray-50 dark:hover:bg-neutral-800 p-1 rounded cursor-pointer transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={formData.part_replaced?.includes(part["ITEM NAME"] || "")}
-                      onChange={() => handlePartChange(part["ITEM NAME"] || "")}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="truncate" title={part["ITEM NAME"] || ""}>{part["ITEM NAME"]}</span>
-                  </label>
-                ))}
-                {partsData.length === 0 && (
-                  <span className="text-sm text-muted-foreground italic col-span-2">No parts available.</span>
-                )}
+              <div className="relative">
+                <div
+                  className="min-h-10 border border-gray-200 dark:border-neutral-700 rounded-md bg-white dark:bg-neutral-900 focus-within:ring-2 focus-within:ring-blue-500 cursor-pointer"
+                  onClick={() => setIsOpen(!isOpen)}
+                >
+                  <div className="flex flex-wrap gap-1 p-2 min-h-[38px] items-center pr-8">
+                    {formData.part_replaced?.filter(p => p !== "other").map((p) => (
+                      <span key={p} className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-medium rounded border border-blue-100 dark:border-blue-800" onClick={(e) => e.stopPropagation()}>
+                        {p}
+                        <button type="button" onClick={() => handlePartChange(p)} className="hover:text-blue-900 dark:hover:text-blue-100">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                    {/* Live preview of manually typed parts */}
+                    {formData.part_replaced?.includes("other") && formData.customPart.trim() && (
+                      formData.customPart.split(",").map((p, i) => {
+                        const trimmed = p.trim();
+                        if (!trimmed) return null;
+                        return (
+                          <span key={`manual-${i}`} className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-50 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 text-xs font-medium rounded border border-orange-100 dark:border-orange-800" onClick={(e) => e.stopPropagation()}>
+                            {trimmed}
+                          </span>
+                        );
+                      })
+                    )}
+                    {formData.part_replaced?.includes("other") && !formData.customPart.trim() && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-50 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 text-xs font-medium rounded border border-orange-100 dark:border-orange-800 italic" onClick={(e) => e.stopPropagation()}>
+                        Type below...
+                      </span>
+                    )}
+                    {(!formData.part_replaced || formData.part_replaced.length === 0) && (
+                      <span className="text-sm text-muted-foreground px-1 py-0.5">Select parts to replace...</span>
+                    )}
+                    <ChevronDown className={`absolute right-2.5 top-3 w-4 h-4 text-muted-foreground transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+                  </div>
+
+                  {isOpen && (
+                    <div
+                      className="absolute z-10 w-full mt-1 bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-700 rounded-md shadow-lg p-2 max-h-60 overflow-y-auto"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="grid grid-cols-1 gap-x-4 gap-y-1">
+                        {partsData.filter(p => p["ITEM NAME"]).map((part) => (
+                          <label key={part.id} className="flex items-center space-x-2 text-sm text-foreground hover:bg-gray-50 dark:hover:bg-neutral-800 p-1.5 rounded cursor-pointer transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={formData.part_replaced?.includes(part["ITEM NAME"] || "")}
+                              onChange={() => handlePartChange(part["ITEM NAME"] || "")}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="truncate text-xs flex-1" title={part["ITEM NAME"] || ""}>{part["ITEM NAME"]}</span>
+                          </label>
+                        ))}
+                        <label className="flex items-center space-x-2 text-sm text-foreground hover:bg-gray-50 dark:hover:bg-neutral-800 p-1.5 rounded cursor-pointer transition-colors border-t border-dashed border-gray-100 dark:border-neutral-800 mt-1 sm:col-span-2">
+                          <input
+                            type="checkbox"
+                            checked={formData.part_replaced?.includes("other")}
+                            onChange={() => handlePartChange("other")}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-xs font-semibold text-blue-600">Other (Enter manually)</span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
+
+            {/* Conditional: Custom Part Name */}
+            {formData.part_replaced?.includes("other") && (
+              <div className="mb-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                <label className={labelClass}>Manual Part Entry *</label>
+                <input
+                  type="text"
+                  name="customPart"
+                  value={formData.customPart}
+                  onChange={handleChange}
+                  placeholder="Type part names separated by commas (e.g. Bearing, Oil Filter)"
+                  required
+                  className={inputClass}
+                />
+              </div>
+            )}
 
             {/* Row 4: Task Start Date */}
             <div className="mb-3">
