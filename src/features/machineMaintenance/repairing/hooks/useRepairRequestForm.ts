@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import { useActiveMachinesQuery } from "../../machines/server/tanstackQuery/useMachineQueries";
+import { usePartsQuery } from "../../machines/server/tanstackQuery/usePartQueries";
 import {
   useActiveUserNamesQuery,
   useCreateRepairRequestMutation,
@@ -19,6 +20,7 @@ interface RepairRequestFormState {
   customMachine: string;
   issueDetail: string;
   task_start_date: string;
+  part_replaced: string[];
 }
 
 const initialFormData: RepairRequestFormState = {
@@ -29,6 +31,7 @@ const initialFormData: RepairRequestFormState = {
   customMachine: "",
   issueDetail: "",
   task_start_date: new Date().toISOString().split("T")[0],
+  part_replaced: [],
 };
 
 const STATIC_USERS = [
@@ -51,6 +54,9 @@ export function useRepairRequestForm() {
 
   const { data: machinesData = [], isLoading: isLoadingMachines } =
     useActiveMachinesQuery();
+
+  // Fetch parts
+  const { data: partsData = [], isLoading: isPartsLoading } = usePartsQuery();
 
   // Fetch dynamic machine types
   const { data: dbMachineTypes = [], isLoading: isMachineTypesLoading } =
@@ -79,7 +85,7 @@ export function useRepairRequestForm() {
 
   // ── Overall loading ───────────────────────────────────────────
   const isLoading =
-    (isUsersLoading && isLoadingMachines) || isMachineTypesLoading;
+    (isUsersLoading && isLoadingMachines) || isMachineTypesLoading || isPartsLoading;
   const isSubmitting = createMutation.isPending;
 
   // ── Handlers ──────────────────────────────────────────────────
@@ -110,6 +116,17 @@ export function useRepairRequestForm() {
     },
     [],
   );
+
+  const handlePartChange = useCallback((partName: string) => {
+    setFormData((prev) => {
+      const currentParts = prev.part_replaced || [];
+      if (currentParts.includes(partName)) {
+        return { ...prev, part_replaced: currentParts.filter((p) => p !== partName) };
+      } else {
+        return { ...prev, part_replaced: [...currentParts, partName] };
+      }
+    });
+  }, []);
 
   const handleReset = useCallback(() => {
     setFormData(initialFormData);
@@ -143,6 +160,7 @@ export function useRepairRequestForm() {
           machineName,
           issueDetail: formData.issueDetail,
           task_start_date: formData.task_start_date,
+          part_replaced: formData.part_replaced,
         },
         {
           onSuccess: (result) => {
@@ -170,11 +188,13 @@ export function useRepairRequestForm() {
     assignToUsers,
     machineTypes,
     filteredMachines,
+    partsData,
     // Loading
     isLoading,
     isSubmitting,
     // Handlers
     handleChange,
+    handlePartChange,
     handleSubmit,
     handleReset,
   };

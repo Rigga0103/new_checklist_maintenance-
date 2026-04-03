@@ -31,9 +31,11 @@ export default function MainRepairRequestForm({
     assignToUsers,
     machineTypes,
     filteredMachines,
+    partsData,
     isLoading,
     isSubmitting,
     handleChange,
+    handlePartChange,
     handleSubmit,
     handleReset,
   } = useRepairRequestForm();
@@ -213,6 +215,27 @@ export default function MainRepairRequestForm({
                 placeholder="Describe the issue in detail..."
                 className={inputClass + " resize-none"}
               />
+            </div>
+
+            {/* Row 3.5: Parts Replaced */}
+            <div className="mb-3">
+              <label className={labelClass}>Parts to Replace (Select one or more)</label>
+              <div className="max-h-48 overflow-y-auto border border-gray-200 dark:border-neutral-700 rounded-md p-2 bg-white dark:bg-neutral-900 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {partsData.filter(p => p["ITEM NAME"]).map((part) => (
+                  <label key={part.id} className="flex items-center space-x-2 text-sm text-foreground hover:bg-gray-50 dark:hover:bg-neutral-800 p-1 rounded cursor-pointer transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={formData.part_replaced?.includes(part["ITEM NAME"] || "")}
+                      onChange={() => handlePartChange(part["ITEM NAME"] || "")}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="truncate" title={part["ITEM NAME"] || ""}>{part["ITEM NAME"]}</span>
+                  </label>
+                ))}
+                {partsData.length === 0 && (
+                  <span className="text-sm text-muted-foreground italic col-span-2">No parts available.</span>
+                )}
+              </div>
             </div>
 
             {/* Row 4: Task Start Date */}

@@ -9,6 +9,7 @@ import {
   useGenerateTasksMutation,
 } from "../server/tanstackQuery/useMaintenanceSchedules";
 import { useActiveMachinesQuery } from "../../machines/server/tanstackQuery/useMachineQueries";
+import { useMachineTypesQuery } from "../../repairing/server/tanstackQuery/useMachineTypes";
 import {
   Plus,
   Pencil,
@@ -29,6 +30,7 @@ export default function MainMaintenanceSchedule() {
   const [currentPage, setCurrentPage] = useState(1);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState<CreateScheduleDTO>({
+    machine_type: "",
     machine_name: "",
     task_description: "",
     frequency: "daily",
@@ -38,6 +40,7 @@ export default function MainMaintenanceSchedule() {
 
   const { data: schedules = [], isLoading } = useMaintenanceSchedulesQuery();
   const { data: machinesData = [] } = useActiveMachinesQuery();
+  const { data: machineTypesData = [] } = useMachineTypesQuery();
   const createMutation = useCreateScheduleMutation();
   const updateMutation = useUpdateScheduleMutation();
   const deleteMutation = useDeleteScheduleMutation();
@@ -59,6 +62,7 @@ export default function MainMaintenanceSchedule() {
     if (schedule) {
       setEditingId(schedule.id);
       setFormData({
+        machine_type: schedule.machine_type || "",
         machine_name: schedule.machine_name,
         task_description: schedule.task_description,
         frequency: schedule.frequency,
@@ -68,6 +72,7 @@ export default function MainMaintenanceSchedule() {
     } else {
       setEditingId(null);
       setFormData({
+        machine_type: "",
         machine_name: "",
         task_description: "",
         frequency: "daily",
@@ -171,6 +176,9 @@ export default function MainMaintenanceSchedule() {
           <thead>
             <tr className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                Machine Type
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                 Machine Name
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
@@ -203,6 +211,9 @@ export default function MainMaintenanceSchedule() {
                   key={schedule.id}
                   className="hover:bg-neutral-50 dark:hover:bg-neutral-700/50"
                 >
+                  <td className="px-6 py-4 text-sm text-foreground">
+                    {schedule.machine_type || "-"}
+                  </td>
                   <td className="px-6 py-4 text-sm font-medium text-foreground">
                     {schedule.machine_name}
                   </td>
@@ -293,25 +304,54 @@ export default function MainMaintenanceSchedule() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Machine Name
-                </label>
-                <select
-                  required
-                  value={formData.machine_name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, machine_name: e.target.value })
-                  }
-                  className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-green-500"
-                >
-                  <option value="">Select a machine</option>
-                  {machinesData.map((machine) => (
-                    <option key={machine.id} value={machine.machine_name}>
-                      {machine.machine_name}
-                    </option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">
+                    Machine Type
+                  </label>
+                  <select
+                    value={formData.machine_type}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        machine_type: e.target.value,
+                        machine_name: "", // Reset machine name when type changes
+                      })
+                    }
+                    className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-green-500"
+                  >
+                    <option value="">Select a type</option>
+                    {machineTypesData.map((type) => (
+                      <option key={type.id} value={type.type_name}>
+                        {type.type_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">
+                    Machine Name
+                  </label>
+                  <select
+                    required
+                    value={formData.machine_name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, machine_name: e.target.value })
+                    }
+                    className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-green-500"
+                  >
+                    <option value="">Select a machine</option>
+                    {(formData.machine_type
+                      ? machinesData.filter((m) => m.type === formData.machine_type)
+                      : machinesData
+                    ).map((machine) => (
+                      <option key={machine.id} value={machine.machine_name}>
+                        {machine.machine_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div>

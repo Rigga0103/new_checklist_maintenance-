@@ -317,6 +317,7 @@ export default function RepairingList({
       "Machine Type",
       "Machine Name",
       "Issue Detail",
+      "Part Repair",
       "Requested By",
       "Assigned To",
       "Vendor",
@@ -324,7 +325,7 @@ export default function RepairingList({
     if (activeTab === "pending" || activeTab === "overdue") {
       headers.push("Date", "Status");
     } else if (activeTab === "history") {
-      headers.splice(3, 0, "Part Replaced", "Warranty", "Work Done");
+      headers.splice(5, 0, "Warranty", "Work Done");
       headers.push("Bill Amount", "Request Date", "Completion Date", "Status");
     } else {
       headers.push("Request Date", "Completion Date", "Status", "Remarks");
@@ -336,6 +337,7 @@ export default function RepairingList({
         t.machine_type || "",
         t.machine_name || "",
         t.issue_detail || "",
+        t.part_replaced || "",
         t.form_filled_by || "",
         t.assigned_to || "",
         t.vendor_name || "",
@@ -564,13 +566,13 @@ export default function RepairingList({
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                     Issue
                   </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Part Repair
+                  </th>
                   {activeTab === "history" && (
                     <>
                       <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                         Work Done
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                        Part Replaced
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                         Cost
@@ -628,13 +630,13 @@ export default function RepairingList({
                     >
                       {repair.issue_detail || "-"}
                     </td>
+                    <td className="px-4 py-3 text-sm text-foreground">
+                      {repair.part_replaced || "-"}
+                    </td>
                     {activeTab === "history" && (
                       <>
                         <td className="px-4 py-3 text-sm text-foreground max-w-37.5 truncate">
                           {repair.work_done || "-"}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-foreground">
-                          {repair.part_replaced || "-"}
                         </td>
                         <td className="px-4 py-3 text-sm font-medium text-foreground">
                           {formatCurrency(repair.bill_amount)}

@@ -488,29 +488,36 @@ export const fetchActiveUserNames = async (): Promise<string[]> => {
  */
 export const createRepairRequest = async (
   formData: RepairRequestFormData,
-): Promise<MachineRepair | null> => {
+): Promise<MachineRepair | MachineRepair[] | null> => {
   try {
+    const partsArray = formData.part_replaced && formData.part_replaced.length > 0
+      ? formData.part_replaced
+      : [null];
+
+    const recordsToInsert = partsArray.map((part) => ({
+      form_filled_by: formData.formFilledBy,
+      assigned_to: formData.assignedTo,
+      machine_type: formData.machineType,
+      machine_name: formData.machineName,
+      issue_detail: formData.issueDetail,
+      motor_name: formData.motorName || null,
+      status: "pending",
+      task_start_date: formData.task_start_date || new Date().toISOString().split("T")[0],
+      part_replaced: part,
+    }));
+
     const { data, error } = await supabase
       .from("machine_repair")
-      .insert({
-        form_filled_by: formData.formFilledBy,
-        assigned_to: formData.assignedTo,
-        machine_type: formData.machineType,
-        machine_name: formData.machineName,
-        issue_detail: formData.issueDetail,
-        motor_name: formData.motorName || null,
-        status: "pending",
-        task_start_date: formData.task_start_date || new Date().toISOString().split("T")[0],
-      })
-      .select()
-      .single();
+      .insert(recordsToInsert)
+      .select();
 
     if (error) {
       console.error("Error creating repair request:", error);
       return null;
     }
 
-    return data as MachineRepair;
+    // Supabase returns an array of inserted rows
+    return data && data.length === 1 ? (data[0] as MachineRepair) : (data as MachineRepair[]);
   } catch (error) {
     console.error("Error from Supabase:", error);
     return null;

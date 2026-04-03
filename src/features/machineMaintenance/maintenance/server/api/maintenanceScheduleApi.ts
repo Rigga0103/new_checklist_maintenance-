@@ -3,6 +3,7 @@ import supabase from "@/utils/supabaseClient";
 export interface MaintenanceSchedule {
   id: number;
   created_at: string;
+  machine_type: string | null;
   machine_name: string;
   task_description: string;
   frequency: string;
@@ -11,6 +12,7 @@ export interface MaintenanceSchedule {
 }
 
 export interface CreateScheduleDTO {
+  machine_type?: string;
   machine_name: string;
   task_description: string;
   frequency: string;
@@ -137,6 +139,7 @@ export const generateDailyTasks = async (): Promise<{
     // For simplicity, we'll just insert. Providing a unique constraint on (schedule_id, date) in DB would be better.
 
     const tasksToInsert = dueSchedules.map((schedule) => ({
+      machine_type: schedule.machine_type,
       machine_name: schedule.machine_name,
       task_description: schedule.task_description,
       frequency: schedule.frequency,

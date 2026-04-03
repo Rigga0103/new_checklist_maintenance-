@@ -8,6 +8,7 @@ export interface Machine {
   model: string | null;
   location: string | null;
   department: string | null;
+  type: string | null;
   status: "active" | "inactive";
 }
 
