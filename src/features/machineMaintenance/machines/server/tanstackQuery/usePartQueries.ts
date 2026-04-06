@@ -10,10 +10,10 @@ import { toast } from "sonner";
 
 export const PARTS_QUERY_KEY = ["parts"];
 
-export const usePartsQuery = () => {
+export const usePartsQuery = (searchTerm?: string) => {
   return useQuery({
-    queryKey: PARTS_QUERY_KEY,
-    queryFn: fetchParts,
+    queryKey: [...PARTS_QUERY_KEY, searchTerm],
+    queryFn: () => fetchParts(searchTerm),
   });
 };
 

@@ -905,7 +905,7 @@ export default function RepairingList({
                           htmlFor="warranty-checkbox-list"
                           className="block text-sm font-medium text-foreground cursor-pointer select-none"
                         >
-                          Warranty & Guarantee
+                          Warranty
                         </label>
                       </div>
                       {hasWarranty && (

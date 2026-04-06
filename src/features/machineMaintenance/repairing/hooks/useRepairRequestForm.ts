@@ -57,8 +57,10 @@ export function useRepairRequestForm() {
   const { data: machinesData = [], isLoading: isLoadingMachines } =
     useActiveMachinesQuery();
 
+  const [searchTerm, setSearchTerm] = useState("");
+
   // Fetch parts
-  const { data: partsData = [], isLoading: isPartsLoading } = usePartsQuery();
+  const { data: partsData = [], isLoading: isPartsLoading } = usePartsQuery(searchTerm);
 
   // Fetch dynamic machine types
   const { data: dbMachineTypes = [], isLoading: isMachineTypesLoading } =
@@ -87,7 +89,7 @@ export function useRepairRequestForm() {
 
   // ── Overall loading ───────────────────────────────────────────
   const isLoading =
-    (isUsersLoading && isLoadingMachines) || isMachineTypesLoading || isPartsLoading;
+    (isUsersLoading && isLoadingMachines) || isMachineTypesLoading;
   const isSubmitting = createMutation.isPending;
 
   // ── Handlers ──────────────────────────────────────────────────
@@ -141,6 +143,7 @@ export function useRepairRequestForm() {
 
   const handleReset = useCallback(() => {
     setFormData(initialFormData);
+    setSearchTerm("");
   }, []);
 
   const handleSubmit = useCallback(
@@ -231,5 +234,8 @@ export function useRepairRequestForm() {
     handlePartChange,
     handleSubmit,
     handleReset,
+    searchTerm,
+    setSearchTerm,
+    isPartsLoading,
   };
 }

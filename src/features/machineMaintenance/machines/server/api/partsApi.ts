@@ -1,13 +1,19 @@
 import supabase from "@/utils/supabaseClient";
 import { Part, CreatePartDTO } from "../../../types/types";
 
-// Fetch all items from itemdetails table
-export const fetchParts = async (): Promise<Part[]> => {
+// Fetch items from itemdetails table with optional search
+export const fetchParts = async (searchTerm?: string): Promise<Part[]> => {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from("itemdetails")
       .select("*")
       .order("id", { ascending: false });
+
+    if (searchTerm) {
+      query = query.ilike("ITEM NAME", `%${searchTerm}%`);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("Error fetching parts:", error);

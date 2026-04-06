@@ -20,6 +20,7 @@ export default function MainRepairRequestForm({
   const [showQR, setShowQR] = useState(false);
   const [publicUrl, setPublicUrl] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -39,7 +40,18 @@ export default function MainRepairRequestForm({
     handlePartChange,
     handleSubmit,
     handleReset,
+    searchTerm,
+    setSearchTerm,
+    isPartsLoading,
   } = useRepairRequestForm();
+
+  // Debouncing search input
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setSearchTerm(searchInput);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchInput, setSearchTerm]);
 
   const {
     canRead,
@@ -220,70 +232,123 @@ export default function MainRepairRequestForm({
 
             {/* Row 3.5: Parts Replaced */}
             <div className="mb-3">
-              <label className={labelClass}>Parts to Replace (Select one or more)</label>
+              <label className={labelClass}>
+                Parts to Replace/Repair (Select one or more)
+              </label>
+
               <div className="relative">
+                {/* Trigger */}
                 <div
                   className="min-h-10 border border-gray-200 dark:border-neutral-700 rounded-md bg-white dark:bg-neutral-900 focus-within:ring-2 focus-within:ring-blue-500 cursor-pointer"
                   onClick={() => setIsOpen(!isOpen)}
                 >
-                  <div className="flex flex-wrap gap-1 p-2 min-h-[38px] items-center pr-8">
+                  <div className="flex flex-wrap gap-1 p-2 max-h-[38px] items-center pr-8">
                     {formData.part_replaced?.filter(p => p !== "other").map((p) => (
-                      <span key={p} className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-medium rounded border border-blue-100 dark:border-blue-800" onClick={(e) => e.stopPropagation()}>
+                      <span
+                        key={p}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-medium rounded border border-blue-100 dark:border-blue-800"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         {p}
-                        <button type="button" onClick={() => handlePartChange(p)} className="hover:text-blue-900 dark:hover:text-blue-100">
+                        <button
+                          type="button"
+                          onClick={() => handlePartChange(p)}
+                          className="hover:text-blue-900 dark:hover:text-blue-100"
+                        >
                           <X className="w-3 h-3" />
                         </button>
                       </span>
                     ))}
-                    {/* Live preview of manually typed parts */}
-                    {formData.part_replaced?.includes("other") && formData.customPart.trim() && (
-                      formData.customPart.split(",").map((p, i) => {
-                        const trimmed = p.trim();
-                        if (!trimmed) return null;
-                        return (
-                          <span key={`manual-${i}`} className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-50 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 text-xs font-medium rounded border border-orange-100 dark:border-orange-800" onClick={(e) => e.stopPropagation()}>
-                            {trimmed}
-                          </span>
-                        );
-                      })
-                    )}
-                    {formData.part_replaced?.includes("other") && !formData.customPart.trim() && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-50 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 text-xs font-medium rounded border border-orange-100 dark:border-orange-800 italic" onClick={(e) => e.stopPropagation()}>
-                        Type below...
+
+                    {(!formData.part_replaced || formData.part_replaced.length === 0) && (
+                      <span className="text-sm text-muted-foreground px-1">
+                        Select parts to replace...
                       </span>
                     )}
-                    {(!formData.part_replaced || formData.part_replaced.length === 0) && (
-                      <span className="text-sm text-muted-foreground px-1 py-0.5">Select parts to replace...</span>
-                    )}
-                    <ChevronDown className={`absolute right-2.5 top-3 w-4 h-4 text-muted-foreground transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+
+                    <ChevronDown
+                      className={`absolute right-2.5 top-3 w-4 h-4 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""
+                        }`}
+                    />
                   </div>
 
+                  {/* Dropdown */}
                   {isOpen && (
                     <div
-                      className="absolute z-10 w-full mt-1 bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-700 rounded-md shadow-lg p-2 max-h-60 overflow-y-auto"
+                      className="absolute z-10 w-full mt-1 bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-700 rounded-md shadow-lg max-h-60 overflow-y-auto"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <div className="grid grid-cols-1 gap-x-4 gap-y-1">
-                        {partsData.filter(p => p["ITEM NAME"]).map((part) => (
-                          <label key={part.id} className="flex items-center space-x-2 text-sm text-foreground hover:bg-gray-50 dark:hover:bg-neutral-800 p-1.5 rounded cursor-pointer transition-colors">
+                      {/* Search Bar */}
+                      <div className="p-2 border-b border-gray-100 dark:border-neutral-800 sticky top-0 bg-white dark:bg-neutral-900 z-10">
+                        <div className="relative">
+                          <input
+                            type="text"
+                            placeholder="Search parts by name..."
+                            value={searchInput}
+                            onChange={(e) => setSearchInput(e.target.value)}
+                            className={inputClass + " pr-10"}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") e.preventDefault();
+                            }}
+                            autoFocus
+                          />
+                          {isPartsLoading && (
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                              <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Single Column List */}
+                      <div className="flex flex-col">
+                        {partsData.length === 0 && !isPartsLoading && (
+                          <div className="px-3 py-4 text-center text-sm text-muted-foreground">
+                            No parts found for "{searchTerm}"
+                          </div>
+                        )}
+                        {partsData
+                          .filter(p => p["ITEM NAME"])
+                          .map((part) => {
+                            const name = part["ITEM NAME"] || "";
+                            const isChecked = formData.part_replaced?.includes(name);
+
+                            return (
+                              <div
+                                key={part.id}
+                                onClick={() => handlePartChange(name)}
+                                className="flex items-center gap-2 px-3 py-2 text-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-neutral-800 transition"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  readOnly
+                                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 pointer-events-none"
+                                />
+                                <span className="truncate text-md flex-1" title={name}>
+                                  {name}
+                                </span>
+                              </div>
+                            );
+                          })}
+
+                        {/* Other Option */}
+                        <div className="border-t border-dashed border-gray-200 dark:border-neutral-700 mt-1">
+                          <div
+                            onClick={() => handlePartChange("other")}
+                            className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 transition"
+                          >
                             <input
                               type="checkbox"
-                              checked={formData.part_replaced?.includes(part["ITEM NAME"] || "")}
-                              onChange={() => handlePartChange(part["ITEM NAME"] || "")}
-                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              checked={formData.part_replaced?.includes("other")}
+                              readOnly
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 pointer-events-none"
                             />
-                            <span className="truncate text-xs flex-1" title={part["ITEM NAME"] || ""}>{part["ITEM NAME"]}</span>
-                          </label>
-                        ))}
-                        <label className="flex items-center space-x-2 text-sm text-foreground hover:bg-gray-50 dark:hover:bg-neutral-800 p-1.5 rounded cursor-pointer transition-colors border-t border-dashed border-gray-100 dark:border-neutral-800 mt-1 sm:col-span-2">
-                          <input
-                            type="checkbox"
-                            checked={formData.part_replaced?.includes("other")}
-                            onChange={() => handlePartChange("other")}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          <span className="text-xs font-semibold text-blue-600">Other (Enter manually)</span>
-                        </label>
+                            <span className="text-xs font-semibold text-blue-600">
+                              Other (Enter manually)
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -324,7 +389,10 @@ export default function MainRepairRequestForm({
             <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-neutral-700">
               <button
                 type="button"
-                onClick={handleReset}
+                onClick={() => {
+                  handleReset();
+                  setSearchInput("");
+                }}
                 className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
               >
                 <X className="w-4 h-4" />
