@@ -64,6 +64,7 @@ export default function MainChecklist() {
   // Date range filters
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending">("all");
 
   // Read role and username from localStorage for role-based filtering
   const [role, setRole] = useState<string | null>(null);
@@ -168,9 +169,27 @@ export default function MainChecklist() {
       })
       : rawTasks;
 
-  const tasks = nameFilter
-    ? dateFilteredTasks.filter((t) => t.name === nameFilter)
-    : dateFilteredTasks;
+  const tasks = dateFilteredTasks.filter((t) => {
+    let keep = true;
+    if (nameFilter && t.name !== nameFilter) keep = false;
+    if (activeTab === "last7days" && statusFilter === "pending") {
+      if (
+        t.status === "yes" ||
+        t.status === "Done" ||
+        t.status === "no" ||
+        t.status === "Extend date"
+      ) {
+        keep = false;
+      } else if (
+        t.task_start_date &&
+        new Date(t.task_start_date) < new Date(new Date().setHours(0, 0, 0, 0))
+      ) {
+        // Also exclude tasks that are considered "Overdue"
+        keep = false;
+      }
+    }
+    return keep;
+  });
 
   const isLoading =
     isFetchingActive ||
@@ -681,6 +700,24 @@ export default function MainChecklist() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Status filter for Last 7 Days */}
+        {activeTab === "last7days" && (
+          <div className="relative">
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value as "all" | "pending");
+                setCurrentPage(1);
+              }}
+              className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 focus:outline-none"
+            >
+              <option value="all">All Status</option>
+              <option value="pending">Pending</option>
+
+            </select>
           </div>
         )}
 

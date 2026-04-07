@@ -84,6 +84,7 @@ export default function MainDelegation() {
     handleCancelEdit,
     handleEditFieldChange,
     handleSaveEdit,
+    handleDeleteTask,
   } = useDelegation(effectiveRole);
 
   const { data: usersData } = useUsers();
@@ -629,9 +630,9 @@ export default function MainDelegation() {
                       </th>
                     </>
                   )}
-                  {/* Edit column header - sticky right */}
-                  <th className="sticky right-0 z-10 bg-gray-50 dark:bg-neutral-900/50 px-3 py-2 text-left text-xs font-medium text-blue-600 dark:text-blue-400 uppercase w-16 border-l border-gray-200 dark:border-neutral-700">
-                    Edit
+                  {/* Edit/Action column header - sticky right */}
+                  <th className="sticky right-0 z-10 bg-gray-50 dark:bg-neutral-900/50 px-3 py-2 text-left text-xs font-medium text-blue-600 dark:text-blue-400 uppercase w-[5.5rem] border-l border-gray-200 dark:border-neutral-700">
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -946,15 +947,26 @@ export default function MainDelegation() {
                         </td>
                       </>
                     )}
-                    {/* Edit button cell - sticky right */}
+                    {/* Actions button cell - sticky right */}
                     <td className="sticky right-0 z-10 bg-white dark:bg-neutral-800 px-3 py-3 border-l border-gray-100 dark:border-neutral-700">
-                      <button
-                        onClick={() => handleEditClick(task)}
-                        title="Edit task"
-                        className="p-1.5 rounded text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleEditClick(task)}
+                          title="Edit task"
+                          className="p-1.5 rounded text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        {isAdmin && (
+                          <button
+                            onClick={() => handleDeleteTask(task.task_id)}
+                            title="Delete task"
+                            className="p-1.5 rounded text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

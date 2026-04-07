@@ -387,3 +387,25 @@ export const editDelegationTaskApi = async (
     return { success: false, message: "Failed to update task" };
   }
 };
+
+// Delete a delegation task (admin delete)
+export const deleteDelegationTaskApi = async (
+  taskId: number,
+): Promise<{ success: boolean; message?: string }> => {
+  try {
+    const { error } = await supabase
+      .from("delegation")
+      .delete()
+      .eq("task_id", taskId);
+
+    if (error) {
+      console.error("Error deleting delegation task:", error);
+      return { success: false, message: error.message };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error in deleteDelegationTaskApi:", error);
+    return { success: false, message: "Failed to delete task" };
+  }
+};

@@ -10,6 +10,8 @@ import {
 import {
   useMachineTypesQuery,
   useAllMachineNamesQuery,
+  useCreateMachineTypeMutation,
+  useCreateMachineNameMutation,
 } from "../../repairing/server/tanstackQuery/useMachineTypes";
 import {
   Plus,
@@ -27,6 +29,8 @@ const ITEMS_PER_PAGE = 20;
 
 export default function MainMachinesMaster() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
+  const [newTypeName, setNewTypeName] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState<CreateMachineDTO>({
@@ -45,6 +49,8 @@ export default function MainMachinesMaster() {
   const createMutation = useCreateMachineMutation();
   const updateMutation = useUpdateMachineMutation();
   const deleteMutation = useDeleteMachineMutation();
+  const createTypeMutation = useCreateMachineTypeMutation();
+  const createNameMutation = useCreateMachineNameMutation();
 
   const { canWrite, canEdit, canDelete } = useRBAC("machines");
 
@@ -87,11 +93,54 @@ export default function MainMachinesMaster() {
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
+    setIsTypeModalOpen(false);
     setEditingId(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    let currentTypeId: number | undefined;
+
+    if (formData.type) {
+      const typeValue = formData.type;
+      const existingType = machineTypes.find(
+        (t) => t.type_name.toLowerCase() === typeValue.toLowerCase()
+      );
+
+      if (existingType) {
+        currentTypeId = existingType.id;
+      } else {
+        try {
+          const newType = await createTypeMutation.mutateAsync(typeValue);
+          if (newType) {
+            currentTypeId = newType.id;
+          }
+        } catch (error) {
+          console.error("Failed to create machine type", error);
+          return;
+        }
+      }
+    }
+
+    if (formData.machine_name && currentTypeId) {
+      const existingName = allRepairMachineNames.find(
+        (n) => n.machine_name.toLowerCase() === formData.machine_name.toLowerCase() && n.type_id === currentTypeId
+      );
+
+      if (!existingName) {
+        try {
+          await createNameMutation.mutateAsync({
+            typeId: currentTypeId,
+            machineName: formData.machine_name,
+          });
+        } catch (error) {
+          console.error("Failed to create machine name", error);
+          return;
+        }
+      }
+    }
+
     if (editingId) {
       updateMutation.mutate(
         { id: editingId, updates: formData },
@@ -100,6 +149,18 @@ export default function MainMachinesMaster() {
     } else {
       createMutation.mutate(formData, { onSuccess: handleCloseModal });
     }
+  };
+
+  const handleTypeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTypeName) return;
+
+    createTypeMutation.mutate(newTypeName, {
+      onSuccess: () => {
+        setIsTypeModalOpen(false);
+        setNewTypeName("");
+      }
+    });
   };
 
   const handleDelete = (id: number) => {
@@ -143,13 +204,22 @@ export default function MainMachinesMaster() {
           </p>
         </div>
         {canWrite && (
-          <button
-            onClick={() => handleOpenModal()}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add Machine
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setIsTypeModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-neutral-800 dark:bg-blue-800 border border-neutral-200 dark:border-neutral-700 dark:text-neutral-200 rounded-lg hover:bg-blue-200 dark:hover:bg-blue  -700 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add Type
+            </button>
+            <button
+              onClick={() => handleOpenModal()}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add Machine
+            </button>
+          </div>
         )}
       </div>
 
@@ -447,14 +517,212 @@ export default function MainMachinesMaster() {
                 <button
                   type="submit"
                   disabled={
-                    createMutation.isPending || updateMutation.isPending
+                    createMutation.isPending || updateMutation.isPending || createNameMutation.isPending
                   }
                   className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg disabled:opacity-50 flex items-center gap-2"
                 >
-                  {(createMutation.isPending || updateMutation.isPending) && (
+                  {(createMutation.isPending || updateMutation.isPending || createNameMutation.isPending) && (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   )}
                   {editingId ? "Update Machine" : "Create Machine"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isTypeModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-xl w-full max-w-lg p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-foreground">
+                Add New Machine Type
+              </h2>
+              <button
+                onClick={() => {
+                  setIsTypeModalOpen(false);
+                  setEditingId(null);
+                  setFormData({
+                    machine_name: "",
+                    serial_no: "",
+                    model: "",
+                    location: "",
+                    department: "",
+                    type: "",
+                    status: "active",
+                  });
+                }}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">
+                    Machine Type *
+                  </label>
+                  <input
+                    type="text"
+                    list="machine-types-add-type"
+                    value={formData.type || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, type: e.target.value })
+                    }
+                    className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-green-500"
+                    placeholder="Search or type machine type..."
+                  />
+                  <datalist id="machine-types-add-type">
+                    {machineTypes.map((type) => (
+                      <option key={type.id} value={type.type_name} />
+                    ))}
+                  </datalist>
+                </div>
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
+                    Machine Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    list="repair-machine-names-add-type"
+                    value={formData.machine_name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, machine_name: e.target.value })
+                    }
+                    className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-green-500"
+                    placeholder="e.g. CNC Machine 01"
+                  />
+                  <datalist id="repair-machine-names-add-type">
+                    {(formData.type
+                      ? allRepairMachineNames.filter(
+                        (n) =>
+                          n.type_id ===
+                          machineTypes.find(
+                            (t) => t.type_name === formData.type,
+                          )?.id,
+                      )
+                      : allRepairMachineNames
+                    ).map((name) => (
+                      <option key={name.id} value={name.machine_name} />
+                    ))}
+                  </datalist>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">
+                    Serial No
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.serial_no || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, serial_no: e.target.value })
+                    }
+                    className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-green-500"
+                    placeholder="e.g. SN-12345"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">
+                    Model
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.model || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, model: e.target.value })
+                    }
+                    className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-green-500"
+                    placeholder="e.g. ABC-1000"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">
+                    Location
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.location || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, location: e.target.value })
+                    }
+                    className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-green-500"
+                    placeholder="e.g. Building A, Floor 2"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">
+                    Department
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.department || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, department: e.target.value })
+                    }
+                    className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-green-500"
+                    placeholder="e.g. Production"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">
+                    Status
+                  </label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        status: e.target.value as "active" | "inactive",
+                      })
+                    }
+                    className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-green-500"
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsTypeModalOpen(false);
+                    setEditingId(null);
+                    setFormData({
+                      machine_name: "",
+                      serial_no: "",
+                      model: "",
+                      location: "",
+                      department: "",
+                      type: "",
+                      status: "active",
+                    });
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={
+                    createMutation.isPending || updateMutation.isPending || createNameMutation.isPending || createTypeMutation.isPending
+                  }
+                  className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg disabled:opacity-50 flex items-center gap-2"
+                >
+                  {(createMutation.isPending || updateMutation.isPending || createNameMutation.isPending || createTypeMutation.isPending) && (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  )}
+                  Create Machine
                 </button>
               </div>
             </form>

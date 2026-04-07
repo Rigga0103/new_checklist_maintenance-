@@ -18,6 +18,9 @@ import {
   Box,
   Building2,
   Tag,
+  Download,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 import { useRBAC } from "@/hooks/useRBAC";
 import {
@@ -27,6 +30,8 @@ import {
   useDeletePartMutation,
 } from "../server/tanstackQuery/usePartQueries";
 import { CreatePartDTO, Part } from "../../types/types";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const ITEMS_PER_PAGE = 20;
 
@@ -35,6 +40,8 @@ export default function MainPartMaster() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
+  const [selectAll, setSelectAll] = useState(false);
 
   const { data: parts = [], isLoading } = usePartsQuery();
   const createMutation = useCreatePartMutation();
@@ -77,6 +84,134 @@ export default function MainPartMaster() {
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE,
   );
+
+  // Handle row selection
+  const handleSelectRow = (id: number) => {
+    const newSelected = new Set(selectedRows);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedRows(newSelected);
+    setSelectAll(false);
+  };
+
+  const handleSelectAll = () => {
+    if (selectAll) {
+      setSelectedRows(new Set());
+    } else {
+      const allIds = paginatedParts.map(p => p.id);
+      setSelectedRows(new Set(allIds));
+    }
+    setSelectAll(!selectAll);
+  };
+
+  // Export to PDF
+  const exportToPDF = () => {
+    if (selectedRows.size === 0) {
+      alert("Please select at least one item to export");
+      return;
+    }
+
+    const selectedParts = parts.filter(part => selectedRows.has(part.id));
+
+    // Create PDF document
+    const doc = new jsPDF('landscape');
+
+    // Add title
+    doc.setFontSize(18);
+    doc.setTextColor(0, 0, 0);
+    doc.text("Parts Inventory Report", 14, 15);
+
+    // Add metadata
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 25);
+    doc.text(`Total Items: ${selectedParts.length}`, 14, 31);
+
+    // Prepare table data
+    const tableHeaders = [
+      "S.No",
+      "Item Name",
+      "Vendor Name",
+      "Date of Purchase",
+      "Rate (₹)",
+      "Quantity",
+      "Unit",
+      "Vendor Code"
+    ];
+
+    const tableData = selectedParts.map((part, index) => [
+      index + 1,
+      part["ITEM NAME"] || "-",
+      part["VENDOR NAME"] || "-",
+      part["DATE OF PURCHASE"] || "-",
+      part.RATE ? parseFloat(part.RATE).toFixed(2) : "-",
+      part.QTY || "0",
+      part.UNIT || "Pcs",
+      part["VENDOR CODE"] || "-",
+    ]);
+
+    // Add table to PDF
+    autoTable(doc, {
+      head: [tableHeaders],
+      body: tableData,
+      startY: 40,
+      theme: 'grid',
+      styles: {
+        fontSize: 8,
+        cellPadding: 3,
+        lineColor: [200, 200, 200],
+        textColor: [0, 0, 0],
+      },
+      headStyles: {
+        fillColor: [59, 130, 246],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 9,
+      },
+      alternateRowStyles: {
+        fillColor: [245, 245, 245],
+      },
+      columnStyles: {
+        0: { cellWidth: 15 }, // S.No 
+        1: { cellWidth: 50 }, // Item Name
+        2: { cellWidth: 45 }, // Vendor Name
+        3: { cellWidth: 30 }, // Date
+        4: { cellWidth: 25 }, // Rate
+        5: { cellWidth: 20 }, // Quantity
+        6: { cellWidth: 20 }, // Unit
+        7: { cellWidth: 35 }, // Vendor Code
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    // Add summary at the end
+    const finalY = (doc as any).lastAutoTable.finalY || 80;
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+
+
+    // Save PDF
+    doc.save(`parts-inventory-${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  // Calculate total value of selected items
+  const calculateTotalValue = (items: Part[]) => {
+    return items.reduce((sum, item) => {
+      const rate = item.RATE ? parseFloat(item.RATE) : 0;
+      const qty = item.QTY ? parseFloat(item.QTY) : 0;
+      return sum + (rate * qty);
+    }, 0);
+  };
+
+  const calculateTotalQuantity = (items: Part[]) => {
+    return items.reduce((sum, item) => {
+      const qty = item.QTY ? parseFloat(item.QTY) : 0;
+      return sum + qty;
+    }, 0);
+  };
 
   const handleOpenModal = (part?: Part) => {
     if (part) {
@@ -145,7 +280,7 @@ export default function MainPartMaster() {
   };
 
   return (
-    <div className="p-6 pt-0 space-y-6 p">
+    <div className="p-6 pt-0 space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -164,6 +299,18 @@ export default function MainPartMaster() {
               className="pl-9 pr-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm w-64"
             />
           </div>
+
+          {/* Export Button */}
+          {selectedRows.size > 0 && (
+            <button
+              onClick={exportToPDF}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all shadow-sm active:scale-95 text-sm"
+            >
+              <Download className="w-4 h-4" />
+              Export ({selectedRows.size})
+            </button>
+          )}
+
           {canWrite && (
             <button
               onClick={() => handleOpenModal()}
@@ -183,7 +330,18 @@ export default function MainPartMaster() {
             <table className="w-full text-left">
               <thead className="sticky top-0 z-10 bg-neutral-50/50 dark:bg-neutral-900/50 backdrop-blur-sm">
                 <tr className="border-b border-neutral-200 dark:border-neutral-700">
-
+                  <th className="px-4 py-3 text-center w-10">
+                    <button
+                      onClick={handleSelectAll}
+                      className="text-muted-foreground hover:text-blue-600 transition-colors"
+                    >
+                      {selectAll && paginatedParts.length > 0 ? (
+                        <CheckSquare className="w-4 h-4" />
+                      ) : (
+                        <Square className="w-4 h-4" />
+                      )}
+                    </button>
+                  </th>
                   <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Item Name</th>
                   <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Vendor Name</th>
                   <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Date of Purchase</th>
@@ -203,7 +361,18 @@ export default function MainPartMaster() {
                 ) : (
                   paginatedParts.map((part) => (
                     <tr key={part.id} className="hover:bg-neutral-50/40 dark:hover:bg-neutral-800/20 transition-colors group">
-
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          onClick={() => handleSelectRow(part.id)}
+                          className="text-muted-foreground hover:text-blue-600 transition-colors"
+                        >
+                          {selectedRows.has(part.id) ? (
+                            <CheckSquare className="w-4 h-4 text-blue-600" />
+                          ) : (
+                            <Square className="w-4 h-4" />
+                          )}
+                        </button>
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
                           <Package className="w-3.5 h-3.5 text-muted-foreground" />
@@ -330,7 +499,7 @@ export default function MainPartMaster() {
         )}
       </div>
 
-      {/* Modal Form */}
+      {/* Modal Form (same as before) */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
@@ -354,8 +523,6 @@ export default function MainPartMaster() {
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-
                 <div>
                   <label className="block text-xs text-muted-foreground mb-1">Item Name *</label>
                   <input

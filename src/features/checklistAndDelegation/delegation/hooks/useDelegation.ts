@@ -8,6 +8,7 @@ import {
   fetchDelegationLast7Days,
   updateDelegationData,
   editDelegationTaskApi,
+  deleteDelegationTaskApi,
 } from "../server/api/delegationApi";
 import {
   DelegationTask,
@@ -338,6 +339,29 @@ export function useDelegation(roleOverride?: string | null) {
     loadHistoryTasks,
   ]);
 
+  const handleDeleteTask = useCallback(async (taskId: number) => {
+    if (!confirm("Are you sure you want to delete this task?")) return;
+    try {
+      const result = await deleteDelegationTaskApi(taskId);
+      if (result.success) {
+        toast.success("Task deleted successfully");
+        // Reload based on active tab
+        if (activeTab === "pending") {
+          loadPendingTasks();
+        } else if (activeTab === "history") {
+          loadHistoryTasks();
+        } else {
+          loadLast7DaysTasks();
+        }
+      } else {
+        toast.error(result.message || "Failed to delete task");
+      }
+    } catch (error) {
+      console.error("Delete task error:", error);
+      toast.error("Failed to delete task");
+    }
+  }, [activeTab, loadPendingTasks, loadHistoryTasks, loadLast7DaysTasks]);
+
   // Submit selected tasks
   const submitSelectedTasks = useCallback(async () => {
     if (selectedTasks.size === 0) {
@@ -521,6 +545,7 @@ export function useDelegation(roleOverride?: string | null) {
     handleCancelEdit,
     handleEditFieldChange,
     handleSaveEdit,
+    handleDeleteTask,
 
     loadPendingTasks,
     loadHistoryTasks,
