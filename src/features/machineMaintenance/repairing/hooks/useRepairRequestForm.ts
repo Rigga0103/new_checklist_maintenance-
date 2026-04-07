@@ -39,7 +39,7 @@ const initialFormData: RepairRequestFormState = {
 const STATIC_USERS = [
   "Pratap Kumar Rout",
   "Chhotu Bhaiya",
-  "Prashant Kumar Sharma",
+  "Kamal Sharma",
   "Rakesh Kumar Rout",
   "Other",
 ];
@@ -50,7 +50,7 @@ export function useRepairRequestForm() {
 
   // ── Data queries ──────────────────────────────────────────────
   const requestByUsers = STATIC_USERS;
-  const assignToUsers = ["Pratap Kumar Rout", "muzammil"];
+  const assignToUsers = ["Pratap Kumar Rout", "Kamal Sharma", "muzammil"];
 
   const { isLoading: isUsersLoading } = { isLoading: false };
 
@@ -125,7 +125,7 @@ export function useRepairRequestForm() {
     setFormData((prev) => {
       const currentParts = prev.part_replaced || [];
       const isSelected = currentParts.includes(partName);
-      
+
       let nextParts: string[];
       if (isSelected) {
         nextParts = currentParts.filter((p) => p !== partName);
@@ -167,12 +167,12 @@ export function useRepairRequestForm() {
       }
 
       let partsList = [...(formData.part_replaced || [])];
-      
+
       // Handle the "other" manual entry
       if (partsList.includes("other")) {
         // Remove the placeholder "other"
         partsList = partsList.filter((p) => p !== "other");
-        
+
         // Split custom parts by comma and add them individually
         if (formData.customPart.trim()) {
           const manualParts = formData.customPart
