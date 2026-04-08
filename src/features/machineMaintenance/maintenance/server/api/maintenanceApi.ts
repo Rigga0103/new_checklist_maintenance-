@@ -3,6 +3,7 @@ import type {
   MachineMaintenance,
   MaintenanceFetchResponse,
 } from "../../../types/types";
+import { logMaintenanceAction } from "../../../../checklistAndDelegation/assignTask/server/api/logMaintenanceApi";
 
 // ============ Fetch Maintenance Tasks ============
 
@@ -444,6 +445,19 @@ export const completeMaintenance = async (
       return null;
     }
 
+    if (data) {
+      await logMaintenanceAction([{
+        maintenanceId: data.task_id.toString(),
+        action: "update",
+        machine: data.machine_name || "",
+        givenBy: "-",
+        doer: data.doer_name || "",
+        frequency: data.frequency || "",
+        fromDate: data.task_start_date || "",
+        taskDescription: data.task_description || ""
+      }]);
+    }
+
     return data as MachineMaintenance;
   } catch (error) {
     console.error("Error from Supabase:", error);
@@ -472,6 +486,20 @@ export const bulkCompleteMaintenance = async (
     if (error) {
       console.error("Error bulk completing maintenance:", error);
       return [];
+    }
+
+    if (data && data.length > 0) {
+      const logParams = data.map((d: any) => ({
+        maintenanceId: d.task_id.toString(),
+        action: "update",
+        machine: d.machine_name || "",
+        givenBy: "-",
+        doer: d.doer_name || "",
+        frequency: d.frequency || "",
+        fromDate: d.task_start_date || "",
+        taskDescription: d.task_description || ""
+      }));
+      await logMaintenanceAction(logParams);
     }
 
     return data as MachineMaintenance[];

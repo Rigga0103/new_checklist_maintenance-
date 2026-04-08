@@ -1,4 +1,5 @@
 import supabase from "@/utils/supabaseClient";
+import { logMaintenanceAction } from "../../../assignTask/server/api/logMaintenanceApi";
 
 // Types matching the Supabase tables
 export interface MachineRepairTask {
@@ -410,6 +411,19 @@ export const updateMaintenanceTask = async (
       throw error;
     }
 
+    if (data) {
+      await logMaintenanceAction([{
+        maintenanceId: data.task_id?.toString() || "",
+        action: "update",
+        machine: data.machine_name || "",
+        givenBy: "-",
+        doer: data.doer_name || "",
+        frequency: data.frequency || "",
+        fromDate: data.task_start_date || "",
+        taskDescription: data.task_description || ""
+      }]);
+    }
+
     return data;
   } catch (error) {
     console.error("Unexpected error in updateMaintenanceTask:", error);
@@ -606,6 +620,20 @@ export const updateMaintenanceTaskCascade = async (
       console.warn("Could not update maintenance_schedules cascade:", schedErr);
     }
 
+    if (data && data.length > 0) {
+      const logParams = data.map((d: any) => ({
+        maintenanceId: d.task_id?.toString() || "",
+        action: "update",
+        machine: d.machine_name || "",
+        givenBy: "-",
+        doer: d.doer_name || "",
+        frequency: d.frequency || "",
+        fromDate: d.task_start_date || "",
+        taskDescription: d.task_description || ""
+      }));
+      await logMaintenanceAction(logParams);
+    }
+
     return data;
   } catch (error) {
     console.error("Unexpected error in updateMaintenanceTaskCascade:", error);
@@ -632,11 +660,25 @@ export const deleteMaintenanceTaskCascade = async (
       query = query.is("doer_name", null);
     }
 
-    const { error } = await query;
+    const { data, error } = await query.select();
 
     if (error) {
       console.error("Error in deleteMaintenanceTaskCascade:", error);
       throw error;
+    }
+    
+    if (data && data.length > 0) {
+      const logParams = data.map((d: any) => ({
+        maintenanceId: d.task_id?.toString() || "",
+        action: "delete",
+        machine: d.machine_name || "",
+        givenBy: "-",
+        doer: d.doer_name || "",
+        frequency: d.frequency || "",
+        fromDate: d.task_start_date || "",
+        taskDescription: d.task_description || ""
+      }));
+      await logMaintenanceAction(logParams);
     }
   } catch (error) {
     console.error("Unexpected error in deleteMaintenanceTaskCascade:", error);
@@ -648,12 +690,28 @@ export const deleteMaintenanceTaskCascade = async (
 export const deleteMaintenanceTasks = async (
   taskIds: number[],
 ): Promise<number[]> => {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("machine_maintenance")
     .delete()
-    .in("task_id", taskIds);
+    .in("task_id", taskIds)
+    .select();
 
   if (error) throw error;
+  
+  if (data && data.length > 0) {
+    const logParams = data.map((d: any) => ({
+      maintenanceId: d.task_id?.toString() || "",
+      action: "delete",
+      machine: d.machine_name || "",
+      givenBy: "-",
+      doer: d.doer_name || "",
+      frequency: d.frequency || "",
+      fromDate: d.task_start_date || "",
+      taskDescription: d.task_description || ""
+    }));
+    await logMaintenanceAction(logParams);
+  }
+  
   return taskIds;
 };
 
@@ -716,12 +774,28 @@ export const fetchRepairTasksForEdit = async (
 export const deleteRepairTasks = async (
   taskIds: number[],
 ): Promise<number[]> => {
-  const { error } = await supabase
+  const { data: deletedTasks, error } = await supabase
     .from("machine_repair")
     .delete()
-    .in("task_id", taskIds);
+    .in("task_id", taskIds)
+    .select();
 
   if (error) throw error;
+
+  if (deletedTasks && deletedTasks.length > 0) {
+    const logParams = deletedTasks.map((d: any) => ({
+      maintenanceId: d.task_id?.toString() || "",
+      action: "delete",
+      machine: d.machine_name || "",
+      givenBy: "-",
+      doer: d.assigned_to || "",
+      frequency: "-",
+      fromDate: d.task_start_date || "",
+      taskDescription: d.issue_detail || ""
+    }));
+    await logMaintenanceAction(logParams);
+  }
+
   return taskIds;
 };
 
@@ -738,9 +812,17 @@ export const updateRepairTask = async (
       .select()
       .single();
 
-    if (error) {
-      console.error("Error updating machine_repair:", error);
-      throw error;
+    if (data) {
+      await logMaintenanceAction([{
+        maintenanceId: data.task_id?.toString() || "",
+        action: "update",
+        machine: data.machine_name || "",
+        givenBy: "-",
+        doer: data.assigned_to || "",
+        frequency: "-",
+        fromDate: data.task_start_date || "",
+        taskDescription: data.issue_detail || ""
+      }]);
     }
 
     return data;
@@ -854,19 +936,43 @@ export const updateMaintenanceScheduleCascade = async (
       pendingUpdates.department = newData.department;
 
     if (Object.keys(pendingUpdates).length > 0) {
-      const { error: cascadeError } = await supabase
+      const { data: cascadeData, error: cascadeError } = await supabase
         .from("machine_maintenance")
         .update(pendingUpdates)
         .eq("machine_name", oldData.machine_name)
         .eq("task_description", oldData.task_description)
         .is("actual_date", null)
-        .gte("task_start_date", startOfToday);
+        .gte("task_start_date", startOfToday)
+        .select();
 
       if (cascadeError) {
         console.error("Error cascading update to tasks:", cascadeError);
-        // We don't throw here to avoid rolling back the schedule update (Supabase REST doesn't support transactions easily)
-        // In a real app, use RPC for transaction.
+      } else if (cascadeData && cascadeData.length > 0) {
+        const logParams = cascadeData.map((d: any) => ({
+          maintenanceId: d.task_id?.toString() || "",
+          action: "update",
+          machine: d.machine_name || "",
+          givenBy: "-",
+          doer: d.doer_name || "",
+          frequency: d.frequency || "",
+          fromDate: d.task_start_date || "",
+          taskDescription: d.task_description || ""
+        }));
+        await logMaintenanceAction(logParams);
       }
+    }
+
+    if (data) {
+      await logMaintenanceAction([{
+        maintenanceId: data.id.toString(), // Schedule ID
+        action: "update",
+        machine: data.machine_name || "",
+        givenBy: "-",
+        doer: data.assigned_to || "",
+        frequency: data.frequency || "",
+        fromDate: "-",
+        taskDescription: data.task_description || ""
+      }]);
     }
 
     return data;
@@ -897,17 +1003,42 @@ export const deleteMaintenanceScheduleCascade = async (
     const today = new Date().toISOString().split("T")[0];
     const startOfToday = `${today}T00:00:00`;
 
-    const { error: cascadeError } = await supabase
+    const { data: deletedTasks, error: cascadeError } = await supabase
       .from("machine_maintenance")
       .delete()
       .eq("machine_name", oldData.machine_name)
       .eq("task_description", oldData.task_description)
       .is("actual_date", null)
-      .gte("task_start_date", startOfToday);
+      .gte("task_start_date", startOfToday)
+      .select();
 
     if (cascadeError) {
       console.error("Error cascading delete to tasks:", cascadeError);
+    } else if (deletedTasks && deletedTasks.length > 0) {
+      const logParams = deletedTasks.map((d: any) => ({
+        maintenanceId: d.task_id?.toString() || "",
+        action: "delete",
+        machine: d.machine_name || "",
+        givenBy: "-",
+        doer: d.doer_name || "",
+        frequency: d.frequency || "",
+        fromDate: d.task_start_date || "",
+        taskDescription: d.task_description || ""
+      }));
+      await logMaintenanceAction(logParams);
     }
+
+    // Also log the schedule deletion itself
+    await logMaintenanceAction([{
+      maintenanceId: id.toString(),
+      action: "delete",
+      machine: oldData.machine_name || "",
+      givenBy: "-",
+      doer: oldData.assigned_to || "",
+      frequency: oldData.frequency || "",
+      fromDate: "-",
+      taskDescription: oldData.task_description || ""
+    }]);
 
     return id;
   } catch (error) {
@@ -930,9 +1061,17 @@ export const createMaintenanceTask = async (
       .select()
       .single();
 
-    if (error) {
-      console.error("Error creating machine_maintenance:", error);
-      throw error;
+    if (data) {
+      await logMaintenanceAction([{
+        maintenanceId: data.task_id?.toString() || "",
+        action: "created",
+        machine: data.machine_name || "",
+        givenBy: "-",
+        doer: data.doer_name || "",
+        frequency: data.frequency || "",
+        fromDate: data.task_start_date || "",
+        taskDescription: data.task_description || ""
+      }]);
     }
 
     return data;
@@ -953,9 +1092,17 @@ export const createRepairTask = async (
       .select()
       .single();
 
-    if (error) {
-      console.error("Error creating machine_repair:", error);
-      throw error;
+    if (data) {
+      await logMaintenanceAction([{
+        maintenanceId: data.task_id?.toString() || "",
+        action: "created",
+        machine: data.machine_name || "",
+        givenBy: "-",
+        doer: data.assigned_to || "",
+        frequency: "-",
+        fromDate: data.task_start_date || "",
+        taskDescription: data.issue_detail || ""
+      }]);
     }
 
     return data;

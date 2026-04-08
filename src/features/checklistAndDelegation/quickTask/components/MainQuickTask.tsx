@@ -487,11 +487,10 @@ export default function MainQuickTask() {
               setChecklistPage(0);
               setSelectedTasks([]);
             }}
-            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-              activeTab === "checklist"
-                ? "bg-white dark:bg-neutral-700 text-blue-600 shadow-sm"
-                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            }`}
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === "checklist"
+              ? "bg-white dark:bg-neutral-700 text-blue-600 shadow-sm"
+              : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              }`}
           >
             Checklist
           </button>
@@ -501,11 +500,10 @@ export default function MainQuickTask() {
               setDelegationPage(0);
               setSelectedTasks([]);
             }}
-            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-              activeTab === "delegation"
-                ? "bg-white dark:bg-neutral-700 text-blue-600 shadow-sm"
-                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            }`}
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === "delegation"
+              ? "bg-white dark:bg-neutral-700 text-blue-600 shadow-sm"
+              : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              }`}
           >
             Delegation
           </button>
@@ -658,11 +656,11 @@ export default function MainQuickTask() {
                         checked={
                           activeTab === "checklist"
                             ? selectedTasks.length ===
-                                filteredChecklistTasks.length &&
-                              filteredChecklistTasks.length > 0
+                            filteredChecklistTasks.length &&
+                            filteredChecklistTasks.length > 0
                             : selectedDelegationTasks.length ===
-                                filteredDelegationTasks.length &&
-                              filteredDelegationTasks.length > 0
+                            filteredDelegationTasks.length &&
+                            filteredDelegationTasks.length > 0
                         }
                         onChange={handleSelectAll}
                         className="w-4 h-4 rounded border-gray-300 text-blue-600"
@@ -731,11 +729,11 @@ export default function MainQuickTask() {
                             checked={
                               activeTab === "checklist"
                                 ? !!selectedTasks.find(
-                                    (t) => t.task_id === task.task_id,
-                                  )
+                                  (t) => t.task_id === task.task_id,
+                                )
                                 : !!selectedDelegationTasks.find(
-                                    (t) => t.task_id === task.task_id,
-                                  )
+                                  (t) => t.task_id === task.task_id,
+                                )
                             }
                             onChange={() => handleCheckboxChange(task)}
                             className="w-4 h-4 rounded border-gray-300 text-blue-600"
@@ -869,10 +867,10 @@ export default function MainQuickTask() {
                             value={
                               delegationEditFormData.task_start_date
                                 ? new Date(
-                                    delegationEditFormData.task_start_date,
-                                  )
-                                    .toISOString()
-                                    .split("T")[0]
+                                  delegationEditFormData.task_start_date,
+                                )
+                                  .toISOString()
+                                  .split("T")[0]
                                 : ""
                             }
                             onChange={(e) =>
@@ -895,8 +893,8 @@ export default function MainQuickTask() {
                             value={
                               delegationEditFormData.planned_date
                                 ? new Date(delegationEditFormData.planned_date)
-                                    .toISOString()
-                                    .split("T")[0]
+                                  .toISOString()
+                                  .split("T")[0]
                                 : ""
                             }
                             onChange={(e) =>
@@ -1041,8 +1039,8 @@ export default function MainQuickTask() {
                                   activeTab === "checklist"
                                     ? handleEditClick(task as ChecklistTask)
                                     : handleDelegationEditClick(
-                                        task as DelegationTask,
-                                      )
+                                      task as DelegationTask,
+                                    )
                                 }
                                 className="p-1 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 hover:bg-blue-200"
                               >
@@ -1110,11 +1108,10 @@ export default function MainQuickTask() {
             </h3>
             <p className="text-gray-500 dark:text-gray-400 mb-6">
               {isBulkDeleteConfirm
-                ? `Are you sure you want to delete ${
-                    activeTab === "checklist"
-                      ? selectedTasks.length
-                      : selectedDelegationTasks.length
-                  } selected tasks? This action cannot be undone.`
+                ? `Are you sure you want to delete ${activeTab === "checklist"
+                  ? selectedTasks.length
+                  : selectedDelegationTasks.length
+                } selected tasks? This action cannot be undone.`
                 : `Are you sure you want to delete this task? This action cannot be undone.`}
             </p>
             <div className="flex justify-end gap-3">
@@ -1141,8 +1138,8 @@ export default function MainQuickTask() {
                 {(activeTab === "checklist"
                   ? deleteChecklistMutation.isPending
                   : deleteDelegationMutation.isPending) && (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                )}
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  )}
                 Delete
               </button>
             </div>

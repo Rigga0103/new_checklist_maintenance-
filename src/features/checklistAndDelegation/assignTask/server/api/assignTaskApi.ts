@@ -1,5 +1,7 @@
 import supabase from "@/utils/supabaseClient";
 import { GeneratedTask } from "../../types/types";
+import { logChecklistAction } from "./logChecklistApi";
+import { logMaintenanceAction } from "./logMaintenanceApi";
 
 // Fetch unique departments based on user role
 export const fetchUniqueDepartmentDataApi = async (): Promise<string[]> => {
@@ -274,6 +276,37 @@ export const pushAssignTaskApi = async (
       `Successfully inserted ${tasksData.length} tasks into ${submitTable}`,
       data,
     );
+
+    // Call logChecklistApi to track action
+    if (data && data.length > 0) {
+      if (section === "maintenance") {
+        const logParamsArray = generatedTasks.map((task, index) => ({
+          maintenanceId: (currentMaxId + index + 1).toString(),
+          action: "created",
+          machine: task.department, // For maintenance, department field holds machine name
+          givenBy: task.givenBy || "-",
+          doer: task.assignTo,
+          frequency: task.frequency,
+          fromDate: task.dueDate,
+          taskDescription: task.description,
+        }));
+        await logMaintenanceAction(logParamsArray);
+      } else {
+        const logParamsArray = generatedTasks.map((task, index) => ({
+          checklistId: (currentMaxId + index + 1).toString(),
+          action: "created",
+          department: task.department,
+          givenBy: task.givenBy || "-",
+          doerName: task.assignTo,
+          frequency: task.frequency,
+          fromDate: task.dueDate,
+          endDate: task.frequency === "one-time" ? task.endDate : task.dueDate,
+          description: task.description,
+        }));
+        await logChecklistAction(logParamsArray);
+      }
+    }
+
     return {
       success: true,
       message: `Successfully assigned ${tasksData.length} task(s)`,

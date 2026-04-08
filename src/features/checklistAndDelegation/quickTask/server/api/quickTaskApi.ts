@@ -9,6 +9,7 @@ import type {
   DelegationOriginalMatch,
   DelegationUpdatePayload,
 } from "../../types/types";
+import { logChecklistAction } from "../../../assignTask/server/api/logChecklistApi";
 
 // ============ Checklist API ============
 
@@ -134,6 +135,7 @@ export const fetchUsersData = async (): Promise<User[]> => {
 export const deleteChecklistTasksApi = async (
   tasks: ChecklistTask[],
 ): Promise<ChecklistTask[]> => {
+  let allDeleted: ChecklistTask[] = [];
   for (const task of tasks) {
     let query = supabase.from("checklist").delete();
 
@@ -144,9 +146,26 @@ export const deleteChecklistTasksApi = async (
       query = query.eq("task_description", task.task_description);
     else query = query.is("task_description", null);
 
-    const { error } = await query;
+    const { data, error } = await query.select();
     if (error) throw error;
+    if (data) allDeleted = [...allDeleted, ...data];
   }
+  
+  if (allDeleted.length > 0) {
+     const logParams = allDeleted.map(task => ({
+        checklistId: task.task_id?.toString() || "",
+        action: "delete",
+        department: task.department || "",
+        givenBy: task.given_by || "",
+        doerName: task.name || "",
+        frequency: task.frequency || "",
+        fromDate: task.task_start_date || "",
+        endDate: (task as any).planned_date || "", 
+        description: task.task_description || ""
+     }));
+     await logChecklistAction(logParams);
+  }
+  
   return tasks;
 };
 
@@ -157,6 +176,7 @@ export const deleteChecklistTasksApi = async (
 export const deleteDelegationTasksApi = async (
   tasks: DelegationTask[],
 ): Promise<DelegationTask[]> => {
+  let allDeleted: DelegationTask[] = [];
   for (const task of tasks) {
     let query = supabase.from("delegation").delete();
 
@@ -167,9 +187,26 @@ export const deleteDelegationTasksApi = async (
       query = query.eq("task_description", task.task_description);
     else query = query.is("task_description", null);
 
-    const { error } = await query;
+    const { data, error } = await query.select();
     if (error) throw error;
+    if (data) allDeleted = [...allDeleted, ...data];
   }
+  
+  if (allDeleted.length > 0) {
+     const logParams = allDeleted.map(task => ({
+        checklistId: task.task_id?.toString() || "",
+        action: "delete",
+        department: task.department || "",
+        givenBy: task.given_by || "",
+        doerName: task.name || "",
+        frequency: task.frequency || "",
+        fromDate: task.task_start_date || "",
+        endDate: task.planned_date || "", 
+        description: task.task_description || ""
+     }));
+     await logChecklistAction(logParams);
+  }
+  
   return tasks;
 };
 
@@ -221,6 +258,21 @@ export const updateChecklistTaskApi = async (
   if (error) {
     console.error("Supabase error (Checklist update):", error);
     throw error;
+  }
+
+  if (data && data.length > 0) {
+     const logParams = data.map(task => ({
+        checklistId: task.task_id?.toString() || "",
+        action: "update",
+        department: task.department || "",
+        givenBy: task.given_by || "",
+        doerName: task.name || "",
+        frequency: task.frequency || "",
+        fromDate: task.task_start_date || "",
+        endDate: (task as any).planned_date || "", 
+        description: task.task_description || ""
+     }));
+     await logChecklistAction(logParams);
   }
 
   return data as ChecklistTask[];
@@ -285,6 +337,21 @@ export const updateDelegationTaskApi = async (
   if (error) {
     console.error("Error editing delegation task (cascading):", error);
     throw error;
+  }
+
+  if (data && data.length > 0) {
+     const logParams = data.map(task => ({
+        checklistId: task.task_id?.toString() || "",
+        action: "update",
+        department: task.department || "",
+        givenBy: task.given_by || "",
+        doerName: task.name || "",
+        frequency: task.frequency || "",
+        fromDate: task.task_start_date || "",
+        endDate: task.planned_date || "", 
+        description: task.task_description || ""
+     }));
+     await logChecklistAction(logParams);
   }
 
   return data as DelegationTask[];

@@ -1,4 +1,5 @@
 import supabase from "@/utils/supabaseClient";
+import { logMaintenanceAction } from "../../../../checklistAndDelegation/assignTask/server/api/logMaintenanceApi";
 
 export interface MaintenanceSchedule {
   id: number;
@@ -56,6 +57,20 @@ export const createMaintenanceSchedule = async (
       console.error("Error creating schedule:", error);
       return null;
     }
+
+    if (data) {
+      await logMaintenanceAction([{
+        maintenanceId: data.id.toString(),
+        action: "created",
+        machine: data.machine_name || "",
+        givenBy: "-",
+        doer: data.assigned_to || "",
+        frequency: data.frequency || "",
+        fromDate: "-",
+        taskDescription: data.task_description || ""
+      }]);
+    }
+
     return data as MaintenanceSchedule;
   } catch (error) {
     console.error("Error:", error);
@@ -80,6 +95,20 @@ export const updateMaintenanceSchedule = async (
       console.error("Error updating schedule:", error);
       return null;
     }
+
+    if (data) {
+      await logMaintenanceAction([{
+        maintenanceId: data.id.toString(),
+        action: "update",
+        machine: data.machine_name || "",
+        givenBy: "-",
+        doer: data.assigned_to || "",
+        frequency: data.frequency || "",
+        fromDate: "-",
+        taskDescription: data.task_description || ""
+      }]);
+    }
+
     return data as MaintenanceSchedule;
   } catch (error) {
     console.error("Error:", error);
@@ -92,15 +121,31 @@ export const deleteMaintenanceSchedule = async (
   id: number,
 ): Promise<boolean> => {
   try {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("maintenance_schedules")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .select()
+      .single();
 
     if (error) {
       console.error("Error deleting schedule:", error);
       return false;
     }
+
+    if (data) {
+      await logMaintenanceAction([{
+        maintenanceId: data.id.toString(),
+        action: "delete",
+        machine: data.machine_name || "",
+        givenBy: "-",
+        doer: data.assigned_to || "",
+        frequency: data.frequency || "",
+        fromDate: "-",
+        taskDescription: data.task_description || ""
+      }]);
+    }
+
     return true;
   } catch (error) {
     console.error("Error:", error);
@@ -158,6 +203,20 @@ export const generateDailyTasks = async (): Promise<{
     if (error) {
       console.error("Error generating tasks:", error);
       throw error;
+    }
+
+    if (data && data.length > 0) {
+      const logParams = data.map((d: any) => ({
+        maintenanceId: d.task_id?.toString() || "",
+        action: "created",
+        machine: d.machine_name || "",
+        givenBy: "-",
+        doer: d.doer_name || "",
+        frequency: d.frequency || "",
+        fromDate: d.task_start_date || "",
+        taskDescription: d.task_description || ""
+      }));
+      await logMaintenanceAction(logParams);
     }
 
     return {
