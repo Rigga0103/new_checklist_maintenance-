@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   useMaintenanceSchedulesQuery,
   useCreateScheduleMutation,
@@ -26,6 +26,20 @@ import { useRBAC } from "@/hooks/useRBAC";
 const ITEMS_PER_PAGE = 20;
 
 export default function MainMaintenanceSchedule() {
+  const [userRole, setUserRole] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem("role") || "user";
+  });
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const role = localStorage.getItem("role") || "user";
+      if (role !== userRole) setUserRole(role);
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, [userRole]);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -190,9 +204,10 @@ export default function MainMaintenanceSchedule() {
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                 Assigned To
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
+              {userRole === "admin" && (<th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
                 Actions
-              </th>
+              </th>)
+              }
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
@@ -236,7 +251,7 @@ export default function MainMaintenanceSchedule() {
                     {schedule.assigned_to || "-"}
                   </td>
                   <td className="px-6 py-4 text-right space-x-2">
-                    {canEdit && (
+                    {userRole === "admin" && (
                       <button
                         onClick={() => handleOpenModal(schedule)}
                         className="text-neutral-500 hover:text-green-600 transition-colors"
@@ -244,7 +259,7 @@ export default function MainMaintenanceSchedule() {
                         <Pencil className="w-4 h-4" />
                       </button>
                     )}
-                    {canDelete && (
+                    {userRole === "admin" && (
                       <button
                         onClick={() => handleDelete(schedule.id)}
                         className="text-neutral-500 hover:text-red-600 transition-colors"

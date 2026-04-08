@@ -37,6 +37,21 @@ export default function MaintenanceList({
   const [username, setUsername] = useState<string | null>(null);
   const [viewMyTasksOnly, setViewMyTasksOnly] = useState(false);
 
+  const [userRole, setUserRole] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem("role") || "user";
+  });
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const role = localStorage.getItem("role") || "user";
+      if (role !== userRole) setUserRole(role);
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, [userRole]);
+
+
   useEffect(() => {
     setRole(localStorage.getItem("role") || "user");
     setUsername(localStorage.getItem("user-name") || null);
@@ -816,9 +831,9 @@ export default function MaintenanceList({
                       </th>
                     </>
                   )}
-                  <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground uppercase">
+                  {userRole === "admin" && (<th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground uppercase">
                     Actions
-                  </th>
+                  </th>)}
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-neutral-800 divide-y divide-gray-100 dark:divide-neutral-700">
@@ -1060,13 +1075,14 @@ export default function MaintenanceList({
                       </>
                     )}
                     <td className="px-3 py-3 text-right whitespace-nowrap">
-                      <button
+
+                      {userRole === "admin" && (<button
                         onClick={() => handleDeleteTask(task.task_id)}
                         className="p-1 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded transition-colors"
                         title="Delete Task"
                       >
                         <Trash2 className="w-4 h-4" />
-                      </button>
+                      </button>)}
                     </td>
                   </tr>
                 ))}

@@ -23,6 +23,20 @@ import { useRBAC } from "@/hooks/useRBAC";
 import { deleteRepair } from "../server/api/repairingApi";
 
 export default function MainRepairingHistory() {
+  const [userRole, setUserRole] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem("role") || "user";
+  });
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const role = localStorage.getItem("role") || "user";
+      if (role !== userRole) setUserRole(role);
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, [userRole]);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -392,13 +406,14 @@ export default function MainRepairingHistory() {
                         </button>
 
                         {/* Delete Button */}
-                        <button
+
+                        {userRole === "admin" && (<button
                           onClick={() => handleDelete(repair.task_id)}
                           className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-200 rounded-lg transition-colors"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
 
-                        </button>
+                        </button>)}
                       </div>
                     </td>
                   </tr>

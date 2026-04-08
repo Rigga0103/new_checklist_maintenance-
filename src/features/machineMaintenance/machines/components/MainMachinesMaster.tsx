@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   useMachinesQuery,
   useCreateMachineMutation,
@@ -28,6 +28,20 @@ import { useRBAC } from "@/hooks/useRBAC";
 const ITEMS_PER_PAGE = 20;
 
 export default function MainMachinesMaster() {
+  const [userRole, setUserRole] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem("role") || "user";
+  });
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const role = localStorage.getItem("role") || "user";
+      if (role !== userRole) setUserRole(role);
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, [userRole]);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
   const [newTypeName, setNewTypeName] = useState("");
@@ -250,9 +264,10 @@ export default function MainMachinesMaster() {
                 Status
               </th>
 
-              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
+
+              {userRole === "admin" && <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
                 Actions
-              </th>
+              </th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
@@ -301,7 +316,7 @@ export default function MainMachinesMaster() {
                     </span>
                   </td>
 
-                  <td className="px-6 py-4 text-right space-x-2">
+                  {userRole === "admin" && <td className="px-6 py-4 text-right space-x-2">
                     {canEdit && (
                       <button
                         onClick={() => handleOpenModal(machine)}
@@ -318,7 +333,7 @@ export default function MainMachinesMaster() {
                         <Trash2 className="w-4 h-4" />
                       </button>
                     )}
-                  </td>
+                  </td>}
                 </tr>
               ))
             )}

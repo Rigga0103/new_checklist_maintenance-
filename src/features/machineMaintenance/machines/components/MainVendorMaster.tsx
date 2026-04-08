@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Plus,
   Pencil,
@@ -30,6 +30,20 @@ import { CreateVendorDTO, Vendor } from "../../types/types";
 const ITEMS_PER_PAGE = 20;
 
 export default function MainVendorMaster() {
+  const [userRole, setUserRole] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem("role") || "user";
+  });
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const role = localStorage.getItem("role") || "user";
+      if (role !== userRole) setUserRole(role);
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, [userRole]);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
@@ -184,7 +198,7 @@ export default function MainVendorMaster() {
                 <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Vendor Type</th>
                 <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Parts Name</th>
                 <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Work Type</th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
+                {userRole === "admin" && <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -230,26 +244,28 @@ export default function MainVendorMaster() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {canEdit && (
-                          <button
-                            onClick={() => handleOpenModal(vendor)}
-                            className="p-1.5 text-muted-foreground hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors"
-                            title="Edit Vendor"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                        )}
-                        {canDelete && (
-                          <button
-                            onClick={() => handleDelete(vendor.id)}
-                            className="p-1.5 text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                            title="Delete Vendor"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
+                      {userRole === "admin" &&
+                        <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {canEdit && (
+                            <button
+                              onClick={() => handleOpenModal(vendor)}
+                              className="p-1.5 text-muted-foreground hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors"
+                              title="Edit Vendor"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button
+                              onClick={() => handleDelete(vendor.id)}
+                              className="p-1.5 text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                              title="Delete Vendor"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      }
                     </td>
                   </tr>
                 ))

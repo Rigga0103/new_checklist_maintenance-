@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Plus,
   Pencil,
@@ -36,6 +36,20 @@ import autoTable from "jspdf-autotable";
 const ITEMS_PER_PAGE = 20;
 
 export default function MainPartMaster() {
+  const [userRole, setUserRole] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem("role") || "user";
+  });
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const role = localStorage.getItem("role") || "user";
+      if (role !== userRole) setUserRole(role);
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, [userRole]);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
@@ -348,7 +362,7 @@ export default function MainPartMaster() {
                   <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Rate</th>
                   <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Qty</th>
                   <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Unit</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
+                  {userRole === "admin" && <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -419,7 +433,7 @@ export default function MainPartMaster() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {userRole === "admin" && <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           {canEdit && (
                             <button
                               onClick={() => handleOpenModal(part)}
@@ -438,7 +452,7 @@ export default function MainPartMaster() {
                               <Trash2 className="w-4 h-4" />
                             </button>
                           )}
-                        </div>
+                        </div>}
                       </td>
                     </tr>
                   ))

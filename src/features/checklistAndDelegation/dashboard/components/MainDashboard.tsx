@@ -11,7 +11,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
-  ClockCheck
+  ClockCheck,
+  Megaphone
 } from "lucide-react";
 import { useDashboard } from "../hooks/useDashboard";
 import { StatCardSkeleton, StaffTableSkeleton } from "./DashboardSkeleton";
@@ -323,6 +324,12 @@ export default function MainDashboard() {
       </div>
     );
   };
+
+  const latestUpdates = filteredTasks.length > 0
+    ? (filteredTasks.filter((t) => t.status === "completed").length > 0
+      ? filteredTasks.filter((t) => t.status === "completed")
+      : filteredTasks).slice(0, 15)
+    : [];
 
   // Consolidate task tables with tabs
   return (
@@ -679,6 +686,44 @@ export default function MainDashboard() {
                     </span>
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Headlines / Latest Updates (Checklist only) */}
+          {dashboardType === "checklist" && latestUpdates.length > 0 && (
+            <div className="bg-blue-50/30 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-900/30 mb-6 overflow-hidden">
+              <div className="px-4 py-3 border-b border-blue-100 dark:border-blue-900/30 flex items-center gap-2 text-blue-700 dark:text-blue-400 font-semibold">
+                <Megaphone className="w-4 h-4 animate-pulse" />
+                <h3 className="text-sm">Latest Updates</h3>
+              </div>
+              <div className="max-h-40 overflow-y-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-blue-50/50 dark:bg-blue-900/20 text-xs text-blue-600/80 dark:text-blue-400/80 uppercase">
+                    <tr>
+                      <th className="px-4 py-2 font-medium">Task</th>
+                      <th className="px-4 py-2 font-medium text-right">Assigned To</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-blue-50 dark:divide-blue-900/20">
+                    {latestUpdates.map((task, idx) => (
+                      <tr
+                        key={`update-${task.id}-${idx}`}
+                        className="hover:bg-blue-50/50 dark:hover:bg-blue-900/20 transition-colors"
+                      >
+                        <td className="px-4 py-2.5 text-blue-900 dark:text-blue-100 font-medium">
+                          <div className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                            <span className="line-clamp-1">{task.title}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-2.5 text-blue-600/80 dark:text-blue-300/80 text-xs font-semibold text-right whitespace-nowrap">
+                          {task.assignedTo}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 
 import {
   Wrench,
@@ -95,6 +95,20 @@ function StatCard({
 // ============ Main Component ============
 
 export default function RepairingDashboard() {
+  const [userRole, setUserRole] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem("role") || "user";
+  });
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const role = localStorage.getItem("role") || "user";
+      if (role !== userRole) setUserRole(role);
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, [userRole]);
+
   const {
     repairLoading,
     repairError,
@@ -763,13 +777,15 @@ export default function RepairingDashboard() {
                         >
                           <Edit size={16} />
                         </button>
-                        <button
-                          onClick={() => console.log("Delete", row.task_id)}
-                          className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        {userRole === "admin" && (
+                          <button
+                            onClick={() => console.log("Delete", row.task_id)}
+                            className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -872,13 +888,15 @@ export default function RepairingDashboard() {
                       >
                         <Edit size={14} />
                       </button>
-                      <button
-                        onClick={() => console.log("Delete", row.task_id)}
-                        className="p-1 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 rounded transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      {userRole === "admin" && (
+                        <button
+                          onClick={() => console.log("Delete", row.task_id)}
+                          className="p-1 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 rounded transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
