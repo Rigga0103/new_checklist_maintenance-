@@ -8,6 +8,7 @@ import {
   pushAssignTaskApi,
   fetchUniqueTaskDescriptionsApi,
 } from "../server/api/assignTaskApi";
+import { uploadSampleImage } from "../server/api/assignTaskImageApi";
 import { fetchActiveMachines } from "@/features/machineMaintenance/machines/server/api/machinesApi";
 import {
   AssignTaskFormData,
@@ -131,6 +132,8 @@ export interface UseAssignTaskReturn {
   handleGenerate: () => Promise<void>;
   handleSubmit: (e: React.FormEvent) => Promise<void>;
   handleReset: () => void;
+  handleSampleImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
+  isUploadingSampleImage: boolean;
   taskSuggestions: string[];
 
   // Helpers
@@ -165,6 +168,7 @@ export function useAssignTask(): UseAssignTaskReturn {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingDoerNames, setIsLoadingDoerNames] = useState(false);
+  const [isUploadingSampleImage, setIsUploadingSampleImage] = useState(false);
 
   // Load initial data
   useEffect(() => {
@@ -305,6 +309,24 @@ export function useAssignTask(): UseAssignTaskReturn {
   // Handle switch changes
   const handleSwitchChange = useCallback((name: string, checked: boolean) => {
     setFormData((prev) => ({ ...prev, [name]: checked }));
+  }, []);
+
+  // Handle sample image upload
+  const handleSampleImageUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingSampleImage(true);
+    try {
+      const url = await uploadSampleImage(file);
+      setFormData(prev => ({ ...prev, sampleImage: url }));
+      toast.success("Image uploaded successfully");
+    } catch (error) {
+      console.error("Image upload failed:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to upload image");
+    } finally {
+      setIsUploadingSampleImage(false);
+    }
   }, []);
 
   // --- Date Logic Helpers from Legacy Code ---
@@ -688,6 +710,8 @@ export function useAssignTask(): UseAssignTaskReturn {
     handleGenerate,
     handleSubmit,
     handleReset,
+    handleSampleImageUpload,
+    isUploadingSampleImage,
     taskSuggestions,
 
     // Helpers

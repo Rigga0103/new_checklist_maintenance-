@@ -10,6 +10,7 @@ import {
   editDelegationTaskApi,
   deleteDelegationTaskApi,
 } from "../server/api/delegationApi";
+import { logDelegationAction } from "../server/api/delegationLogApi";
 import {
   DelegationTask,
   DelegationFilters,
@@ -312,8 +313,19 @@ export function useDelegation(roleOverride?: string | null) {
         planned_date: editFormData.planned_date || undefined,
       });
 
-      if (result.success) {
-        toast.success("Task updated successfully");
+        if (result.success) {
+          // Log the update action
+          const userName = localStorage.getItem("user-name") || "Unknown";
+          await logDelegationAction({
+            task_id: editingTaskId.toString(),
+            action: "update",
+            action_done_by: userName,
+            name: editFormData.name,
+            task_description: editFormData.task_description,
+            frequency: editFormData.frequency,
+          });
+
+          toast.success("Task updated successfully");
         setEditingTaskId(null);
         setEditFormData({});
         // Reload to reflect changes
@@ -341,9 +353,26 @@ export function useDelegation(roleOverride?: string | null) {
 
   const handleDeleteTask = useCallback(async (taskId: number) => {
     if (!confirm("Are you sure you want to delete this task?")) return;
+    
+    // Find task details for logging before it's deleted
+    const taskToDelete = pendingTasks.find(t => t.task_id === taskId) 
+                     || historyTasks.find(t => t.task_id === taskId)
+                     || last7DaysTasks.find(t => t.task_id === taskId);
+
     try {
       const result = await deleteDelegationTaskApi(taskId);
       if (result.success) {
+        // Log the delete action
+        const userName = localStorage.getItem("user-name") || "Unknown";
+        await logDelegationAction({
+          task_id: taskId.toString(),
+          action: "delete",
+          action_done_by: userName,
+          name: taskToDelete?.name,
+          task_description: taskToDelete?.task_description,
+          frequency: taskToDelete?.frequency,
+        });
+
         toast.success("Task deleted successfully");
         // Reload based on active tab
         if (activeTab === "pending") {

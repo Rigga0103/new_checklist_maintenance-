@@ -16,13 +16,12 @@ import {
 } from "lucide-react";
 import AutocompleteInput from "./AutocompleteInput";
 import { useState } from "react";
-import { uploadSampleImage } from "../server/api/assignTaskImageApi";
 import { toast } from "sonner";
 
 const inputClass =
-  "w-full px-3 py-2 text-sm bg-white dark:bg-neutral-900 text-foreground border border-gray-200 dark:border-neutral-700 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
+  "w-full px-3 py-2 text-sm bg-white text-black dark:bg-black dark:text-white border border-gray-200 dark:border-neutral-700 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
 const selectClass =
-  "w-full px-3 py-2 text-sm bg-white dark:bg-neutral-900 text-foreground border border-gray-200 dark:border-neutral-700 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
+  "w-full px-3 py-2 text-sm bg-white text-black dark:bg-black dark:text-white border border-gray-200 dark:border-neutral-700 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
 const labelClass =
   "block text-xs font-medium text-muted-foreground dark:text-muted-foreground mb-1";
 
@@ -51,33 +50,10 @@ export default function MainAssignTask() {
     handleGenerate,
     handleSubmit,
     handleReset,
+    handleSampleImageUpload,
+    isUploadingSampleImage,
     taskSuggestions,
   } = useAssignTask();
-
-  const [isUploadingSampleImage, setIsUploadingSampleImage] = useState(false);
-
-  const handleSampleImageUpload = async (
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsUploadingSampleImage(true);
-    try {
-      const url = await uploadSampleImage(file);
-      handleChange({
-        target: { name: "sampleImage", value: url },
-      } as React.ChangeEvent<HTMLInputElement>);
-      toast.success("Image uploaded successfully");
-    } catch (error) {
-      console.error("Image upload failed:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to upload image",
-      );
-    } finally {
-      setIsUploadingSampleImage(false);
-    }
-  };
 
   // Convert Date to input format
   const getInputDateValue = () => {
