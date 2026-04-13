@@ -65,7 +65,7 @@ export const useCreateMachineTypeMutation = () => {
     onError: (error: any) => {
       toast.error(
         error?.message ||
-          "Failed to create Machine Type. It might already exist.",
+        "Failed to create Machine Type. It might already exist.",
       );
     },
   });
@@ -129,7 +129,7 @@ export const useCreateMachineNameMutation = () => {
     onError: (error: any) => {
       toast.error(
         error?.message ||
-          "Failed to create Machine Name. It might already exist.",
+        "Failed to create Machine Name. It might already exist.",
       );
     },
   });

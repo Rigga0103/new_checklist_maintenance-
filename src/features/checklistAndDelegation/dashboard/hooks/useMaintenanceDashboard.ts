@@ -247,16 +247,21 @@ export function useMaintenanceDashboard(
 
   // ---- Stats Calculation (uses ALL data for dashboard) ----
   const maintenanceStats = useMemo<MaintenanceStats>(() => {
-    const totalTasks = filteredAllMaintenanceTasks.length;
-    const completedTasks = filteredAllMaintenanceTasks.filter(
+    const today = new Date().toISOString().split("T")[0];
+
+    // Filter tasks till today (inclusive)
+    const tasksTillToday = filteredAllMaintenanceTasks.filter(
+      (t) => t.task_start_date && t.task_start_date <= today
+    );
+
+    const totalTasks = tasksTillToday.length;
+    const completedTasks = tasksTillToday.filter(
       (t) => t.actual_date && t.actual_date.trim() !== "",
     ).length;
     const pendingTasksCount = totalTasks - completedTasks;
 
-    const today = new Date().toISOString().split("T")[0];
-
     // Overdue: Start date < today and not completed
-    const overdueTasks = filteredAllMaintenanceTasks.filter((t) => {
+    const overdueTasks = tasksTillToday.filter((t) => {
       if (t.actual_date && t.actual_date.trim() !== "") return false;
       if (!t.task_start_date) return false;
       return t.task_start_date < today;

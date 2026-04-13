@@ -310,7 +310,7 @@ export default function MaintenanceDashboard() {
           value={maintenanceStats.totalTasks}
           icon={Wrench}
           color="border-blue-500"
-          subtext="All scheduled tasks"
+          subtext="Tasks scheduled till today"
         />
         <StatCard
           title="Completed"
