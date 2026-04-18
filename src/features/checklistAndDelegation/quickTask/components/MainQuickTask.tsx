@@ -284,7 +284,7 @@ export default function MainQuickTask() {
   // Edit handlers
   const handleEditClick = (task: ChecklistTask) => {
     setEditingTaskId(task.task_id);
-    setEditFormData({ ...task });
+    setEditFormData({ ...task, image: task.sample_image || task.image });
   };
 
   const handleCancelEdit = () => {
@@ -316,6 +316,7 @@ export default function MainQuickTask() {
           image: editFormData.image || undefined,
         },
         originalTask: {
+          task_id: originalTask.task_id,
           department: originalTask.department || "",
           name: originalTask.name || "",
           task_description: originalTask.task_description || "",
@@ -379,6 +380,7 @@ export default function MainQuickTask() {
           planned_date: delegationEditFormData.planned_date || undefined,
         },
         originalTask: {
+          task_id: originalTask.task_id,
           department: originalTask.department || null,
           name: originalTask.name || null,
           task_description: originalTask.task_description || null,
@@ -1041,21 +1043,30 @@ export default function MainQuickTask() {
                                   href={editFormData.image}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="text-xs text-blue-500 hover:underline"
+                                  className="flex items-center gap-2 mt-1"
                                 >
-                                  View Current Image
+                                  <img 
+                                    src={editFormData.image} 
+                                    alt="Preview" 
+                                    className="w-8 h-8 object-cover rounded border border-gray-200 dark:border-neutral-600" 
+                                  />
+                                  <span className="text-xs text-blue-500 hover:underline">Current</span>
                                 </a>
                               )}
                             </div>
                           ) : (
-                            task.image ? (
+                            (task.sample_image || task.image) ? (
                               <a
-                                href={task.image}
+                                href={task.sample_image || task.image}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="text-blue-600 hover:underline flex items-center gap-1"
+                                className="block w-10 h-10 overflow-hidden rounded border border-gray-200 dark:border-neutral-700 hover:opacity-80 transition-opacity"
                               >
-                                View Image
+                                <img
+                                  src={task.sample_image || task.image}
+                                  alt="Preview"
+                                  className="w-full h-full object-cover"
+                                />
                               </a>
                             ) : (
                               "—"

@@ -14,6 +14,7 @@ export interface ChecklistTask {
   remark: string | null;
   status: "yes" | "no" | null;
   image: string | null;
+  sample_image?: string | null;
   admin_done: string | null;
   delay: string | null;
   planned_date: string | null;
@@ -34,6 +35,7 @@ export interface ChecklistUpdatePayload {
 }
 
 export interface ChecklistOriginalMatch {
+  task_id: number;
   department: string | null;
   name: string | null;
   task_description: string | null;
@@ -54,6 +56,7 @@ export interface DelegationUpdatePayload {
 }
 
 export interface DelegationOriginalMatch {
+  task_id: number;
   department: string | null;
   name: string | null;
   task_description: string | null;
@@ -70,6 +73,7 @@ export interface DelegationTask {
   task_start_date: string;
   given_by: string | null;
   image: string | null;
+  sample_image?: string | null;
   enable_reminder: "yes" | "no" | null;
   require_attachment: string | null;
   status: string | null;

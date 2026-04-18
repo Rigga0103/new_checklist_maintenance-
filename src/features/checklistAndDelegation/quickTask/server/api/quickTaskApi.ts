@@ -236,26 +236,16 @@ export const updateChecklistTaskApi = async (
   if (updatedTask.remark !== undefined)
     updatePayload.remark = updatedTask.remark;
   if (updatedTask.image !== undefined)
-    updatePayload.image = updatedTask.image;
+    updatePayload.sample_image = updatedTask.image;
 
   let query = supabase
     .from("checklist")
     .update(updatePayload)
-    .is("submission_date", null);
-
-  // Strict composite match
-  if (originalTask.department)
-    query = query.eq("department", originalTask.department);
-  else query = query.is("department", null);
-
-  if (originalTask.name) query = query.eq("name", originalTask.name);
-  else query = query.is("name", null);
-
-  if (originalTask.task_description)
-    query = query.eq("task_description", originalTask.task_description);
-  else query = query.is("task_description", null);
+    .eq("task_id", originalTask.task_id);
 
   const { data, error } = await query.select();
+
+  console.log("Supabase response:", { dataLength: data?.length, error });
 
   if (error) {
     console.error("Supabase error (Checklist update):", error);
@@ -320,21 +310,11 @@ export const updateDelegationTaskApi = async (
   let query = supabase
     .from("delegation")
     .update(updatePayload)
-    .is("submission_date", null);
-
-  // Strict composite match
-  if (originalTask.department)
-    query = query.eq("department", originalTask.department);
-  else query = query.is("department", null);
-
-  if (originalTask.name) query = query.eq("name", originalTask.name);
-  else query = query.is("name", null);
-
-  if (originalTask.task_description)
-    query = query.eq("task_description", originalTask.task_description);
-  else query = query.is("task_description", null);
+    .eq("task_id", originalTask.task_id);
 
   const { data, error } = await query.select();
+
+  console.log("Supabase response:", { dataLength: data?.length, error });
 
   if (error) {
     console.error("Error editing delegation task (cascading):", error);
