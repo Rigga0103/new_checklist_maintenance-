@@ -183,7 +183,7 @@ export default function MainRepairingPending() {
     }
   };
 
-  const formatDate = (dateString: string | null) => {
+  const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return "-";
     return new Date(dateString).toLocaleDateString("en-IN", {
       day: "2-digit",
