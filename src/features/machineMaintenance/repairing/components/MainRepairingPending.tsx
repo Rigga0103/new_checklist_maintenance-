@@ -229,9 +229,11 @@ export default function MainRepairingPending() {
       "Machine Name",
       "Machine Type",
       "Issue Detail",
-      "Requested By",
       "Assigned To",
       "Vendor",
+      "Qty",
+      "Rate",
+      "Purchase Date",
       "Date",
       "Status",
     ];
@@ -244,6 +246,9 @@ export default function MainRepairingPending() {
       t.form_filled_by || "",
       t.assigned_to || "",
       t.vendor_name || "",
+      t.qty || "",
+      t.bill_amount || "",
+      formatDate(t.purchase_date),
       formatDate(t.created_at),
       t.status || "",
     ]);
@@ -437,6 +442,15 @@ export default function MainRepairingPending() {
                     Vendor
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Qty
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Rate
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Purchase. Date
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                     Date
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
@@ -473,6 +487,15 @@ export default function MainRepairingPending() {
                     </td>
                     <td className="px-4 py-3 text-sm text-foreground">
                       {repair.vendor_name || "-"}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-foreground">
+                      {repair.qty || "-"}
+                    </td>
+                    <td className="px-4 py-3 text-sm font-medium text-foreground">
+                      {repair.bill_amount ? `₹${repair.bill_amount}` : "-"}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">
+                      {formatDate(repair.purchase_date)}
                     </td>
                     <td className="px-4 py-3 text-sm text-muted-foreground">
                       {formatDate(repair.created_at)}
@@ -565,6 +588,22 @@ export default function MainRepairingPending() {
                     {selectedRepair.form_filled_by}
                   </span>
                 </p>
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-neutral-200 dark:border-neutral-700">
+                  <div>
+                    <p className="text-[10px] uppercase text-muted-foreground">Qty</p>
+                    <p className="text-xs font-bold">{selectedRepair.qty || "-"}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase text-muted-foreground">Rate</p>
+                    <p className="text-xs font-bold text-green-600">
+                      {selectedRepair.bill_amount ? `₹${selectedRepair.bill_amount}` : "-"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase text-muted-foreground">Purchase. Date</p>
+                    <p className="text-xs font-bold">{formatDate(selectedRepair.purchase_date)}</p>
+                  </div>
+                </div>
               </div>
 
               {/* Status */}

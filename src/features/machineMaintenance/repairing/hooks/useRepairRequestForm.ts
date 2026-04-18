@@ -10,6 +10,7 @@ import {
   useMachineTypesQuery,
   useMachineNamesByTypeQuery,
 } from "../server/tanstackQuery/useMachineTypes";
+import { usePartsAndVendorsFiltersQuery } from "../server/tanstackQuery/useRepairingQueries";
 
 // Form state shape
 interface RepairRequestFormState {
@@ -22,6 +23,10 @@ interface RepairRequestFormState {
   task_start_date: string;
   part_replaced: string[];
   customPart: string;
+  bill_amount: string; // Keep as string for input handling
+  qty: string;
+  vendorName: string;
+  purchaseDate: string;
 }
 
 const initialFormData: RepairRequestFormState = {
@@ -34,6 +39,10 @@ const initialFormData: RepairRequestFormState = {
   task_start_date: new Date().toISOString().split("T")[0],
   part_replaced: [],
   customPart: "",
+  bill_amount: "",
+  qty: "1",
+  vendorName: "",
+  purchaseDate: new Date().toISOString().split("T")[0],
 };
 
 const STATIC_USERS = [
@@ -65,6 +74,9 @@ export function useRepairRequestForm() {
   // Fetch dynamic machine types
   const { data: dbMachineTypes = [], isLoading: isMachineTypesLoading } =
     useMachineTypesQuery();
+  
+  const { data: vendorFiltersData } = usePartsAndVendorsFiltersQuery();
+  const vendors = vendorFiltersData?.vendors || [];
 
   // Find the selected Machine Type ID to fetch its names
   const selectedTypeObj = dbMachineTypes.find(
@@ -198,6 +210,10 @@ export function useRepairRequestForm() {
           issueDetail: formData.issueDetail,
           task_start_date: formData.task_start_date,
           part_replaced: partsList,
+          bill_amount: formData.bill_amount ? parseFloat(formData.bill_amount) : undefined,
+          qty: formData.qty ? parseFloat(formData.qty) : undefined,
+          vendorName: formData.vendorName,
+          purchaseDate: formData.purchaseDate,
         },
         {
           onSuccess: (result) => {
@@ -226,6 +242,7 @@ export function useRepairRequestForm() {
     machineTypes,
     filteredMachines,
     partsData,
+    vendors,
     // Loading
     isLoading,
     isSubmitting,

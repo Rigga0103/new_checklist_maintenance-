@@ -148,7 +148,9 @@ export default function MainRepairingHistory() {
         "Requested By",
         "Assigned To",
         "Vendor",
-        "Bill Amount",
+        "Qty",
+        "Rate",
+        "Purchase Date",
         "Request Date",
         "Completion Date",
         "Status",
@@ -167,7 +169,9 @@ export default function MainRepairingHistory() {
         r.form_filled_by || "",
         r.assigned_to || "",
         r.vendor_name || "",
+        r.qty || "",
         r.bill_amount || "",
+        formatDate(r.purchase_date),
         formatDate(r.created_at),
         formatDate(r.actual_date),
         r.status || "",
@@ -346,7 +350,13 @@ export default function MainRepairingHistory() {
                     Vendor
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                    Cost
+                    Qty
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Rate
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Purchase Date
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                     Completed
@@ -388,8 +398,14 @@ export default function MainRepairingHistory() {
                     <td className="px-4 py-3 text-sm text-foreground">
                       {repair.vendor_name || "-"}
                     </td>
+                    <td className="px-4 py-3 text-sm text-foreground text-center">
+                      {repair.qty || "-"}
+                    </td>
                     <td className="px-4 py-3 text-sm font-medium text-foreground">
                       {formatCurrency(repair.bill_amount)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">
+                      {formatDate(repair.purchase_date)}
                     </td>
                     <td className="px-4 py-3 text-sm text-muted-foreground">
                       {formatDate(repair.actual_date)}
@@ -524,6 +540,18 @@ export default function MainRepairingHistory() {
                   <p className="text-sm text-muted-foreground">Bill Amount</p>
                   <p className="font-medium text-foreground">
                     {formatCurrency(selectedRepair.bill_amount)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Qty</p>
+                  <p className="font-medium text-foreground">
+                    {selectedRepair.qty || "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Purchase. Date</p>
+                  <p className="font-medium text-foreground">
+                    {formatDate(selectedRepair.purchase_date)}
                   </p>
                 </div>
                 <div>

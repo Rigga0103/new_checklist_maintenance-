@@ -24,6 +24,8 @@ export interface MachineRepair {
   warranty_end_date: string | null;
   Work_Done_By?: string | null;
   Type_of_Work?: string | null;
+  qty?: number | null;
+  purchase_date?: string | null;
 }
 
 export interface MachineMaintenance {
@@ -65,6 +67,10 @@ export interface RepairRequestFormData {
   issueDetail: string;
   task_start_date?: string;
   part_replaced?: string[];
+  bill_amount?: number;
+  qty?: number;
+  vendorName?: string;
+  purchaseDate?: string;
 }
 
 export interface RepairProcessFormData {

@@ -321,6 +321,9 @@ export default function RepairingList({
       "Requested By",
       "Assigned To",
       "Vendor",
+      "Qty",
+      "Rate",
+      "Purchase Date",
     ];
     if (activeTab === "pending" || activeTab === "overdue") {
       headers.push("Date", "Status");
@@ -341,6 +344,9 @@ export default function RepairingList({
         t.form_filled_by || "",
         t.assigned_to || "",
         t.vendor_name || "",
+        t.qty || "",
+        t.bill_amount || "",
+        formatDate(t.purchase_date),
       ];
       if (activeTab === "pending" || activeTab === "overdue") {
         return [...base, formatDate(t.created_at), t.status || ""];
@@ -356,7 +362,9 @@ export default function RepairingList({
           t.form_filled_by || "",
           t.assigned_to || "",
           t.vendor_name || "",
+          t.qty || "",
           t.bill_amount || "",
+          formatDate(t.purchase_date),
           formatDate(t.created_at),
           formatDate(t.actual_date),
           t.status || "",
@@ -570,14 +578,9 @@ export default function RepairingList({
                     Part Repair
                   </th>
                   {activeTab === "history" && (
-                    <>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                        Work Done
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                        Cost
-                      </th>
-                    </>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                      Work Done
+                    </th>
                   )}
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                     Requested By
@@ -587,6 +590,15 @@ export default function RepairingList({
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                     Vendor
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Qty
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Rate
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Purchase. Date
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                     Request Date
@@ -634,14 +646,9 @@ export default function RepairingList({
                       {repair.part_replaced || "-"}
                     </td>
                     {activeTab === "history" && (
-                      <>
-                        <td className="px-4 py-3 text-sm text-foreground max-w-37.5 truncate">
-                          {repair.work_done || "-"}
-                        </td>
-                        <td className="px-4 py-3 text-sm font-medium text-foreground">
-                          {formatCurrency(repair.bill_amount)}
-                        </td>
-                      </>
+                      <td className="px-4 py-3 text-sm text-foreground max-w-37.5 truncate">
+                        {repair.work_done || "-"}
+                      </td>
                     )}
                     <td className="px-4 py-3 text-sm text-foreground">
                       {repair.form_filled_by || "-"}
@@ -651,6 +658,15 @@ export default function RepairingList({
                     </td>
                     <td className="px-4 py-3 text-sm text-foreground truncate max-w-30">
                       {repair.vendor_name || "-"}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-foreground">
+                      {repair.qty || "-"}
+                    </td>
+                    <td className="px-4 py-3 text-sm font-medium text-foreground">
+                      {repair.bill_amount ? `₹${repair.bill_amount}` : "-"}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">
+                      {formatDate(repair.purchase_date)}
                     </td>
                     <td className="px-4 py-3 text-sm text-muted-foreground">
                       {formatDate(repair.created_at)}
@@ -782,6 +798,22 @@ export default function RepairingList({
                     {selectedRepair.form_filled_by}
                   </span>
                 </p>
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-neutral-200 dark:border-neutral-700">
+                  <div>
+                    <p className="text-[10px] uppercase text-muted-foreground">Qty</p>
+                    <p className="text-xs font-bold">{selectedRepair.qty || "-"}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase text-muted-foreground">Rate</p>
+                    <p className="text-xs font-bold text-green-600">
+                      {selectedRepair.bill_amount ? `₹${selectedRepair.bill_amount}` : "-"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase text-muted-foreground">Purchase. Date</p>
+                    <p className="text-xs font-bold">{formatDate(selectedRepair.purchase_date)}</p>
+                  </div>
+                </div>
               </div>
 
               <div>
@@ -1184,6 +1216,18 @@ export default function RepairingList({
                   <p className="text-sm text-muted-foreground">Bill Amount</p>
                   <p className="font-medium text-foreground">
                     {formatCurrency(viewDetailRepair.bill_amount)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Qty</p>
+                  <p className="font-medium text-foreground">
+                    {viewDetailRepair.qty || "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground"></p>
+                  <p className="font-medium text-foreground">
+                    {formatDate(viewDetailRepair.purchase_date)}
                   </p>
                 </div>
                 <div>

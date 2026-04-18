@@ -132,7 +132,9 @@ export default function MainPartAndVendor() {
       "Machine Name",
       "Part Replaced",
       "Vendor",
-      "Bill Amount",
+      "Qty",
+      "Rate",
+      "Purchase Date",
       "Warranty",
       "Work Done",
       "Issue Detail",
@@ -146,7 +148,9 @@ export default function MainPartAndVendor() {
       r.machine_name || "",
       r.part_replaced || "",
       r.vendor_name || "",
+      r.qty || "",
       r.bill_amount || "",
+      formatDate(r.purchase_date),
       r.warranty_start_date ? `${r.warranty_start_date} to ${r.warranty_end_date || 'N/A'}` : "",
       r.work_done || "",
       r.issue_detail || "",
@@ -383,7 +387,13 @@ export default function MainPartAndVendor() {
                     Vendor
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                    Bill Amount
+                    Qty
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Rate
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Purchase Date
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                     Warranty
@@ -417,10 +427,16 @@ export default function MainPartAndVendor() {
                     <td className="px-4 py-3 text-sm text-foreground">
                       {repair.vendor_name || "-"}
                     </td>
+                    <td className="px-4 py-3 text-sm text-foreground">
+                      {repair.qty || "-"}
+                    </td>
                     <td className="px-4 py-3 text-sm font-medium text-foreground">
                       {formatCurrency(repair.bill_amount)}
                     </td>
-                    <td className="px-4 py-3 text-sm text-amber-600 dark:text-amber-400 font-medium">
+                    <td className="px-4 py-3 text-sm text-muted-foreground">
+                      {formatDate(repair.purchase_date)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-amber-600 dark:text-amber-400 font-medium whitespace-nowrap">
                       {repair.warranty_start_date ? `${formatDate(repair.warranty_start_date)} to ${formatDate(repair.warranty_end_date)}` : "-"}
                     </td>
                     <td className="px-4 py-3 text-sm text-muted-foreground">
@@ -534,9 +550,21 @@ export default function MainPartAndVendor() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Bill Amount</p>
+                  <p className="text-sm text-muted-foreground">Rate</p>
                   <p className="font-medium text-foreground">
                     {formatCurrency(selectedRepair.bill_amount)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Qty</p>
+                  <p className="font-medium text-foreground">
+                    {selectedRepair.qty || "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Purchase Date</p>
+                  <p className="font-medium text-foreground">
+                    {formatDate(selectedRepair.purchase_date)}
                   </p>
                 </div>
 

@@ -504,6 +504,10 @@ export const createRepairRequest = async (
       status: "pending",
       task_start_date: formData.task_start_date || new Date().toISOString().split("T")[0],
       part_replaced: part,
+      bill_amount: formData.bill_amount || null,
+      qty: formData.qty || null,
+      vendor_name: formData.vendorName || null,
+      purchase_date: formData.purchaseDate || null,
     }));
 
     const { data, error } = await supabase

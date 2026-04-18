@@ -73,6 +73,13 @@ export default function MainPartMaster() {
   const { data: parts = [], isLoading } = usePartsQuery();
   const [activeTab, setActiveTab] = useState<"purchase" | "list">("purchase");
 
+  // Clear selection and reset pagination when switching tabs
+  useEffect(() => {
+    setSelectedRows(new Set());
+    setSelectAll(false);
+    setCurrentPage(1);
+  }, [activeTab]);
+
   const createMutation = useCreatePartMutation();
   const updateMutation = useUpdatePartMutation();
   const deleteMutation = useDeletePartMutation();
@@ -497,7 +504,6 @@ export default function MainPartMaster() {
             <table className="w-full text-left">
               <thead className="sticky top-0 z-10 bg-neutral-50/50 dark:bg-neutral-900/50 backdrop-blur-sm">
                 <tr className="border-b border-neutral-200 dark:border-neutral-700">
-                  {activeTab === "purchase" && (
                     <th className="px-4 py-3 text-center w-10">
                       <button
                         onClick={handleSelectAll}
@@ -510,21 +516,12 @@ export default function MainPartMaster() {
                         )}
                       </button>
                     </th>
-                  )}
                   <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Item Name</th>
-                  {activeTab === "purchase" && (
-                    <>
-                      <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Vendor Name</th>
-                    </>
-                  )}
+                  <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Vendor Name</th>
                   <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Date of Purchase</th>
-                  {activeTab === "purchase" && (
-                    <>
-                      <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Rate</th>
-                      <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Qty</th>
-                      <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Unit</th>
-                    </>
-                  )}
+                  <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Rate</th>
+                  <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Qty</th>
+                  <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Unit</th>
                   {userRole === "admin" && activeTab === "purchase" && (
                     <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
                   )}
@@ -533,14 +530,13 @@ export default function MainPartMaster() {
               <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
                 {paginatedParts.length === 0 ? (
                   <tr>
-                    <td colSpan={activeTab === "purchase" ? 8 : 2} className="px-4 py-8 text-center text-muted-foreground">
+                    <td colSpan={activeTab === "purchase" ? 8 : 7} className="px-4 py-8 text-center text-muted-foreground">
                       No item records found.
                     </td>
                   </tr>
                 ) : (
                   paginatedParts.map((part) => (
                     <tr key={part.id} className="hover:bg-neutral-50/40 dark:hover:bg-neutral-800/20 transition-colors group">
-                      {activeTab === "purchase" && (
                         <td className="px-4 py-3 text-center">
                           <button
                             onClick={() => handleSelectRow(part.id)}
@@ -553,7 +549,6 @@ export default function MainPartMaster() {
                             )}
                           </button>
                         </td>
-                      )}
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
                           <Package className="w-3.5 h-3.5 text-muted-foreground" />
@@ -562,16 +557,14 @@ export default function MainPartMaster() {
                           </span>
                         </div>
                       </td>
-                      {activeTab === "purchase" && (
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-1.5">
-                            <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
-                            <span className="text-sm text-foreground">
-                              {part["VENDOR NAME"] || "-"}
-                            </span>
-                          </div>
-                        </td>
-                      )}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5">
+                          <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span className="text-sm text-foreground">
+                            {part["VENDOR NAME"] || "-"}
+                          </span>
+                        </div>
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
                           <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
@@ -580,54 +573,52 @@ export default function MainPartMaster() {
                           </span>
                         </div>
                       </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <IndianRupee className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span className="text-sm text-foreground font-medium">
+                            {formatRate(part.RATE)}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm text-foreground">
+                          {part.QTY || "0"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5">
+                          <Box className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span className="text-sm text-foreground">
+                            {part.UNIT || "Pcs"}
+                          </span>
+                        </div>
+                      </td>
                       {activeTab === "purchase" && (
-                        <>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-1">
-                              <IndianRupee className="w-3.5 h-3.5 text-muted-foreground" />
-                              <span className="text-sm text-foreground font-medium">
-                                {formatRate(part.RATE)}
-                              </span>
+                        <td className="px-4 py-3 text-center">
+                          {userRole === "admin" && (
+                            <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              {canEdit && (
+                                <button
+                                  onClick={() => handleOpenModal(part)}
+                                  className="p-1.5 text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                                  title="Edit Item"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </button>
+                              )}
+                              {canDelete && (
+                                <button
+                                  onClick={() => handleDelete(part.id)}
+                                  className="p-1.5 text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                                  title="Delete Item"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
                             </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="text-sm text-foreground">
-                              {part.QTY || "0"}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-1.5">
-                              <Box className="w-3.5 h-3.5 text-muted-foreground" />
-                              <span className="text-sm text-foreground">
-                                {part.UNIT || "Pcs"}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            {userRole === "admin" && (
-                              <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                {canEdit && (
-                                  <button
-                                    onClick={() => handleOpenModal(part)}
-                                    className="p-1.5 text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
-                                    title="Edit Item"
-                                  >
-                                    <Pencil className="w-4 h-4" />
-                                  </button>
-                                )}
-                                {canDelete && (
-                                  <button
-                                    onClick={() => handleDelete(part.id)}
-                                    className="p-1.5 text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                                    title="Delete Item"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                )}
-                              </div>
-                            )}
-                          </td>
-                        </>
+                          )}
+                        </td>
                       )}
                     </tr>
                   ))

@@ -43,6 +43,7 @@ export default function MainRepairRequestForm({
     searchTerm,
     setSearchTerm,
     isPartsLoading,
+    vendors,
   } = useRepairRequestForm();
 
   // Debouncing search input
@@ -372,7 +373,74 @@ export default function MainRepairRequestForm({
               </div>
             )}
 
-            {/* Row 4: Task Start Date */}
+            {/* Row 4: Professional Industrial Fields (Rate, Qty, Vendor, Purchase Date) */}
+            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4 mb-3 p-3 bg-neutral-50 dark:bg-neutral-900/50 rounded-lg border border-neutral-100 dark:border-neutral-700/50">
+              {/* Rate */}
+              <div>
+                <label className={labelClass}>Rate (Bill Amount)</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">₹</span>
+                  <input
+                    type="number"
+                    name="bill_amount"
+                    value={formData.bill_amount}
+                    onChange={handleChange}
+                    placeholder="0.00"
+                    className={inputClass + " pl-7"}
+                    step="0.01"
+                  />
+                </div>
+              </div>
+
+              {/* Qty */}
+              <div>
+                <label className={labelClass}>Qty</label>
+                <input
+                  type="number"
+                  name="qty"
+                  value={formData.qty}
+                  onChange={handleChange}
+                  placeholder="1"
+                  className={inputClass}
+                  min="1"
+                />
+              </div>
+
+              {/* Vendor Name */}
+              <div>
+                <label className={labelClass}>Vendor Name</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    name="vendorName"
+                    value={formData.vendorName}
+                    onChange={handleChange}
+                    placeholder="Search or type vendor..."
+                    list="vendor-list"
+                    className={inputClass}
+                  />
+                  <datalist id="vendor-list">
+                    {(vendors as string[] || []).map((vendor: string) => (
+                      <option key={vendor} value={vendor} />
+                    ))}
+                  </datalist>
+                </div>
+              </div>
+
+              {/* Purchase Date */}
+              <div>
+                <label className={labelClass}>Purchase Date</label>
+                <input
+                  type="date"
+                  name="purchaseDate"
+                  value={formData.purchaseDate}
+                  onChange={handleChange}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+
+            {/* Row 5: Task Start Date */}
             <div className="mb-3">
               <label className={labelClass}>Task Start Date *</label>
               <input
