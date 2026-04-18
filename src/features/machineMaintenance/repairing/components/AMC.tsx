@@ -27,12 +27,7 @@ import {
   Tooltip,
   Legend
 } from "recharts";
-import { createClient } from "@supabase/supabase-js";
-
-// Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import supabase from "@/utils/supabaseClient";
 
 // Define type for machine repair records
 type MachineRepair = {
@@ -455,7 +450,7 @@ export default function AMC() {
                           ))}
                         </Pie>
                         <Tooltip
-                          formatter={(value: number | undefined) => formatCurrency(value || 0)}
+                          formatter={(value: any) => formatCurrency(value || 0)}
                           contentStyle={{
                             backgroundColor: "rgba(255, 255, 255, 0.95)",
                             borderRadius: "6px  ",
@@ -819,7 +814,7 @@ export default function AMC() {
                           ))}
                         </Pie>
                         <Tooltip
-                          formatter={(value: number | undefined) => formatCurrency(value || 0)}
+                          formatter={(value: any) => formatCurrency(value || 0)}
                           contentStyle={{
                             backgroundColor: "rgba(255, 255, 255, 0.98)",
                             borderRadius: "8px",

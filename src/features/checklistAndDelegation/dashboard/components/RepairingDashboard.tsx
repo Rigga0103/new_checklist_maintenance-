@@ -936,7 +936,7 @@ export default function RepairingDashboard() {
                   width={120}
                 />
                 <Tooltip
-                  formatter={(value: number | string | undefined) => [
+                  formatter={(value: any) => [
                     value,
                     "Repairs",
                   ]}
@@ -989,8 +989,8 @@ export default function RepairingDashboard() {
                 <Tooltip
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   formatter={(
-                    value: number | string | undefined,
-                    _name: string | undefined,
+                    value: any,
+                    _name: any,
                     props: any,
                   ) => [value ?? "", props?.payload?.fullName || ""]}
                   contentStyle={{
@@ -1092,7 +1092,7 @@ export default function RepairingDashboard() {
                 />
                 <YAxis fontSize={12} stroke="#888888" />
                 <Tooltip
-                  formatter={(value: number | string | undefined) => [
+                  formatter={(value: any) => [
                     value,
                     "Tasks",
                   ]}
