@@ -228,27 +228,31 @@ export const pushAssignTaskApi = async (
         task_description: task.description,
         task_start_date: task.dueDate,
         frequency: task.frequency,
-        status: "pending",
         created_at: new Date().toISOString(),
         enable_reminder: task.enableReminders ? "yes" : "no",
         require_attachment: task.requireAttachment ? "yes" : "no",
-        sample_image: task.sampleImage || null,
       }));
     } else {
-      tasksData = generatedTasks.map((task, index) => ({
-        task_id: currentMaxId + index + 1,
-        department: task.department,
-        given_by: task.givenBy,
-        name: task.assignTo,
-        task_description: task.description,
-        task_start_date: task.dueDate,
-        frequency: task.frequency,
-        enable_reminder: task.enableReminders ? "yes" : "no",
-        require_attachment: task.requireAttachment ? "yes" : "no",
-        sample_image: task.sampleImage || null,
-        // status: "pending", // Status column in checklist is enum(yes/no), cannot be "pending".
-        created_at: new Date().toISOString(),
-      }));
+      tasksData = generatedTasks.map((task, index) => {
+        const baseTask: any = {
+          task_id: currentMaxId + index + 1,
+          department: task.department,
+          given_by: task.givenBy,
+          name: task.assignTo,
+          task_description: task.description,
+          task_start_date: task.dueDate,
+          frequency: task.frequency,
+          enable_reminder: task.enableReminders ? "yes" : "no",
+          require_attachment: task.requireAttachment ? "yes" : "no",
+          created_at: new Date().toISOString(),
+        };
+
+        if (submitTable === "checklist") {
+          baseTask.sample_image = task.sampleImage || null;
+        }
+
+        return baseTask;
+      });
 
       // If delegation (one-time), it supports status text
       if (submitTable === "delegation") {

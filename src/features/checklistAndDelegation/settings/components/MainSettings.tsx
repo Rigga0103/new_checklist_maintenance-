@@ -230,8 +230,20 @@ export default function MainSettings() {
         toast.success("User created successfully!");
         setShowUserModal(false);
         setUserForm(initialUserForm);
-      } catch (error) {
-        toast.error("Failed to create user");
+      } catch (error: any) {
+        let errorMessage = "Failed to create user";
+        if (error?.message?.includes("unique constraint")) {
+          if (error?.details?.includes("number")) {
+            errorMessage = "This phone number is already in use.";
+          } else if (error?.details?.includes("email")) {
+            errorMessage = "This email address is already in use.";
+          } else if (error?.details?.includes("user_name")) {
+            errorMessage = "This username is already taken.";
+          } else {
+            errorMessage = "A duplicate entry exists for one of the fields.";
+          }
+        }
+        toast.error(errorMessage);
         console.error("Error adding user:", error);
       }
     },
@@ -280,8 +292,20 @@ export default function MainSettings() {
         setUserForm(initialUserForm);
         setIsEditing(false);
         setCurrentUserId(null);
-      } catch (error) {
-        toast.error("Failed to update user");
+      } catch (error: any) {
+        let errorMessage = "Failed to update user";
+        if (error?.message?.includes("unique constraint")) {
+          if (error?.details?.includes("number")) {
+            errorMessage = "This phone number is already in use.";
+          } else if (error?.details?.includes("email")) {
+            errorMessage = "This email address is already in use.";
+          } else if (error?.details?.includes("user_name")) {
+            errorMessage = "This username is already taken.";
+          } else {
+            errorMessage = "A duplicate entry exists for one of the fields.";
+          }
+        }
+        toast.error(errorMessage);
         console.error("Error updating user:", error);
       }
     },

@@ -27,6 +27,7 @@ import {
 } from "../server/tanstackQuery/useQuickTask";
 import { QuickTaskSkeleton } from "./QuickTaskSkeleton";
 import type { ChecklistTask, DelegationTask } from "../types/types";
+import { uploadChecklistImage } from "../../checklist/server/api/checklistUploadApi";
 
 export default function MainQuickTask() {
   const [activeTab, setActiveTab] = useState<"checklist" | "delegation">(
@@ -40,12 +41,10 @@ export default function MainQuickTask() {
     frequency: false,
   });
 
-  // Checklist State
   const [selectedTasks, setSelectedTasks] = useState<ChecklistTask[]>([]);
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<ChecklistTask>>({});
-
-  // Delegation State
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [selectedDelegationTasks, setSelectedDelegationTasks] = useState<
     DelegationTask[]
   >([]);
@@ -314,6 +313,7 @@ export default function MainQuickTask() {
             (editFormData.require_attachment as "yes" | "no" | undefined) ||
             undefined,
           remark: editFormData.remark || undefined,
+          image: editFormData.image || undefined,
         },
         originalTask: {
           department: originalTask.department || "",
@@ -699,6 +699,11 @@ export default function MainQuickTask() {
                   </th>
                   {activeTab === "checklist" && (
                     <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
+                      Add Image
+                    </th>
+                  )}
+                  {activeTab === "checklist" && (
+                    <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
                       Actions
                     </th>
                   )}
@@ -993,6 +998,71 @@ export default function MainQuickTask() {
                           task.require_attachment || "—"
                         )}
                       </td>
+                      {/* ADD IMAGE (Only for Checklist) */}
+                      {activeTab === "checklist" && (
+                        <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
+                          {isChecklistEditing ? (
+                            <div className="flex flex-col gap-2 min-w-32">
+                              <input
+                                type="text"
+                                placeholder="Paste Image URL"
+                                value={editFormData.image || ""}
+                                onChange={(e) =>
+                                  handleInputChange("image", e.target.value)
+                                }
+                                className="w-full px-2 py-1 text-xs border rounded bg-white dark:bg-neutral-700 text-gray-900 dark:text-white border-gray-200 dark:border-neutral-600 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                              />
+                              <div className="relative">
+                                <input
+                                  type="file"
+                                  accept="image/jpeg,image/png,image/webp"
+                                  onChange={async (e) => {
+                                    const file = e.target.files?.[0];
+                                    if (!file) return;
+                                    try {
+                                      setIsUploadingImage(true);
+                                      const url = await uploadChecklistImage(file, task.task_id);
+                                      handleInputChange("image", url);
+                                      toast.success("Image uploaded!");
+                                    } catch (err: any) {
+                                      toast.error(err.message || "Upload failed");
+                                    } finally {
+                                      setIsUploadingImage(false);
+                                    }
+                                  }}
+                                  className="w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                />
+                                {isUploadingImage && (
+                                  <Loader2 className="absolute top-1/2 right-2 -translate-y-1/2 w-4 h-4 animate-spin text-blue-500" />
+                                )}
+                              </div>
+                              {editFormData.image && (
+                                <a
+                                  href={editFormData.image}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-xs text-blue-500 hover:underline"
+                                >
+                                  View Current Image
+                                </a>
+                              )}
+                            </div>
+                          ) : (
+                            task.image ? (
+                              <a
+                                href={task.image}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-blue-600 hover:underline flex items-center gap-1"
+                              >
+                                View Image
+                              </a>
+                            ) : (
+                              "—"
+                            )
+                          )}
+                        </td>
+                      )}
                       {/* ACTIONS */}
                       <td className="px-3 py-3">
                         <div className="flex gap-1">

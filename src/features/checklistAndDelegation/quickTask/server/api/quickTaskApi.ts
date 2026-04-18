@@ -235,6 +235,8 @@ export const updateChecklistTaskApi = async (
     updatePayload.require_attachment = updatedTask.require_attachment;
   if (updatedTask.remark !== undefined)
     updatePayload.remark = updatedTask.remark;
+  if (updatedTask.image !== undefined)
+    updatePayload.image = updatedTask.image;
 
   let query = supabase
     .from("checklist")

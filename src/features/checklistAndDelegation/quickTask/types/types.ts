@@ -30,6 +30,7 @@ export interface ChecklistUpdatePayload {
   enable_reminder?: "yes" | "no";
   require_attachment?: "yes" | "no";
   remark?: string;
+  image?: string;
 }
 
 export interface ChecklistOriginalMatch {

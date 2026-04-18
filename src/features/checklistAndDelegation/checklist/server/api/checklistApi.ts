@@ -5,6 +5,15 @@ import type {
   ChecklistSubmissionItem,
 } from "../../types/types";
 
+const applyNameFilter = (query: any, filterName: string | null | undefined) => {
+  if (!filterName || filterName === "all" || filterName === "") return query;
+  const nameToFilter = filterName.trim();
+  if (nameToFilter === "Ritu Sahu") {
+    return query.in("name", ["Ritu Sahu", "Hemlata Verma"]);
+  }
+  return query.eq("name", nameToFilter);
+};
+
 // ============ Fetch Checklist (Active Tasks) ============
 
 /**
@@ -54,7 +63,7 @@ export const fetchChecklistDataSortByDate = async (
 
     // Apply role filter - users only see their own tasks
     if (role === "user" && username) {
-      query = query.eq("name", username);
+      query = applyNameFilter(query, username);
     }
 
     const { data, error, count } = await query;
@@ -112,7 +121,7 @@ export const fetchChecklistDataForHistory = async (
 
     // Apply role filter
     if (role === "user" && username) {
-      query = query.eq("name", username);
+      query = applyNameFilter(query, username);
     }
 
     const { data, error } = await query;
@@ -202,12 +211,12 @@ export const fetchChecklistLast7Days = async (
 
     // Apply role filter — users only see their own tasks
     if (role === "user" && username) {
-      query = query.eq("name", username);
+      query = applyNameFilter(query, username);
     }
 
     // Apply name filter (admin filtering by a specific user)
     if (nameFilter && nameFilter.trim() !== "") {
-      query = query.eq("name", nameFilter.trim());
+      query = applyNameFilter(query, nameFilter);
     }
 
     const { data, error, count } = await query;
@@ -279,12 +288,12 @@ export const fetchChecklistUpcoming7Days = async (
 
     // Apply role filter
     if (role === "user" && username) {
-      query = query.eq("name", username);
+      query = applyNameFilter(query, username);
     }
 
     // Apply name filter (admin filtering by a specific user)
     if (nameFilter && nameFilter.trim() !== "") {
-      query = query.eq("name", nameFilter.trim());
+      query = applyNameFilter(query, nameFilter);
     }
 
     const { data, error, count } = await query;
@@ -347,12 +356,12 @@ export const fetchChecklistOverdue = async (
 
     // Apply role filter
     if (role === "user" && username) {
-      query = query.eq("name", username);
+      query = applyNameFilter(query, username);
     }
 
     // Apply name filter
     if (nameFilter && nameFilter.trim() !== "") {
-      query = query.eq("name", nameFilter.trim());
+      query = applyNameFilter(query, nameFilter);
     }
 
     const { data, error, count } = await query;

@@ -21,7 +21,7 @@ export const fetchUserDetailsApi = async (): Promise<User[]> => {
     .neq("user_name", "");
 
   if (error) {
-    console.error("Error when fetching data", error);
+    console.error("Error when fetching user details:", error.message || error);
     throw error;
   }
 
@@ -42,7 +42,7 @@ export const createUserApi = async (
     .limit(1);
 
   if (maxIdError) {
-    console.error("Error fetching last ID:", maxIdError);
+    console.error("Error fetching last ID for user:", maxIdError.message || maxIdError);
     throw maxIdError;
   }
 
@@ -68,7 +68,7 @@ export const createUserApi = async (
     .single();
 
   if (error) {
-    console.error("Error when creating user:", error);
+    console.error("Error when creating user:", error.message || error);
     throw error;
   }
 
@@ -111,7 +111,7 @@ export const createUserApi = async (
     .insert(permissionData);
 
   if (permError) {
-    console.error("Error creating default permissions:", permError);
+    console.error("Error creating default permissions:", permError.message || permError);
   }
 
   return data as User;
@@ -146,15 +146,20 @@ export const updateUserDataApi = async (
     updateData.remark = updatedUser.remark;
   }
 
+  // Filter out undefined values to avoid Supabase errors
+  const cleanUpdateData = Object.fromEntries(
+    Object.entries(updateData).filter(([_, v]) => v !== undefined)
+  );
+
   const { data, error } = await supabase
     .from("users")
-    .update(updateData)
+    .update(cleanUpdateData)
     .eq("id", id)
     .select()
     .single();
 
   if (error) {
-    console.error("Error when updating user:", error);
+    console.error("Error when updating user:", error.message || error, error.details || "");
     throw error;
   }
 
@@ -168,7 +173,7 @@ export const deleteUserByIdApi = async (id: number): Promise<void> => {
   const { error } = await supabase.from("users").delete().eq("id", id);
 
   if (error) {
-    console.error("Error deleting user:", error);
+    console.error("Error deleting user:", error.message || error);
     throw error;
   }
 };
@@ -187,7 +192,7 @@ export const fetchDepartmentDataApi = async (): Promise<Department[]> => {
     .order("department", { ascending: true });
 
   if (error) {
-    console.error("Error when fetching departments:", error);
+    console.error("Error when fetching departments:", error.message || error);
     throw error;
   }
 
@@ -215,7 +220,7 @@ export const fetchDepartmentsOnlyApi = async (): Promise<
     .order("department", { ascending: true });
 
   if (error) {
-    console.error("Error when fetching departments:", error);
+    console.error("Error when fetching departments only:", error.message || error);
     throw error;
   }
 
@@ -242,7 +247,7 @@ export const fetchGivenByDataApi = async (): Promise<
     .order("given_by", { ascending: true });
 
   if (error) {
-    console.error("Error when fetching given_by data:", error);
+    console.error("Error when fetching given_by data:", error.message || error);
     throw error;
   }
 
@@ -266,7 +271,7 @@ export const createDepartmentApi = async (
     .limit(1);
 
   if (maxIdError) {
-    console.error("Error fetching last ID:", maxIdError);
+    console.error("Error fetching last ID for department:", maxIdError.message || maxIdError);
     throw maxIdError;
   }
 
@@ -286,7 +291,7 @@ export const createDepartmentApi = async (
     .single();
 
   if (error) {
-    console.error("Error when creating department:", error);
+    console.error("Error when creating department:", error.message || error);
     throw error;
   }
 
@@ -315,7 +320,7 @@ export const updateDepartmentDataApi = async (
     .single();
 
   if (error) {
-    console.error("Error when updating department:", error);
+    console.error("Error when updating department:", error.message || error);
     throw error;
   }
 
@@ -336,7 +341,7 @@ export const fetchUserPermissionsApi = async (
     .eq("user_id", userId);
 
   if (error) {
-    console.error("Error fetching user permissions:", error);
+    console.error("Error fetching user permissions:", error.message || error);
     return [];
   }
 
@@ -370,7 +375,7 @@ export const updateUserPermissionsApi = async (
     .upsert(upsertData, { onConflict: "user_id, resource" });
 
   if (error) {
-    console.error("Error updating user permissions:", error);
+    console.error("Error updating user permissions:", error.message || error);
     throw error;
   }
 };

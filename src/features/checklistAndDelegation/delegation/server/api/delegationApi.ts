@@ -6,6 +6,14 @@ interface FetchResult {
   totalCount: number;
 }
 
+const applyNameFilter = (query: any, filterName: string | null | undefined) => {
+  if (!filterName || filterName === "all" || filterName === "") return query;
+  if (filterName === "Ritu Sahu") {
+    return query.in("name", ["Ritu Sahu", "Hemlata Verma"]);
+  }
+  return query.eq("name", filterName);
+};
+
 // Fetch delegation tasks sorted by date (pending tasks)
 export const fetchDelegationDataSortByDate = async (
   page = 1,
@@ -60,11 +68,11 @@ export const fetchDelegationDataSortByDate = async (
     }
 
     if (role === "user" && username) {
-      query = query.eq("name", username);
+      query = applyNameFilter(query, username);
     }
 
     if (nameFilter) {
-      query = query.eq("name", nameFilter);
+      query = applyNameFilter(query, nameFilter);
     }
 
     const { data, error, count } = await query;
@@ -113,11 +121,11 @@ export const fetchDelegationDataForHistory = async (
     }
 
     if (role === "user" && username) {
-      query = query.eq("name", username);
+      query = applyNameFilter(query, username);
     }
 
     if (nameFilter) {
-      query = query.eq("name", nameFilter);
+      query = applyNameFilter(query, nameFilter);
     }
 
     const { data, error, count } = await query;
@@ -197,11 +205,11 @@ export const fetchDelegationLast7Days = async (
     }
 
     if (role === "user" && username) {
-      query = query.eq("name", username);
+      query = applyNameFilter(query, username);
     }
 
     if (nameFilter) {
-      query = query.eq("name", nameFilter);
+      query = applyNameFilter(query, nameFilter);
     }
 
     const { data, error, count } = await query;

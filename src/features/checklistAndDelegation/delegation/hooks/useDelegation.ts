@@ -46,9 +46,12 @@ export function useDelegation(roleOverride?: string | null) {
   const [taskImages, setTaskImages] = useState<
     Record<number, { file: File; previewUrl: string; uploading?: boolean }>
   >({});
+  // Status column date (auto-defaults to today)
   const [nextTargetDates, setNextTargetDates] = useState<
     Record<number, string>
   >({});
+  // Close Task column date — completely separate, always starts empty
+  const [closeTaskDates, setCloseTaskDates] = useState<Record<number, string>>({});
 
   // Edit state
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
@@ -186,17 +189,48 @@ export function useDelegation(roleOverride?: string | null) {
     setTaskRemarks((prev) => ({ ...prev, [taskId]: remark }));
   }, []);
 
-  // Update task status
-  const updateTaskStatus = useCallback((taskId: number, status: string) => {
-    setTaskStatuses((prev) => ({ ...prev, [taskId]: status }));
-    // Reset next target date if status changes from "Extend date"
-    if (status !== "Extend date") {
-      setNextTargetDates((prev) => {
-        const newState = { ...prev };
-        delete newState[taskId];
-        return newState;
-      });
-    }
+  // Update task status — used by BOTH columns.
+  // Status column (skipDefaultDate=false): clears nextTargetDates so it starts blank.
+  // Close Task column (skipDefaultDate=true): clears closeTaskDates so it starts blank.
+  const updateTaskStatus = useCallback(
+    (taskId: number, status: string, skipDefaultDate = false) => {
+      setTaskStatuses((prev) => ({ ...prev, [taskId]: status }));
+      if (status === "Extend date") {
+        if (!skipDefaultDate) {
+          // Status column: clear its own date so it starts blank
+          setNextTargetDates((prev) => {
+            const s = { ...prev };
+            delete s[taskId];
+            return s;
+          });
+        } else {
+          // Close Task column: always clear its own date so it starts blank
+          setCloseTaskDates((prev) => {
+            const s = { ...prev };
+            delete s[taskId];
+            return s;
+          });
+        }
+      } else {
+        // Any other status — clear both date stores
+        setNextTargetDates((prev) => {
+          const s = { ...prev };
+          delete s[taskId];
+          return s;
+        });
+        setCloseTaskDates((prev) => {
+          const s = { ...prev };
+          delete s[taskId];
+          return s;
+        });
+      }
+    },
+    [],
+  );
+
+  // Update close-task date (admin "Extend date till" column only)
+  const updateCloseTaskDate = useCallback((taskId: number, date: string) => {
+    setCloseTaskDates((prev) => ({ ...prev, [taskId]: date }));
   }, []);
 
   // Handle image upload - upload immediately to Supabase
@@ -409,7 +443,10 @@ export function useDelegation(roleOverride?: string | null) {
 
     // Check if tasks with "Extend date" status have a date selected
     const missingDate = Array.from(selectedTasks).some(
-      (id) => taskStatuses[id] === "Extend date" && !nextTargetDates[id],
+      (id) =>
+        taskStatuses[id] === "Extend date" &&
+        !nextTargetDates[id] &&
+        !closeTaskDates[id],
     );
 
     if (missingDate) {
@@ -439,9 +476,10 @@ export function useDelegation(roleOverride?: string | null) {
           taskId,
           status: taskStatuses[taskId] || "Completed",
           remarks: taskRemarks[taskId] || "",
+          // Prefer closeTaskDates (admin "Extend date till") over nextTargetDates (user "Extend date from")
           nextExtendDate:
             taskStatuses[taskId] === "Extend date"
-              ? nextTargetDates[taskId]
+              ? (closeTaskDates[taskId] ?? nextTargetDates[taskId])
               : undefined,
           image: taskImages[taskId]
             ? {
@@ -468,6 +506,7 @@ export function useDelegation(roleOverride?: string | null) {
       setTaskStatuses({});
       setTaskImages({});
       setNextTargetDates({});
+      setCloseTaskDates({});
       loadPendingTasks();
     } catch (error) {
       console.error("Error submitting tasks:", error);
@@ -481,6 +520,7 @@ export function useDelegation(roleOverride?: string | null) {
     taskRemarks,
     taskImages,
     nextTargetDates,
+    closeTaskDates,
     pendingTasks,
     loadPendingTasks,
   ]);
@@ -563,8 +603,10 @@ export function useDelegation(roleOverride?: string | null) {
     getStatusColor,
     taskImages,
     nextTargetDates,
+    closeTaskDates,
     handleImageUpload,
     updateNextTargetDate,
+    updateCloseTaskDate,
 
     // Edit
     editingTaskId,

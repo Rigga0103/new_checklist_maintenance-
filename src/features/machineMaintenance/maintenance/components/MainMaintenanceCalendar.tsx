@@ -62,10 +62,21 @@ function deriveStatus(
   return "pending";
 }
 
-// Extract just YYYY-MM-DD from an ISO timestamp or date string
 function toDateStr(isoOrDate: string | null | undefined): string {
   if (!isoOrDate) return "";
   return isoOrDate.substring(0, 10); // "2026-03-19"
+}
+
+// Check if a task matches the selected user, including Hemlata Verma when Ritu Sahu is selected
+function checkNameMatch(assignedToRaw: string | undefined, selectedUserRaw: string | null): boolean {
+  if (!selectedUserRaw) return true;
+  const assignedTo = (assignedToRaw || "").toLowerCase().trim();
+  const selectedUser = selectedUserRaw.toLowerCase().trim();
+  
+  if (selectedUser === "ritu sahu") {
+    return assignedTo === "ritu sahu" || assignedTo === "hemlata verma";
+  }
+  return assignedTo === selectedUser;
 }
 
 // ============ UI Config ============
@@ -431,24 +442,12 @@ export default function MainMaintenanceCalendar() {
     // Apply user filter for the grid only
     let filteredEvents = events;
 
-    // Apply user filter - make it case-insensitive
     // Apply user filter with better null handling
     if (!isAdmin && currentUsername) {
-      filteredEvents = filteredEvents.filter((e) => {
-        const assignedTo = e.assignedTo || "";
-        return (
-          assignedTo.toLowerCase().trim() ===
-          currentUsername.toLowerCase().trim()
-        );
-      });
+      filteredEvents = filteredEvents.filter((e) => checkNameMatch(e.assignedTo, currentUsername));
     }
     if (isAdmin && selectedUser) {
-      filteredEvents = filteredEvents.filter((e) => {
-        const assignedTo = e.assignedTo || "";
-        return (
-          assignedTo.toLowerCase().trim() === selectedUser.toLowerCase().trim()
-        );
-      });
+      filteredEvents = filteredEvents.filter((e) => checkNameMatch(e.assignedTo, selectedUser));
     }
 
     // Apply type filter - if no types selected, show all
@@ -542,21 +541,10 @@ export default function MainMaintenanceCalendar() {
 
     // Apply user filter
     if (!isAdmin && currentUsername) {
-      filteredEvents = filteredEvents.filter((e) => {
-        const assignedTo = e.assignedTo || "";
-        return (
-          assignedTo.toLowerCase().trim() ===
-          currentUsername.toLowerCase().trim()
-        );
-      });
+      filteredEvents = filteredEvents.filter((e) => checkNameMatch(e.assignedTo, currentUsername));
     }
     if (isAdmin && selectedUser) {
-      filteredEvents = filteredEvents.filter((e) => {
-        const assignedTo = e.assignedTo || "";
-        return (
-          assignedTo.toLowerCase().trim() === selectedUser.toLowerCase().trim()
-        );
-      });
+      filteredEvents = filteredEvents.filter((e) => checkNameMatch(e.assignedTo, selectedUser));
     }
 
     // Apply type filter

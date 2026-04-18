@@ -71,8 +71,10 @@ export default function MainDelegation() {
     getStatusColor,
     taskImages,
     nextTargetDates,
+    closeTaskDates,
     handleImageUpload,
     updateNextTargetDate,
+    updateCloseTaskDate,
     filters,
     handleNameFilter,
     handleStatusFilter,
@@ -156,57 +158,74 @@ export default function MainDelegation() {
 
   const exportToCSV = () => {
     if (tasks.length === 0) {
-      // you could import toast from sonner if you want, or just alert
       alert("No data to export");
       return;
     }
 
     const headers = [
       "Task ID",
-      "Timestamp",
+      "Created At",
       "Department",
       "Given By",
-      "Name",
-      "Description",
+      "Assigned To",
+      "Task Description",
       "Plan Date",
       "Actual Date",
-      ...(activeTab === "history" || activeTab === "last7days"
-        ? ["Submitted Date"]
-        : []),
+      ...(activeTab !== "pending" ? ["Submitted Date"] : []),
       "Status",
-      "Freq",
-      "Remarks",
+      "Frequency",
+      "Reminders",
+      "Attachment Req.",
+      "Remark",
+      "Reference Link",
     ];
 
-    const csvRows = tasks.map((t) => [
-      t.task_id,
-      formatDate(t.created_at),
-      t.department || "",
-      t.given_by || "",
-      t.name || "",
-      `"${(t.task_description || "").replace(/"/g, '""')}"`,
-      formatDate(t.task_start_date),
-      formatDate(t.planned_date),
-      ...(activeTab === "history" || activeTab === "last7days"
-        ? [formatDate(t.submission_date)]
-        : []),
-      t.status || "Pending",
-      t.frequency || "One-time",
-      `"${(t.remark || "").replace(/"/g, '""')}"`,
-    ]);
+    const escapeCSV = (val: any) => {
+      if (val === null || val === undefined) return '""';
+      const str = String(val);
+      // Replace double quotes with double-double quotes and wrap in quotes
+      return `"${str.replace(/"/g, '""')}"`;
+    };
 
-    const csvContent = [
-      headers.join(","),
-      ...csvRows.map((e) => e.join(",")),
-    ].join("\n");
+    const csvRows = tasks.map((t) => {
+      const rowData = [
+        t.task_id,
+        formatDate(t.created_at),
+        t.department || "",
+        t.given_by || "",
+        t.name || "",
+        t.task_description || "",
+        formatDate(t.task_start_date),
+        formatDate(t.planned_date),
+        ...(activeTab !== "pending" ? [formatDate(t.submission_date)] : []),
+        t.status || "Pending",
+        t.frequency || "One-time",
+        t.enable_reminder || "No",
+        t.require_attachment || "No",
+        t.remark || "",
+        t.image || t.sample_image || "",
+      ];
+      return rowData.map(escapeCSV).join(",");
+    });
+
+    // Add UTF-8 BOM for Excel compatibility
+    const csvContent =
+      "\uFEFF" + [headers.map(escapeCSV).join(","), ...csvRows].join("\r\n");
+
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", `Delegation_${activeTab}_Tasks.csv`);
+
+    const dateStr = new Date().toLocaleDateString("en-IN").replace(/\//g, "-");
+    link.setAttribute(
+      "download",
+      `Delegation_${activeTab}_Report_${dateStr}.csv`,
+    );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -712,7 +731,7 @@ export default function MainDelegation() {
                           >
                             <option value="">Select</option>
                             <option value="Done">Done</option>
-                            <option value="Extend date">Extend date</option>
+                            <option value="Extend date">Extend date from</option>
                           </select>
                           {taskStatuses[task.task_id] === "Extend date" && (
                             <input
@@ -737,23 +756,20 @@ export default function MainDelegation() {
                             disabled={!selectedTasks.has(task.task_id)}
                             value={taskStatuses[task.task_id] || ""}
                             onChange={(e) =>
-                              updateTaskStatus(task.task_id, e.target.value)
+                              updateTaskStatus(task.task_id, e.target.value, true)
                             }
                             className="min-w-32 border border-gray-300 dark:border-neutral-600 rounded-md px-2 py-1 w-full disabled:bg-gray-100 dark:disabled:bg-neutral-800 disabled:cursor-not-allowed text-xs sm:text-sm bg-white dark:bg-neutral-700 text-gray-900 dark:text-white"
                           >
                             <option value="">Select</option>
                             <option value="Done">Done</option>
-                            <option value="Extend date">Extend date</option>
+                            <option value="Extend date">Extend date till</option>
                           </select>
                           {taskStatuses[task.task_id] === "Extend date" && (
                             <input
                               type="date"
-                              value={nextTargetDates[task.task_id] || ""}
+                              value={closeTaskDates[task.task_id] || ""}
                               onChange={(e) =>
-                                updateNextTargetDate(
-                                  task.task_id,
-                                  e.target.value,
-                                )
+                                updateCloseTaskDate(task.task_id, e.target.value)
                               }
                               className="min-w-32 border border-gray-300 dark:border-neutral-600 rounded-md px-2 py-1 w-full text-xs sm:text-sm bg-white dark:bg-neutral-700 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 focus:outline-none"
                             />

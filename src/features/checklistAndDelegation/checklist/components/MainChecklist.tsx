@@ -171,7 +171,13 @@ export default function MainChecklist() {
 
   const tasks = dateFilteredTasks.filter((t) => {
     let keep = true;
-    if (nameFilter && t.name !== nameFilter) keep = false;
+    if (nameFilter) {
+      if (nameFilter === "Ritu Sahu") {
+        if (t.name !== "Ritu Sahu" && t.name !== "Hemlata Verma") keep = false;
+      } else {
+        if (t.name !== nameFilter) keep = false;
+      }
+    }
     if (activeTab === "last7days" && statusFilter === "pending") {
       if (
         t.status === "yes" ||

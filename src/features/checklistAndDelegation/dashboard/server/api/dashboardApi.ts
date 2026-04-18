@@ -35,6 +35,14 @@ export interface StaffTaskData {
 
 // ============ Core Dashboard Data ============
 
+const applyNameFilter = (query: any, filterName: string | null) => {
+  if (!filterName || filterName === "all") return query;
+  if (filterName === "Ritu Sahu") {
+    return query.in("name", ["Ritu Sahu", "Hemlata Verma"]);
+  }
+  return query.eq("name", filterName);
+};
+
 /**
  * Fetch dashboard data with pagination and filters
  */
@@ -66,7 +74,7 @@ export const fetchDashboardDataApi = async ({
 
     // Role-based filtering
     if (role === "user" && username) {
-      query = query.eq("name", username);
+      query = applyNameFilter(query, username);
     }
 
     // Department filter (checklist only)
@@ -80,7 +88,7 @@ export const fetchDashboardDataApi = async ({
 
     // Staff filter (admin only)
     if (staffFilter && staffFilter !== "all" && role === "admin") {
-      query = query.eq("name", staffFilter);
+      query = applyNameFilter(query, staffFilter);
     }
 
     // Task view filtering OR Date Range mapping
@@ -177,9 +185,9 @@ export const countTotalTasksApi = async (
     .lte("task_start_date", `${today}T23:59:59`);
 
   if (role === "user" && username) {
-    query = query.eq("name", username);
+    query = applyNameFilter(query, username);
   } else if (staffFilter && staffFilter !== "all") {
-    query = query.eq("name", staffFilter);
+    query = applyNameFilter(query, staffFilter);
   }
 
   if (
@@ -223,9 +231,9 @@ export const countCompletedTasksApi = async (
           .lte("task_start_date", `${today}T23:59:59`);
 
   if (role === "user" && username) {
-    query = query.eq("name", username);
+    query = applyNameFilter(query, username);
   } else if (staffFilter && staffFilter !== "all") {
-    query = query.eq("name", staffFilter);
+    query = applyNameFilter(query, staffFilter);
   }
 
   if (
@@ -269,9 +277,9 @@ export const countPendingTasksApi = async (
           .lte("task_start_date", `${today}T23:59:59`);
 
   if (role === "user" && username) {
-    query = query.eq("name", username);
+    query = applyNameFilter(query, username);
   } else if (staffFilter && staffFilter !== "all") {
-    query = query.eq("name", staffFilter);
+    query = applyNameFilter(query, staffFilter);
   }
 
   if (
@@ -315,9 +323,9 @@ export const countOverdueTasksApi = async (
           .lt("task_start_date", `${today}T00:00:00`);
 
   if (role === "user" && username) {
-    query = query.eq("name", username);
+    query = applyNameFilter(query, username);
   } else if (staffFilter && staffFilter !== "all") {
-    query = query.eq("name", staffFilter);
+    query = applyNameFilter(query, staffFilter);
   }
 
   if (
@@ -356,14 +364,14 @@ export const getDashboardSummaryApi = async (
         ? staffFilter
         : null;
 
-  if (startDate && endDate) {
-    const searchStart = `${startDate}T00:00:00`;
-    const searchEnd = `${endDate}T23:59:59`;
+  if ((startDate && endDate) || filterName === "Ritu Sahu") {
+    const searchStart = startDate ? `${startDate}T00:00:00` : `${today}T00:00:00`;
+    const searchEnd = endDate ? `${endDate}T23:59:59` : `${today}T23:59:59`;
 
     let baseQuery = supabase
       .from(dashboardType)
       .select("*", { count: "exact", head: true });
-    if (filterName) baseQuery = baseQuery.eq("name", filterName);
+    baseQuery = applyNameFilter(baseQuery, filterName);
     if (
       dashboardType === "checklist" &&
       departmentFilter &&
@@ -379,7 +387,7 @@ export const getDashboardSummaryApi = async (
     let completedQuery = supabase
       .from(dashboardType)
       .select("*", { count: "exact", head: true });
-    if (filterName) completedQuery = completedQuery.eq("name", filterName);
+    completedQuery = applyNameFilter(completedQuery, filterName);
     if (
       dashboardType === "checklist" &&
       departmentFilter &&
@@ -401,7 +409,7 @@ export const getDashboardSummaryApi = async (
     let pendingQuery = supabase
       .from(dashboardType)
       .select("*", { count: "exact", head: true });
-    if (filterName) pendingQuery = pendingQuery.eq("name", filterName);
+    pendingQuery = applyNameFilter(pendingQuery, filterName);
     if (
       dashboardType === "checklist" &&
       departmentFilter &&
@@ -423,7 +431,7 @@ export const getDashboardSummaryApi = async (
     let overdueQuery = supabase
       .from(dashboardType)
       .select("*", { count: "exact", head: true });
-    if (filterName) overdueQuery = overdueQuery.eq("name", filterName);
+    overdueQuery = applyNameFilter(overdueQuery, filterName);
     if (
       dashboardType === "checklist" &&
       departmentFilter &&

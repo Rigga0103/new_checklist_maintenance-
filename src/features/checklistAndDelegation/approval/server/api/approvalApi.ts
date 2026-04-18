@@ -1,5 +1,14 @@
 import supabase from "@/utils/supabaseClient";
 import { ApprovalTask } from "../../types/types";
+// Helper to combine Ritu Sahu and Hemlata Verma data when Ritu Sahu is selected
+const applyNameFilter = (query: any, filterName: string | null | undefined) => {
+  if (!filterName || filterName === "all" || filterName === "") return query;
+  const nameToFilter = filterName.trim();
+  if (nameToFilter === "Ritu Sahu") {
+    return query.in("name", ["Ritu Sahu", "Hemlata Verma"]);
+  }
+  return query.eq("name", nameToFilter);
+};
 
 // Helper function to format date-time
 const formatDateTime = (dateTimeStr: string | null): string => {
@@ -42,7 +51,7 @@ export async function fetchChecklistApprovalData(
       .range(from, to);
 
     if (role === "user" && username) {
-      query = query.eq("name", username);
+      query = applyNameFilter(query, username);
     }
 
     const { data, error } = await query;
@@ -121,7 +130,7 @@ export async function fetchDelegationApprovalData(
       .range(from, to);
 
     if (role === "user" && username) {
-      query = query.eq("name", username);
+      query = applyNameFilter(query, username);
     }
 
     const { data, error } = await query;
@@ -244,7 +253,7 @@ export async function fetchAllChecklistData(
     let query = supabase.from("checklist").select("*").range(from, to);
 
     if (role === "user" && username) {
-      query = query.eq("name", username);
+      query = applyNameFilter(query, username);
     }
 
     const { data, error } = await query;
