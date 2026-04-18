@@ -1057,13 +1057,13 @@ export default function MainQuickTask() {
                           ) : (
                             (task.sample_image || task.image) ? (
                               <a
-                                href={task.sample_image || task.image}
+                                href={task.sample_image || task.image || undefined}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="block w-10 h-10 overflow-hidden rounded border border-gray-200 dark:border-neutral-700 hover:opacity-80 transition-opacity"
                               >
                                 <img
-                                  src={task.sample_image || task.image}
+                                  src={task.sample_image || task.image || undefined}
                                   alt="Preview"
                                   className="w-full h-full object-cover"
                                 />

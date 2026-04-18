@@ -245,8 +245,6 @@ export const updateChecklistTaskApi = async (
 
   const { data, error } = await query.select();
 
-  console.log("Supabase response:", { dataLength: data?.length, error });
-
   if (error) {
     console.error("Supabase error (Checklist update):", error);
     throw error;
@@ -313,8 +311,6 @@ export const updateDelegationTaskApi = async (
     .eq("task_id", originalTask.task_id);
 
   const { data, error } = await query.select();
-
-  console.log("Supabase response:", { dataLength: data?.length, error });
 
   if (error) {
     console.error("Error editing delegation task (cascading):", error);
