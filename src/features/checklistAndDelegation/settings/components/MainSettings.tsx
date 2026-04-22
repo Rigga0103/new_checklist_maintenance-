@@ -307,11 +307,11 @@ export default function MainSettings() {
     async (e: React.FormEvent) => {
       e.preventDefault();
       const newUser: CreateUserPayload = {
-        username: userForm.username,
+        username: userForm.username.trim(),
         password: userForm.password,
-        email: userForm.email,
-        phone: userForm.phone,
-        employee_id: userForm.employee_id,
+        email: userForm.email.trim(),
+        phone: userForm.phone.trim(),
+        employee_id: userForm.employee_id.trim(),
         role: userForm.role,
         status: userForm.status,
         user_access: userForm.department,
@@ -364,11 +364,11 @@ export default function MainSettings() {
       if (!currentUserId) return;
 
       const updatedUser: UpdateUserPayload = {
-        user_name: userForm.username,
+        user_name: userForm.username.trim(),
         password: userForm.password,
-        email_id: userForm.email,
-        number: userForm.phone,
-        employee_id: userForm.employee_id,
+        email_id: userForm.email.trim(),
+        number: userForm.phone.trim(),
+        employee_id: userForm.employee_id.trim(),
         role: userForm.role,
         status: userForm.status,
         user_access: userForm.department,
