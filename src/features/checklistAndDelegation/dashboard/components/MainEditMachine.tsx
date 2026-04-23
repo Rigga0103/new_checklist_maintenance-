@@ -975,7 +975,7 @@ export default function MainEditMachine() {
                   >
                     <option value="">Select Type</option>
                     {uniqueTypes.map((t) => (
-                      <option key={t} value={t}>{t}</option>
+                      <option key={t || ""} value={t || ""}>{t}</option>
                     ))}
                   </select>
                 ) : (
@@ -993,7 +993,7 @@ export default function MainEditMachine() {
                   >
                     <option value="">Select Machine</option>
                     {uniqueMachines.map((m) => (
-                      <option key={m} value={m}>{m}</option>
+                      <option key={m || ""} value={m || ""}>{m}</option>
                     ))}
                   </select>
                 ) : (
@@ -1269,7 +1269,7 @@ export default function MainEditMachine() {
           >
             <option value="">All Machines</option>
             {uniqueMachines.map((machine) => (
-              <option key={machine} value={machine}>
+              <option key={machine || ""} value={machine || ""}>
                 {machine}
               </option>
             ))}
@@ -1287,7 +1287,7 @@ export default function MainEditMachine() {
           >
             <option value="">All Types</option>
             {uniqueTypes.map((type) => (
-              <option key={type} value={type}>
+              <option key={type || ""} value={type || ""}>
                 {type}
               </option>
             ))}
@@ -1305,7 +1305,7 @@ export default function MainEditMachine() {
           >
             <option value="">All Names</option>
             {uniquePersons.map((person) => (
-              <option key={person} value={person}>
+              <option key={person || ""} value={person || ""}>
                 {person}
               </option>
             ))}
@@ -1461,7 +1461,7 @@ export default function MainEditMachine() {
                     >
                       <option value="">Select Type</option>
                       {uniqueTypes.map((t) => (
-                        <option key={t} value={t}>{t}</option>
+                        <option key={t || ""} value={t || ""}>{t}</option>
                       ))}
                     </select>
                   </div>
@@ -1474,7 +1474,7 @@ export default function MainEditMachine() {
                     >
                       <option value="">Select Machine</option>
                       {uniqueMachines.map((m) => (
-                        <option key={m} value={m}>{m}</option>
+                        <option key={m || ""} value={m || ""}>{m}</option>
                       ))}
                     </select>
                   </div>
