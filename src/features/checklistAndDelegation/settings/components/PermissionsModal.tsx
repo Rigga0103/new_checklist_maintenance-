@@ -51,6 +51,7 @@ const RESOURCE_GROUPS: { label: string; resources: PermissionResource[] }[] = [
     resources: [
       "machines",
       "approval",
+      "employee_management",
       "settings",
       "license",
       "training_video",
@@ -85,6 +86,7 @@ const RESOURCE_LABELS: Record<PermissionResource, string> = {
   // Other
   machines: "Machines Master",
   approval: "Admin Approvals",
+  employee_management: "Employee Management",
   settings: "Settings (User Mgmt)",
   license: "License",
   training_video: "Training Video",
@@ -155,12 +157,12 @@ export default function PermissionsModal({
       prev.map((p) =>
         p.resource === resource
           ? {
-              ...p,
-              can_read: checked,
-              can_write: checked,
-              can_edit: checked,
-              can_delete: checked,
-            }
+            ...p,
+            can_read: checked,
+            can_write: checked,
+            can_edit: checked,
+            can_delete: checked,
+          }
           : p,
       ),
     );
@@ -257,7 +259,7 @@ export default function PermissionsModal({
                             <td className="px-4 py-3 pl-8 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                               {
                                 RESOURCE_LABELS[
-                                  perm.resource as PermissionResource
+                                perm.resource as PermissionResource
                                 ]
                               }
                             </td>

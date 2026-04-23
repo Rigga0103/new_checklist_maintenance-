@@ -54,10 +54,10 @@ export const createUserApi = async (
     .insert([
       {
         id: newId,
-        user_name: newUser.username,
+        user_name: newUser.user_name,
         password: newUser.password,
-        email_id: newUser.email,
-        number: newUser.phone || null,
+        email_id: newUser.email_id,
+        number: newUser.number || null,
         employee_id: newUser.employee_id || null,
         role: newUser.role,
         status: newUser.status,
