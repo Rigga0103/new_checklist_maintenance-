@@ -164,7 +164,7 @@ export default function MainSettings() {
     return (userData || []).filter(
       (user) =>
         !usernameFilter ||
-        user.user_name.toLowerCase().includes(usernameFilter.toLowerCase()),
+        (user.user_name || "").toLowerCase().includes(usernameFilter.toLowerCase()),
     );
   }, [userData, usernameFilter]);
 
@@ -190,7 +190,7 @@ export default function MainSettings() {
     return (userData || []).filter(
       (user) =>
         !leaveUsernameFilter ||
-        user.user_name
+        (user.user_name || "")
           .toLowerCase()
           .includes(leaveUsernameFilter.toLowerCase()),
     );
@@ -307,10 +307,10 @@ export default function MainSettings() {
     async (e: React.FormEvent) => {
       e.preventDefault();
       const newUser: CreateUserPayload = {
-        username: userForm.username.trim(),
+        user_name: userForm.username.trim(),
         password: userForm.password,
-        email: userForm.email.trim(),
-        phone: userForm.phone.trim(),
+        email_id: userForm.email.trim(),
+        number: parseInt(userForm.phone.trim()) || undefined,
         employee_id: userForm.employee_id.trim(),
         role: userForm.role,
         status: userForm.status,
@@ -344,13 +344,13 @@ export default function MainSettings() {
 
   const handleEditUser = useCallback((user: IUser) => {
     setUserForm({
-      username: user.user_name,
+      username: user.user_name || "",
       email: user.email_id || "",
-      password: user.password,
-      phone: user.number || "",
+      password: user.password || "",
+      phone: String(user.number || ""),
       employee_id: user.employee_id || "",
       department: user.user_access || "",
-      role: user.role,
+      role: user.role || "user",
       status: user.status || "active",
     });
     setCurrentUserId(user.id);
@@ -367,7 +367,7 @@ export default function MainSettings() {
         user_name: userForm.username.trim(),
         password: userForm.password,
         email_id: userForm.email.trim(),
-        number: userForm.phone.trim(),
+        number: parseInt(userForm.phone.trim()) || undefined,
         employee_id: userForm.employee_id.trim(),
         role: userForm.role,
         status: userForm.status,
@@ -531,7 +531,7 @@ export default function MainSettings() {
             user_name: userData.find((u) => u.id === userId)?.user_name || "",
             password: userData.find((u) => u.id === userId)?.password || "",
             email_id: userData.find((u) => u.id === userId)?.email_id || "",
-            number: userData.find((u) => u.id === userId)?.number || "",
+            number: userData.find((u) => u.id === userId)?.number || 0,
             role: userData.find((u) => u.id === userId)?.role || "user",
             status: userData.find((u) => u.id === userId)?.status || "active",
             user_access:
@@ -588,7 +588,7 @@ export default function MainSettings() {
       : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
   };
 
-  const getRoleColor = (role: string) => {
+  const getRoleColor = (role: string | null) => {
     switch (role) {
       case "admin":
         return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400";
@@ -627,8 +627,8 @@ export default function MainSettings() {
           <div className="flex border border-gray-200 dark:border-neutral-600 rounded-lg overflow-hidden">
             <button
               className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors ${activeTab === "users"
-                  ? "bg-green-600 text-white"
-                  : "bg-white dark:bg-neutral-800 text-foreground hover:bg-gray-100 dark:hover:bg-neutral-700"
+                ? "bg-green-600 text-white"
+                : "bg-white dark:bg-neutral-800 text-foreground hover:bg-gray-100 dark:hover:bg-neutral-700"
                 }`}
               onClick={() => handleTabChange("users")}
             >
@@ -637,8 +637,8 @@ export default function MainSettings() {
             </button>
             <button
               className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors ${activeTab === "departments"
-                  ? "bg-green-600 text-white"
-                  : "bg-white dark:bg-neutral-800 text-foreground hover:bg-gray-100 dark:hover:bg-neutral-700"
+                ? "bg-green-600 text-white"
+                : "bg-white dark:bg-neutral-800 text-foreground hover:bg-gray-100 dark:hover:bg-neutral-700"
                 }`}
               onClick={() => handleTabChange("departments")}
             >
@@ -647,8 +647,8 @@ export default function MainSettings() {
             </button>
             <button
               className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors ${activeTab === "leave"
-                  ? "bg-green-600 text-white"
-                  : "bg-white dark:bg-neutral-800 text-foreground hover:bg-gray-100 dark:hover:bg-neutral-700"
+                ? "bg-green-600 text-white"
+                : "bg-white dark:bg-neutral-800 text-foreground hover:bg-gray-100 dark:hover:bg-neutral-700"
                 }`}
               onClick={() => handleTabChange("leave")}
             >
@@ -657,8 +657,8 @@ export default function MainSettings() {
             </button>
             <button
               className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors ${activeTab === "import"
-                  ? "bg-green-600 text-white"
-                  : "bg-white dark:bg-neutral-800 text-foreground hover:bg-gray-100 dark:hover:bg-neutral-700"
+                ? "bg-green-600 text-white"
+                : "bg-white dark:bg-neutral-800 text-foreground hover:bg-gray-100 dark:hover:bg-neutral-700"
                 }`}
               onClick={() => handleTabChange("import")}
             >
@@ -667,8 +667,8 @@ export default function MainSettings() {
             </button>
             <button
               className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors ${activeTab === "holiday"
-                  ? "bg-green-600 text-white"
-                  : "bg-white dark:bg-neutral-800 text-foreground hover:bg-gray-100 dark:hover:bg-neutral-700"
+                ? "bg-green-600 text-white"
+                : "bg-white dark:bg-neutral-800 text-foreground hover:bg-gray-100 dark:hover:bg-neutral-700"
                 }`}
               onClick={() => handleTabChange("holiday")}
             >
@@ -677,8 +677,8 @@ export default function MainSettings() {
             </button>
             <button
               className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors ${activeTab === "migrate"
-                  ? "bg-orange-600 text-white"
-                  : "bg-white dark:bg-neutral-800 text-foreground hover:bg-gray-100 dark:hover:bg-neutral-700"
+                ? "bg-orange-600 text-white"
+                : "bg-white dark:bg-neutral-800 text-foreground hover:bg-gray-100 dark:hover:bg-neutral-700"
                 }`}
               onClick={() => handleTabChange("migrate")}
             >
@@ -758,8 +758,8 @@ export default function MainSettings() {
                     <button
                       onClick={clearUsernameFilter}
                       className={`block w-full text-left px-4 py-2 text-sm ${!usernameFilter
-                          ? "bg-muted dark:bg-muted text-foreground dark:text-foreground-muted"
-                          : "text-foreground dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-700"
+                        ? "bg-muted dark:bg-muted text-foreground dark:text-foreground-muted"
+                        : "text-foreground dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-700"
                         }`}
                     >
                       All Usernames
@@ -768,11 +768,11 @@ export default function MainSettings() {
                       <button
                         key={user.id}
                         onClick={() =>
-                          handleUsernameFilterSelect(user.user_name)
+                          handleUsernameFilterSelect(user.user_name || "")
                         }
                         className={`block w-full text-left px-4 py-2 text-sm ${usernameFilter === user.user_name
-                            ? "bg-muted dark:bg-muted text-foreground dark:text-foreground-muted"
-                            : "text-foreground dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-700"
+                          ? "bg-muted dark:bg-muted text-foreground dark:text-foreground-muted"
+                          : "text-foreground dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-700"
                           }`}
                       >
                         {user.user_name}
@@ -950,8 +950,8 @@ export default function MainSettings() {
             <div className="flex border border-border dark:border-muted-foreground rounded-lg overflow-hidden">
               <button
                 className={`px-4 py-2 text-sm font-medium ${activeDeptSubTab === "departments"
-                    ? "bg-primary text-white"
-                    : "bg-white dark:bg-neutral-700 text-primary dark:text-foreground hover:bg-secondary dark:hover:bg-neutral-600"
+                  ? "bg-primary text-white"
+                  : "bg-white dark:bg-neutral-700 text-primary dark:text-foreground hover:bg-secondary dark:hover:bg-neutral-600"
                   }`}
                 onClick={() => setActiveDeptSubTab("departments")}
               >
@@ -959,8 +959,8 @@ export default function MainSettings() {
               </button>
               <button
                 className={`px-4 py-2 text-sm font-medium ${activeDeptSubTab === "givenBy"
-                    ? "bg-primary text-white"
-                    : "bg-white dark:bg-neutral-700 text-primary dark:text-foreground hover:bg-secondary dark:hover:bg-neutral-600"
+                  ? "bg-primary text-white"
+                  : "bg-white dark:bg-neutral-700 text-primary dark:text-foreground hover:bg-secondary dark:hover:bg-neutral-600"
                   }`}
                 onClick={() => setActiveDeptSubTab("givenBy")}
               >

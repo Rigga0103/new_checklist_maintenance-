@@ -24,8 +24,8 @@ import type { MachineMaintenance } from "../../types/types";
 import { toast } from "sonner";
 import { useRBAC } from "@/hooks/useRBAC";
 
-export default function MainMaintenancePending() {
-  const [searchTerm, setSearchTerm] = useState("");
+export default function MainMaintenancePending({ initialDoerFilter }: { initialDoerFilter?: string }) {
+  const [searchTerm, setSearchTerm] = useState(initialDoerFilter || "");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [page, setPage] = useState(1);

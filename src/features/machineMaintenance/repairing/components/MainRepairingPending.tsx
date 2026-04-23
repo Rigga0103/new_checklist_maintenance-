@@ -43,8 +43,8 @@ const WORK_DONE_OPTIONS: { value: string; label: string }[] = [
   { value: "Inspection", label: "Inspection / निरीक्षण" },
 ];
 
-export default function MainRepairingPending() {
-  const [searchTerm, setSearchTerm] = useState("");
+export default function MainRepairingPending({ initialDoerFilter }: { initialDoerFilter?: string }) {
+  const [searchTerm, setSearchTerm] = useState(initialDoerFilter || "");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [page, setPage] = useState(1);

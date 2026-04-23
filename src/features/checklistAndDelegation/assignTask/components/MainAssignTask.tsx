@@ -25,7 +25,13 @@ const selectClass =
 const labelClass =
   "block text-xs font-medium text-muted-foreground dark:text-muted-foreground mb-1";
 
-export default function MainAssignTask() {
+export default function MainAssignTask({
+  initialDoer,
+  initialSection = "checklist",
+}: {
+  initialDoer?: string;
+  initialSection?: SectionType;
+}) {
   const {
     departments,
     givenByList,
@@ -53,7 +59,7 @@ export default function MainAssignTask() {
     handleSampleImageUpload,
     isUploadingSampleImage,
     taskSuggestions,
-  } = useAssignTask();
+  } = useAssignTask(initialDoer, initialSection);
 
   // Convert Date to input format
   const getInputDateValue = () => {

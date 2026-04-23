@@ -14,8 +14,10 @@ const labelClass =
 
 export default function MainRepairRequestForm({
   isPublic = false,
+  initialRequestedBy,
 }: {
   isPublic?: boolean;
+  initialRequestedBy?: string;
 }) {
   const [showQR, setShowQR] = useState(false);
   const [publicUrl, setPublicUrl] = useState("");
@@ -44,7 +46,7 @@ export default function MainRepairRequestForm({
     setSearchTerm,
     isPartsLoading,
     vendors,
-  } = useRepairRequestForm();
+  } = useRepairRequestForm(initialRequestedBy);
 
   // Debouncing search input
   useEffect(() => {

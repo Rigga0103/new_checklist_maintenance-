@@ -177,6 +177,29 @@ const routes: Route[] = [
     permissionResource: "machines",
   },
   {
+    href: "/employee-management",
+    label: "Employee Management",
+    icon: "Users",
+    submenu: true,
+    showFor: ["admin"] as const,
+    children: [
+      {
+        href: "/employee-management/doer-management",
+        label: "Doer Management",
+        icon: "Users",
+        showFor: ["admin"] as const,
+        permissionResource: "employee_management",
+      },
+      {
+        href: "/employee-management/task-management",
+        label: "Task Management",
+        icon: "ClipboardList",
+        showFor: ["admin"] as const,
+        permissionResource: "employee_management",
+      },
+    ],
+  },
+  {
     href: "/approval",
     label: "Admin Approvals",
     icon: "CheckSquare",

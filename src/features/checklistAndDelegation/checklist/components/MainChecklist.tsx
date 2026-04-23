@@ -35,12 +35,12 @@ import { toast } from "sonner";
 
 const ITEMS_PER_PAGE = 50;
 
-export default function MainChecklist() {
+export default function MainChecklist({ initialNameFilter }: { initialNameFilter?: string }) {
   const [activeTab, setActiveTab] = useState<
     "pending" | "history" | "last7days" | "upcoming7days" | "overdue"
   >("pending");
   const [searchTerm, setSearchTerm] = useState("");
-  const [nameFilter, setNameFilter] = useState("");
+  const [nameFilter, setNameFilter] = useState(initialNameFilter || "");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [selectedTasks, setSelectedTasks] = useState<Set<number>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);

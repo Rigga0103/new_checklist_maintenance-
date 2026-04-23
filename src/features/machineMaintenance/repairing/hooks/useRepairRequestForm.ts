@@ -53,9 +53,11 @@ const STATIC_USERS = [
   "Other",
 ];
 
-export function useRepairRequestForm() {
-  const [formData, setFormData] =
-    useState<RepairRequestFormState>(initialFormData);
+export function useRepairRequestForm(initialRequestedBy?: string) {
+  const [formData, setFormData] = useState<RepairRequestFormState>({
+    ...initialFormData,
+    formFilledBy: initialRequestedBy || "",
+  });
 
   // ── Data queries ──────────────────────────────────────────────
   const requestByUsers = STATIC_USERS;

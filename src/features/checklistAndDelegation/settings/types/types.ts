@@ -2,44 +2,57 @@
 
 export interface User {
   id: number;
-  user_name: string;
-  password: string;
+  created_at: string;
+  user_name: string | null;
+  password: string | null;
   email_id: string | null;
-  number: string | null;
-  employee_id: string | null;
-  role: string;
+  number: number | null;
+  department: string | null;
+  given_by: string | null;
+  role: string | null;
   status: string | null;
   user_access: string | null;
   leave_date: string | null;
-  leave_end_date: string | null;
   remark: string | null;
-  department?: string | null;
-  given_by?: string | null;
+  leave_end_date: string | null;
+  employee_id: string | null;
+  last_punch_time: string | null;
+  last_punch_device: string | null;
+  page_access: string | null;
+  system_access: string | null;
 }
 
 export interface CreateUserPayload {
-  username: string;
-  password: string;
-  email: string;
-  phone: string;
-  employee_id?: string;
+  user_name: string;
+  password?: string;
+  email_id: string;
+  number?: number;
+  department?: string;
+  given_by?: string;
   role: string;
   status: string;
-  user_access: string;
+  user_access?: string;
+  employee_id?: string;
+  page_access?: string;
+  system_access?: string;
 }
 
 export interface UpdateUserPayload {
-  user_name: string;
-  password: string;
-  email_id: string;
-  number: string;
-  employee_id?: string;
-  role: string;
-  status: string;
-  user_access: string;
+  user_name?: string;
+  password?: string;
+  email_id?: string;
+  number?: number;
+  department?: string;
+  given_by?: string;
+  role?: string;
+  status?: string;
+  user_access?: string;
   leave_date?: string | null;
   leave_end_date?: string | null;
   remark?: string | null;
+  employee_id?: string;
+  page_access?: string;
+  system_access?: string;
 }
 
 export interface Department {
@@ -93,4 +106,5 @@ export type PermissionResource =
   | "approval"
   | "settings"
   | "license"
-  | "training_video";
+  | "training_video"
+  | "employee_management";

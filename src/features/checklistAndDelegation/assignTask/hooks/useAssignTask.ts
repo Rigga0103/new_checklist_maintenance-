@@ -141,7 +141,10 @@ export interface UseAssignTaskReturn {
   getFormattedDateTime: () => string;
 }
 
-export function useAssignTask(): UseAssignTaskReturn {
+export function useAssignTask(
+  initialDoer?: string,
+  initialSection: SectionType = "checklist",
+): UseAssignTaskReturn {
   // Data state
   const [departments, setDepartments] = useState<string[]>([]);
   const [givenByList, setGivenByList] = useState<string[]>([]);
@@ -151,11 +154,14 @@ export function useAssignTask(): UseAssignTaskReturn {
 
   // Section toggle
   const [selectedSection, setSelectedSection] =
-    useState<SectionType>("checklist");
+    useState<SectionType>(initialSection);
   const [machineOptions, setMachineOptions] = useState<string[]>([]);
 
   // Form state
-  const [formData, setFormData] = useState<AssignTaskFormData>(initialFormData);
+  const [formData, setFormData] = useState<AssignTaskFormData>({
+    ...initialFormData,
+    assignTo: initialDoer || "",
+  });
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
   const [showCalendar, setShowCalendar] = useState(false);
