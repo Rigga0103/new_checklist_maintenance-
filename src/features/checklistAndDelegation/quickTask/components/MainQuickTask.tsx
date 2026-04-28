@@ -14,6 +14,7 @@ import {
   FileText,
   ChevronLeft,
   ChevronRight,
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -410,6 +411,85 @@ export default function MainQuickTask() {
     setDelegationPage(0);
   };
 
+  const handleExportCSV = () => {
+    if (tasks.length === 0) {
+      toast.error("No tasks to export");
+      return;
+    }
+
+    const headers =
+      activeTab === "checklist"
+        ? [
+          "Task ID",
+          "Department",
+          "Given By",
+          "Name",
+          "Description",
+          "Start Date",
+          "End Date",
+          "Frequency",
+        ]
+        : [
+          "Task ID",
+          "Department",
+          "Given By",
+          "Name",
+          "Description",
+          "Start Date",
+          "Planned Date",
+          "Frequency",
+          "Status",
+        ];
+
+    const csvRows = tasks.map((t) => {
+      if (activeTab === "checklist") {
+        const task = t as ChecklistTask;
+        return [
+          task.task_id,
+          `"${(task.department || "").replace(/"/g, '""')}"`,
+          `"${(task.given_by || "").replace(/"/g, '""')}"`,
+          `"${(task.name || "").replace(/"/g, '""')}"`,
+          `"${(task.task_description || "").replace(/"/g, '""')}"`,
+          task.task_start_date || "",
+          (task as any).planned_date || "",
+          task.frequency || "",
+        ];
+      } else {
+        const task = t as DelegationTask;
+        return [
+          task.task_id,
+          `"${(task.department || "").replace(/"/g, '""')}"`,
+          `"${(task.given_by || "").replace(/"/g, '""')}"`,
+          `"${(task.name || "").replace(/"/g, '""')}"`,
+          `"${(task.task_description || "").replace(/"/g, '""')}"`,
+          task.task_start_date || "",
+          task.planned_date || "",
+          task.frequency || "",
+          task.status || "",
+        ];
+      }
+    });
+
+    const csvContent = [
+      headers.join(","),
+      ...csvRows.map((row) => row.join(",")),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `${activeTab}_tasks_${new Date().toISOString().split("T")[0]}.csv`,
+    );
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("CSV exported successfully (current page)");
+  };
+
   // Frequency badge
   const getFrequencyBadge = (freq: string) => {
     const colors: Record<string, string> = {
@@ -462,7 +542,11 @@ export default function MainQuickTask() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Edit Tasks
+            Edit Tasks {totalCount > 0 && (
+              <span className="text-blue-600 dark:text-blue-400">
+                ({totalCount})
+              </span>
+            )}
           </h1>
           <p className="text-sm text-muted-foreground">
             Manage your daily checklist and delegated tasks
@@ -475,6 +559,13 @@ export default function MainQuickTask() {
           >
             <RefreshCw className="w-4 h-4" />
             Refresh
+          </button>
+          <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-2 px-3 py-2 text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            Export CSV
           </button>
         </div>
       </div>
@@ -1045,10 +1136,10 @@ export default function MainQuickTask() {
                                   rel="noreferrer"
                                   className="flex items-center gap-2 mt-1"
                                 >
-                                  <img 
-                                    src={editFormData.image} 
-                                    alt="Preview" 
-                                    className="w-8 h-8 object-cover rounded border border-gray-200 dark:border-neutral-600" 
+                                  <img
+                                    src={editFormData.image}
+                                    alt="Preview"
+                                    className="w-8 h-8 object-cover rounded border border-gray-200 dark:border-neutral-600"
                                   />
                                   <span className="text-xs text-blue-500 hover:underline">Current</span>
                                 </a>

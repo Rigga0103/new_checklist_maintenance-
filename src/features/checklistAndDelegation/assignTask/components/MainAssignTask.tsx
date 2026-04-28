@@ -13,6 +13,7 @@ import {
   Upload,
   Eye,
   X,
+  Download,
 } from "lucide-react";
 import AutocompleteInput from "./AutocompleteInput";
 import { useState } from "react";
@@ -59,7 +60,11 @@ export default function MainAssignTask({
     handleSampleImageUpload,
     isUploadingSampleImage,
     taskSuggestions,
+    handleExportCSV,
   } = useAssignTask(initialDoer, initialSection);
+
+  const [isAddingCustomDept, setIsAddingCustomDept] = useState(false);
+  const [customDept, setCustomDept] = useState("");
 
   // Convert Date to input format
   const getInputDateValue = () => {
@@ -112,7 +117,11 @@ export default function MainAssignTask({
             <Wrench className="w-5 h-5 text-orange-600" />
           )}
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-            Assign New Task
+            Assign New Task {generatedTasks.length > 0 && (
+              <span className="ml-1 text-blue-600 dark:text-blue-400">
+                ({generatedTasks.length})
+              </span>
+            )}
           </h1>
         </div>
         <select
@@ -140,27 +149,71 @@ export default function MainAssignTask({
                     ? "Department *"
                     : "Machine *"}
                 </label>
-                <select
-                  name="department"
-                  value={formData.department}
-                  onChange={handleChange}
-                  required
-                  className={selectClass}
-                >
-                  <option value="">
-                    {selectedSection === "checklist"
-                      ? "Select Department"
-                      : "Select Machine"}
-                  </option>
-                  {(selectedSection === "checklist"
-                    ? departments
-                    : machineOptions
-                  ).map((item, idx) => (
-                    <option key={idx} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex gap-2">
+                    <select
+                      name="department"
+                      value={formData.department}
+                      onChange={(e) => {
+                        if (e.target.value === "ADD_NEW") {
+                          setCustomDept("");
+                          setIsAddingCustomDept(true);
+                          handleChange({ target: { name: "department", value: "" } } as any);
+                        } else {
+                          setIsAddingCustomDept(false);
+                          handleChange(e);
+                        }
+                      }}
+                      required={!isAddingCustomDept}
+                      className={selectClass}
+                    >
+                      <option value="">
+                        {selectedSection === "checklist"
+                          ? "Select Department"
+                          : "Select Machine"}
+                      </option>
+                      <option value="all">
+                        {selectedSection === "checklist" ? "All" : "All"}
+                      </option>
+                      {(selectedSection === "checklist"
+                        ? departments
+                        : machineOptions
+                      ).map((item, idx) => (
+                        <option key={idx} value={item}>
+                          {item}
+                        </option>
+                      ))}
+
+                    </select>
+                  </div>
+
+                  {isAddingCustomDept && (
+                    <div className="relative flex items-center">
+                      <input
+                        type="text"
+                        placeholder={`Enter new ${selectedSection === "checklist" ? "department" : "machine"}...`}
+                        value={customDept}
+                        onChange={(e) => {
+                          setCustomDept(e.target.value);
+                          handleChange({ target: { name: "department", value: e.target.value } } as any);
+                        }}
+                        className={inputClass + " pr-8"}
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAddingCustomDept(false);
+                          setCustomDept("");
+                          handleChange({ target: { name: "department", value: "" } } as any);
+                        }}
+                        className="absolute right-2 text-gray-400 hover:text-gray-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
               <div>
                 <label className={labelClass}>Given By *</label>
@@ -381,15 +434,26 @@ export default function MainAssignTask({
                 </label>
               </div>
 
-              {/* Generate Button */}
-              <button
-                type="button"
-                onClick={handleGenerate}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-700 border border-gray-200 dark:border-neutral-700 rounded-md transition-colors"
-              >
-                <RefreshCw className="w-4 h-4" />
-                Preview Task
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleGenerate}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-700 border border-gray-200 dark:border-neutral-700 rounded-md transition-colors"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Preview Task
+                </button>
+                {generatedTasks.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleExportCSV}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-md transition-colors"
+                  >
+                    <Download className="w-4 h-4" />
+                    Export CSV
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 

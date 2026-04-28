@@ -135,6 +135,7 @@ export interface UseAssignTaskReturn {
   handleSampleImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
   isUploadingSampleImage: boolean;
   taskSuggestions: string[];
+  handleExportCSV: () => void;
 
   // Helpers
   getFormattedDate: (date: Date) => string;
@@ -271,7 +272,9 @@ export function useAssignTask(
 
       setIsLoadingDoerNames(true);
       try {
-        const names = await fetchUniqueDoerNameDataApi(formData.department);
+        const names = await fetchUniqueDoerNameDataApi(
+          formData.department === "all" ? "" : formData.department,
+        );
         setDoerNames(names);
       } catch (error) {
         console.error("Error loading doer names:", error);
@@ -664,6 +667,59 @@ export function useAssignTask(
     [generatedTasks, formData.department, selectedSection],
   );
 
+  // Export to CSV
+  const handleExportCSV = useCallback(() => {
+    if (generatedTasks.length === 0) {
+      toast.error("No tasks to export. Please preview tasks first.");
+      return;
+    }
+
+    const headers = [
+      "Task ID",
+      "Description",
+      "Department/Machine",
+      "Given By",
+      "Assign To",
+      "Due Date",
+      "Frequency",
+      "Reminders",
+      "Attachment Required",
+      "End Date/Deadline",
+    ];
+
+    const csvRows = generatedTasks.map((task) => [
+      task.id,
+      `"${task.description.replace(/"/g, '""')}"`,
+      `"${task.department.replace(/"/g, '""')}"`,
+      `"${task.givenBy.replace(/"/g, '""')}"`,
+      `"${task.assignTo.replace(/"/g, '""')}"`,
+      task.dueDate.split("T")[0],
+      task.frequency,
+      task.enableReminders ? "Yes" : "No",
+      task.requireAttachment ? "Yes" : "No",
+      task.endDate ? task.endDate.split("T")[0] : "",
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...csvRows.map((row) => row.join(",")),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `task_preview_${new Date().toISOString().split("T")[0]}.csv`,
+    );
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("CSV exported successfully");
+  }, [generatedTasks]);
+
   // Reset form
   const handleReset = useCallback(() => {
     setFormData({
@@ -719,6 +775,7 @@ export function useAssignTask(
     handleSampleImageUpload,
     isUploadingSampleImage,
     taskSuggestions,
+    handleExportCSV,
 
     // Helpers
     getFormattedDate,
