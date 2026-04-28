@@ -1,4 +1,5 @@
 import supabase from "@/utils/supabaseClient";
+import { compressImage } from "@/utils/imageCompression";
 import type {
   MachineRepair,
   RepairFetchResponse,
@@ -571,13 +572,22 @@ export const processRepair = async (
 
     // Handle photo upload
     if (photoFile) {
+      let uploadData: File = photoFile;
+      if (photoFile.type.startsWith("image/")) {
+        try {
+          uploadData = await compressImage(photoFile, 1024, 1024, 0.7);
+        } catch (error) {
+          console.warn("Photo compression failed, uploading original:", error);
+        }
+      }
+
       const fileExt = photoFile.name.split(".").pop();
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
       const filePath = `repair-${taskId}/photos/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from("repairing")
-        .upload(filePath, photoFile, {
+        .upload(filePath, uploadData, {
           cacheControl: "3600",
           contentType: photoFile.type,
           upsert: false,
@@ -594,13 +604,22 @@ export const processRepair = async (
 
     // Handle bill copy upload
     if (billFile) {
+      let uploadData: File = billFile;
+      if (billFile.type.startsWith("image/")) {
+        try {
+          uploadData = await compressImage(billFile, 1024, 1024, 0.7);
+        } catch (error) {
+          console.warn("Bill compression failed, uploading original:", error);
+        }
+      }
+
       const fileExt = billFile.name.split(".").pop();
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
       const filePath = `repair-${taskId}/bills/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from("repairing")
-        .upload(filePath, billFile, {
+        .upload(filePath, uploadData, {
           cacheControl: "3600",
           contentType: billFile.type,
           upsert: false,

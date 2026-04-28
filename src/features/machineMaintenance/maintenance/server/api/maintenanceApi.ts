@@ -1,4 +1,5 @@
 import supabase from "@/utils/supabaseClient";
+import { compressImage } from "@/utils/imageCompression";
 import type {
   MachineMaintenance,
   MaintenanceFetchResponse,
@@ -403,13 +404,22 @@ export const completeMaintenance = async (
 
     // Handle image upload
     if (imageFile) {
+      let uploadData: File = imageFile;
+      if (imageFile.type.startsWith("image/")) {
+        try {
+          uploadData = await compressImage(imageFile, 1024, 1024, 0.7);
+        } catch (error) {
+          console.warn("Image compression failed, uploading original:", error);
+        }
+      }
+
       const fileExt = imageFile.name.split(".").pop();
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
       const filePath = `maintenance-${taskId}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from("maintenance")
-        .upload(filePath, imageFile, {
+        .upload(filePath, uploadData, {
           cacheControl: "3600",
           contentType: imageFile.type,
           upsert: false,

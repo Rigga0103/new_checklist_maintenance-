@@ -256,10 +256,10 @@ export function useDelegation(roleOverride?: string | null) {
         return;
       }
 
-      // Validate file size (5MB)
-      const maxSize = 5 * 1024 * 1024;
+      // Validate file size (20MB)
+      const maxSize = 20 * 1024 * 1024;
       if (file.size > maxSize) {
-        toast.error("Image size must be less than 5MB");
+        toast.error("Image size must be less than 20MB");
         return;
       }
 

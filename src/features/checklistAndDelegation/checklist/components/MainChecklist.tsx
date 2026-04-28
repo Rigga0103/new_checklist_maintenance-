@@ -297,9 +297,9 @@ export default function MainChecklist({ initialNameFilter }: { initialNameFilter
     if (!file) return;
 
     // Validate file size
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    const maxSize = 20 * 1024 * 1024; // 20MB
     if (file.size > maxSize) {
-      toast.error("File size exceeds 5MB limit");
+      toast.error("File size exceeds 20MB limit");
       return;
     }
 

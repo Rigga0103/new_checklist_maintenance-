@@ -1,4 +1,5 @@
 import supabase from "@/utils/supabaseClient";
+import { compressImage } from "@/utils/imageCompression";
 
 /**
  * Upload image to Supabase Storage
@@ -10,16 +11,18 @@ export async function uploadChecklistImage(
   file: File,
   taskId: number,
 ): Promise<string> {
-  // Validate file size (5MB max)
-  const maxSize = 5 * 1024 * 1024; // 5MB
-  if (file.size > maxSize) {
-    throw new Error("File size exceeds 5MB limit");
-  }
-
   // Validate file type
   const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
   if (!allowedTypes.includes(file.type)) {
     throw new Error("Invalid file type. Only JPEG, PNG, and WebP are allowed.");
+  }
+
+  // Compress image
+  let uploadData: File = file;
+  try {
+    uploadData = await compressImage(file, 1024, 1024, 0.7);
+  } catch (error) {
+    console.warn("Compression failed, uploading original:", error);
   }
 
   // Generate unique filename
@@ -31,8 +34,9 @@ export async function uploadChecklistImage(
   // Upload to Supabase Storage
   const { data, error } = await supabase.storage
     .from("checklist-images")
-    .upload(filePath, file, {
+    .upload(filePath, uploadData, {
       cacheControl: "3600",
+      contentType: file.type,
       upsert: false,
     });
 
