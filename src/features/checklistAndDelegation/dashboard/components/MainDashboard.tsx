@@ -12,7 +12,8 @@ import {
   ChevronRight,
   Search,
   ClockCheck,
-  Megaphone
+  Megaphone,
+  FileText
 } from "lucide-react";
 import { useDashboard } from "../hooks/useDashboard";
 import { StatCardSkeleton, StaffTableSkeleton } from "./DashboardSkeleton";
@@ -20,6 +21,7 @@ import { useState } from "react";
 import { Task } from "../types/types";
 import RepairingDashboard from "./RepairingDashboard";
 import AMC from "@/features/machineMaintenance/repairing/components/AMC";
+import TodayChecklistReport from "./TodayChecklistReport";
 
 const DASHBOARD_ITEMS_PER_PAGE = 20;
 
@@ -52,6 +54,7 @@ export default function MainDashboard() {
   } = useDashboard();
 
   const [showDateRangePicker, setShowDateRangePicker] = useState(false);
+  const [showReport, setShowReport] = useState(false);
   const [startDate, setStartDate] = useState(dateRange.startDate || "");
   const [endDate, setEndDate] = useState(dateRange.endDate || "");
   const [taskPage, setTaskPage] = useState(1);
@@ -346,6 +349,18 @@ export default function MainDashboard() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Today Report Button */}
+          {userRole === "admin" && (
+            <button
+              onClick={() => setShowReport(true)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-600 text-sm font-medium text-white hover:bg-blue-700 transition-all shadow-sm hover:shadow-md"
+              title="Today's Checklist Report"
+            >
+              <FileText className="w-4 h-4" />
+              Report
+            </button>
+          )}
+
           {/* Date Range Picker */}
           {userRole === "admin" && (
             <div className="relative">
@@ -890,6 +905,12 @@ export default function MainDashboard() {
           </div>
         </>
       )}
+
+      {/* Today's Checklist Report Modal */}
+      <TodayChecklistReport
+        isOpen={showReport}
+        onClose={() => setShowReport(false)}
+      />
     </div>
   );
 }

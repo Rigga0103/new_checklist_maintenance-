@@ -55,27 +55,26 @@ export function useDashboard() {
   });
 
   // Get user info from localStorage with safe window check
-  const [userRole, setUserRole] = useState<string>(() => {
-    if (typeof window === "undefined") return "";
-    return localStorage.getItem("role") || "user";
-  });
-  const [username, setUsername] = useState<string>(() => {
-    if (typeof window === "undefined") return "";
-    return localStorage.getItem("user-name") || "";
-  });
+  const [userRole, setUserRole] = useState<string>("");
+  const [username, setUsername] = useState<string>("");
 
-  // Re-sync if localStorage changes via storage event (safe way to handle cross-tab or external changes)
+  // Sync with localStorage on mount and when storage changes
   useEffect(() => {
+    const role = localStorage.getItem("role") || "user";
+    const name = localStorage.getItem("user-name") || "";
+    setUserRole(role);
+    setUsername(name);
+
     const handleStorageChange = () => {
-      const role = localStorage.getItem("role") || "user";
-      const name = localStorage.getItem("user-name") || "";
-      if (role !== userRole) setUserRole(role);
-      if (name !== username) setUsername(name);
+      const newRole = localStorage.getItem("role") || "user";
+      const newName = localStorage.getItem("user-name") || "";
+      setUserRole(newRole);
+      setUsername(newName);
     };
 
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);
-  }, [userRole, username]);
+  }, []);
 
   // ============ Real Data Queries ============
 
