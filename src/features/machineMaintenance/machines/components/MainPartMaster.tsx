@@ -43,8 +43,6 @@ import {
   useCreateMachineNameMutation,
 } from "../../repairing/server/tanstackQuery/useMachineTypes";
 import { CreateMachineDTO } from "../server/api/machinesApi";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 
 const ITEMS_PER_PAGE = 20;
 
@@ -177,7 +175,7 @@ export default function MainPartMaster() {
     setSelectAll(!selectAll);
   };
 
-  // Export to PDF
+  // Export to PDF using browser print (supports Hindi/Unicode natively)
   const exportToPDF = () => {
     if (selectedRows.size === 0) {
       alert("Please select at least one item to export");
@@ -185,86 +183,49 @@ export default function MainPartMaster() {
     }
 
     const selectedParts = parts.filter(part => selectedRows.has(part.id));
+    const date = new Date().toLocaleString();
 
-    // Create PDF document
-    const doc = new jsPDF('landscape');
+    const rows = selectedParts.map((part, i) => `
+      <tr style="background:${i % 2 === 0 ? '#fff' : '#f5f5f5'}">
+        <td>${i + 1}</td>
+        <td>${part["ITEM NAME"] || "-"}</td>
+        <td>${part["VENDOR NAME"] || "-"}</td>
+        <td>${part["DATE OF PURCHASE"] || "-"}</td>
+        <td>₹${part.RATE ? parseFloat(part.RATE).toFixed(2) : "-"}</td>
+        <td>${part.QTY || "0"}</td>
+        <td>${part.UNIT || "Pcs"}</td>
+        <td>${part["VENDOR CODE"] || "-"}</td>
+      </tr>`).join("");
 
-    // Add title
-    doc.setFontSize(18);
-    doc.setTextColor(0, 0, 0);
-    doc.text("Parts Inventory Report", 14, 15);
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+      <title>Parts Inventory Report</title>
+      <style>
+        body { font-family: 'Noto Sans', Arial, sans-serif; margin: 20px; color: #000; }
+        h2 { color: #1e40af; margin-bottom: 4px; }
+        p { color: #555; font-size: 13px; margin: 2px 0 16px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th { background: #3b82f6; color: #fff; padding: 8px 6px; text-align: left; }
+        td { padding: 6px; border-bottom: 1px solid #ddd; }
+        @media print { @page { size: landscape; margin: 15mm; } }
+      </style></head><body>
+      <h2>Parts Inventory Report</h2>
+      <p>Generated on: ${date} &nbsp;|&nbsp; Total Items: ${selectedParts.length}</p>
+      <table>
+        <thead><tr>
+          <th>S.No</th><th>Item Name</th><th>Vendor Name</th>
+          <th>Date of Purchase</th><th>Rate (₹)</th>
+          <th>Quantity</th><th>Unit</th><th>Vendor Code</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </body></html>`;
 
-    // Add metadata
-    doc.setFontSize(10);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 25);
-    doc.text(`Total Items: ${selectedParts.length}`, 14, 31);
-
-    // Prepare table data
-    const tableHeaders = [
-      "S.No",
-      "Item Name",
-      "Vendor Name",
-      "Date of Purchase",
-      "Rate (₹)",
-      "Quantity",
-      "Unit",
-      "Vendor Code"
-    ];
-
-    const tableData = selectedParts.map((part, index) => [
-      index + 1,
-      part["ITEM NAME"] || "-",
-      part["VENDOR NAME"] || "-",
-      part["DATE OF PURCHASE"] || "-",
-      part.RATE ? parseFloat(part.RATE).toFixed(2) : "-",
-      part.QTY || "0",
-      part.UNIT || "Pcs",
-      part["VENDOR CODE"] || "-",
-    ]);
-
-    // Add table to PDF
-    autoTable(doc, {
-      head: [tableHeaders],
-      body: tableData,
-      startY: 40,
-      theme: 'grid',
-      styles: {
-        fontSize: 8,
-        cellPadding: 3,
-        lineColor: [200, 200, 200],
-        textColor: [0, 0, 0],
-      },
-      headStyles: {
-        fillColor: [59, 130, 246],
-        textColor: [255, 255, 255],
-        fontStyle: 'bold',
-        fontSize: 9,
-      },
-      alternateRowStyles: {
-        fillColor: [245, 245, 245],
-      },
-      columnStyles: {
-        0: { cellWidth: 15 }, // S.No 
-        1: { cellWidth: 50 }, // Item Name
-        2: { cellWidth: 45 }, // Vendor Name
-        3: { cellWidth: 30 }, // Date
-        4: { cellWidth: 25 }, // Rate
-        5: { cellWidth: 20 }, // Quantity
-        6: { cellWidth: 20 }, // Unit
-        7: { cellWidth: 35 }, // Vendor Code
-      },
-      margin: { left: 14, right: 14 },
-    });
-
-    // Add summary at the end
-    const finalY = (doc as any).lastAutoTable.finalY || 80;
-    doc.setFontSize(10);
-    doc.setTextColor(0, 0, 0);
-
-
-    // Save PDF
-    doc.save(`parts-inventory-${new Date().toISOString().split('T')[0]}.pdf`);
+    const win = window.open("", "_blank");
+    if (!win) { alert("Please allow popups to export PDF"); return; }
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => { win.print(); }, 500);
   };
 
   // Calculate total value of selected items

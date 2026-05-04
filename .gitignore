@@ -46,3 +46,5 @@ ai/
 .gemini/
 .antigravity/
 *.txt
+
+.claude

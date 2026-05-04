@@ -475,7 +475,8 @@ export default function MainQuickTask() {
       ...csvRows.map((row) => row.join(",")),
     ].join("\n");
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    // ﻿ BOM ensures Excel opens UTF-8 CSV with correct encoding (Hindi/non-ASCII characters)
+    const blob = new Blob(["﻿" + csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
