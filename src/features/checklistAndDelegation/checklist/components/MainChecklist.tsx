@@ -90,7 +90,13 @@ export default function MainChecklist({ initialNameFilter }: { initialNameFilter
     data: historyData,
     isFetching: isFetchingHistory,
     refetch: refetchHistory,
-  } = useChecklistHistory(searchTerm, effectiveRole, username);
+  } = useChecklistHistory(
+    searchTerm,
+    effectiveRole,
+    username,
+    activeTab === "history" ? startDate : "",
+    activeTab === "history" ? endDate : "",
+  );
 
   const {
     data: last7DaysData,
@@ -148,10 +154,7 @@ export default function MainChecklist({ initialNameFilter }: { initialNameFilter
   const dateFilteredTasks =
     (startDate || endDate) && (activeTab === "history" || activeTab === "overdue")
       ? rawTasks.filter((t) => {
-        // Use submission_date for completed tabs, task_start_date for others
-        const dateStr = (activeTab === "history")
-          ? t.submission_date
-          : t.task_start_date;
+        const dateStr = t.task_start_date;
 
         if (!dateStr) return false;
         const d = new Date(dateStr).setHours(0, 0, 0, 0);

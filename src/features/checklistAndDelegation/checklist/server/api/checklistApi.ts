@@ -90,6 +90,8 @@ export const fetchChecklistDataForHistory = async (
   searchTerm = "",
   role: string | null = null,
   username: string | null = null,
+  startDate = "",
+  endDate = "",
 ): Promise<ChecklistItem[]> => {
   const itemsPerPage = 50;
   const start = (page - 1) * itemsPerPage;
@@ -98,10 +100,20 @@ export const fetchChecklistDataForHistory = async (
     let query = supabase
       .from("checklist")
       .select("*", { count: "exact" })
-      .order("task_start_date", { ascending: false })
+      .order("submission_date", { ascending: false })
       .not("submission_date", "is", null)
       .not("status", "is", null)
       .range(start, start + itemsPerPage - 1);
+
+    if (startDate) {
+      const startOfDay = new Date(`${startDate}T00:00:00`);
+      query = query.gte("task_start_date", startOfDay.toISOString());
+    }
+
+    if (endDate) {
+      const endOfDay = new Date(`${endDate}T23:59:59.999`);
+      query = query.lte("task_start_date", endOfDay.toISOString());
+    }
 
     // Apply search filter
     if (searchTerm && searchTerm.trim() !== "") {

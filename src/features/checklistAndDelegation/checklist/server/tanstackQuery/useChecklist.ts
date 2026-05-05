@@ -23,8 +23,22 @@ export const checklistKeys = {
   all: ["checklist"] as const,
   active: (searchTerm: string, role: string | null, username: string | null) =>
     [...checklistKeys.all, "active", searchTerm, role, username] as const,
-  history: (searchTerm: string, role: string | null, username: string | null) =>
-    [...checklistKeys.all, "history", searchTerm, role, username] as const,
+  history: (
+    searchTerm: string,
+    role: string | null,
+    username: string | null,
+    startDate = "",
+    endDate = "",
+  ) =>
+    [
+      ...checklistKeys.all,
+      "history",
+      searchTerm,
+      role,
+      username,
+      startDate,
+      endDate,
+    ] as const,
   last7days: (
     searchTerm: string,
     role: string | null,
@@ -122,15 +136,19 @@ export function useChecklistHistory(
   searchTerm = "",
   role: string | null = null,
   username: string | null = null,
+  startDate = "",
+  endDate = "",
 ) {
   return useInfiniteQuery({
-    queryKey: checklistKeys.history(searchTerm, role, username),
+    queryKey: checklistKeys.history(searchTerm, role, username, startDate, endDate),
     queryFn: async ({ pageParam = 1 }) => {
       const data = await fetchChecklistDataForHistory(
         pageParam,
         searchTerm,
         role,
         username,
+        startDate,
+        endDate,
       );
       return { data, page: pageParam };
     },
