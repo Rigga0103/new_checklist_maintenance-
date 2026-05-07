@@ -153,12 +153,18 @@ export function useDashboard() {
           task.submission_date
         ) {
           status = "completed";
-        } else if (
-          taskStartDate &&
-          taskStartDate < today &&
-          !task.submission_date
-        ) {
-          status = "overdue";
+        } else if (!task.submission_date) {
+          // Use planned_date as the deadline for delegation (covers extended tasks).
+          // Fall back to task_start_date only when planned_date is absent.
+          const plannedRaw = task.planned_date as string | null;
+          const deadlineDay = plannedRaw
+            ? plannedRaw.split("T")[0]
+            : taskStartDate
+              ? taskStartDate.split("T")[0]
+              : "";
+          if (deadlineDay && deadlineDay < today) {
+            status = "overdue";
+          }
         }
       }
 

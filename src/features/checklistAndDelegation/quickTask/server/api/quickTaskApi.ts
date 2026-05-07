@@ -2,6 +2,9 @@ import supabase from "@/utils/supabaseClient";
 import type {
   ChecklistTask,
   DelegationTask,
+  MaintenanceTask,
+  MaintenanceUpdatePayload,
+  MaintenanceOriginalMatch,
   User,
   PaginatedResponse,
   ChecklistUpdatePayload,
@@ -129,84 +132,82 @@ export const fetchUsersData = async (): Promise<User[]> => {
 // ============ Delete APIs ============
 
 /**
- * Delete checklist tasks by matching department + name + task_description
- * Only deletes where submission_date is null (pending)
+ * Delete checklist tasks by task_id from unique_checklist (template table).
+ * Also removes all pending checklist instances linked to the template.
  */
 export const deleteChecklistTasksApi = async (
   tasks: ChecklistTask[],
 ): Promise<ChecklistTask[]> => {
-  let allDeleted: ChecklistTask[] = [];
   for (const task of tasks) {
-    let query = supabase.from("checklist").delete();
+    // 1. Delete pending checklist instances linked via FK
+    await supabase
+      .from("checklist")
+      .delete()
+      .eq("source_unique_id", task.task_id);
 
-    if (task.name) query = query.eq("name", task.name);
-    else query = query.is("name", null);
+    // 2. Also catch any instances inserted without source_unique_id (legacy rows)
+    if (task.name && task.task_description) {
+      await supabase
+        .from("checklist")
+        .delete()
+        .is("submission_date", null)
+        .eq("name", task.name)
+        .eq("task_description", task.task_description);
+    }
 
-    if (task.task_description)
-      query = query.eq("task_description", task.task_description);
-    else query = query.is("task_description", null);
+    // 3. Delete the template row itself from unique_checklist
+    const { error } = await supabase
+      .from("unique_checklist")
+      .delete()
+      .eq("task_id", task.task_id);
 
-    const { data, error } = await query.select();
     if (error) throw error;
-    if (data) allDeleted = [...allDeleted, ...data];
   }
-  
-  if (allDeleted.length > 0) {
-     const logParams = allDeleted.map(task => ({
-        checklistId: task.task_id?.toString() || "",
-        action: "delete",
-        department: task.department || "",
-        givenBy: task.given_by || "",
-        doerName: task.name || "",
-        frequency: task.frequency || "",
-        fromDate: task.task_start_date || "",
-        endDate: (task as any).planned_date || "", 
-        description: task.task_description || ""
-     }));
-     await logChecklistAction(logParams);
-  }
-  
+
+  const logParams = tasks.map((task) => ({
+    checklistId: task.task_id?.toString() || "",
+    action: "delete",
+    department: task.department || "",
+    givenBy: task.given_by || "",
+    doerName: task.name || "",
+    frequency: task.frequency || "",
+    fromDate: task.task_start_date || "",
+    endDate: (task as any).planned_date || "",
+    description: task.task_description || "",
+  }));
+  await logChecklistAction(logParams);
+
   return tasks;
 };
 
 /**
- * Delete delegation tasks by matching department + name + task_description
- * Only deletes where submission_date is null (pending)
+ * Delete delegation tasks by task_id (exact match).
  */
 export const deleteDelegationTasksApi = async (
   tasks: DelegationTask[],
 ): Promise<DelegationTask[]> => {
-  let allDeleted: DelegationTask[] = [];
   for (const task of tasks) {
-    let query = supabase.from("delegation").delete();
+    const { error } = await supabase
+      .from("delegation")
+      .delete()
+      .eq("task_id", task.task_id);
 
-    if (task.name) query = query.eq("name", task.name);
-    else query = query.is("name", null);
-
-    if (task.task_description)
-      query = query.eq("task_description", task.task_description);
-    else query = query.is("task_description", null);
-
-    const { data, error } = await query.select();
     if (error) throw error;
-    if (data) allDeleted = [...allDeleted, ...data];
   }
-  
-  if (allDeleted.length > 0) {
-     const logParams = allDeleted.map(task => ({
-        checklistId: task.task_id?.toString() || "",
-        action: "delete",
-        department: task.department || "",
-        givenBy: task.given_by || "",
-        doerName: task.name || "",
-        frequency: task.frequency || "",
-        fromDate: task.task_start_date || "",
-        endDate: task.planned_date || "", 
-        description: task.task_description || ""
-     }));
-     await logChecklistAction(logParams);
-  }
-  
+
+  const logParams = tasks.map((task) => ({
+    checklistId: task.task_id?.toString() || "",
+    action: "delete",
+    department: task.department || "",
+    givenBy: task.given_by || "",
+    doerName: task.name || "",
+    frequency: task.frequency || "",
+    fromDate: task.task_start_date || "",
+    endDate: task.planned_date || "",
+    description: task.task_description || "",
+  }));
+  await logChecklistAction(logParams);
+
   return tasks;
 };
 
@@ -226,46 +227,48 @@ export const updateChecklistTaskApi = async (
     updatePayload.department = updatedTask.department;
   if (updatedTask.given_by !== undefined)
     updatePayload.given_by = updatedTask.given_by;
-  if (updatedTask.name !== undefined) updatePayload.name = updatedTask.name;
+  if (updatedTask.name !== undefined)
+    updatePayload.name = updatedTask.name;
   if (updatedTask.task_description !== undefined)
     updatePayload.task_description = updatedTask.task_description;
   if (updatedTask.enable_reminder !== undefined)
     updatePayload.enable_reminder = updatedTask.enable_reminder;
   if (updatedTask.require_attachment !== undefined)
     updatePayload.require_attachment = updatedTask.require_attachment;
-  if (updatedTask.remark !== undefined)
-    updatePayload.remark = updatedTask.remark;
+  // unique_checklist stores the image in the `image` column
   if (updatedTask.image !== undefined)
-    updatePayload.sample_image = updatedTask.image;
+    updatePayload.image = updatedTask.image;
 
-  let query = supabase
-    .from("checklist")
+  // Update the template in unique_checklist.
+  // The trg_sync_checklist_from_template trigger automatically cascades
+  // the change to all pending checklist rows linked via source_unique_id.
+  const { data, error } = await supabase
+    .from("unique_checklist")
     .update(updatePayload)
-    .eq("task_id", originalTask.task_id);
-
-  const { data, error } = await query.select();
+    .eq("task_id", originalTask.task_id)
+    .select();
 
   if (error) {
-    console.error("Supabase error (Checklist update):", error);
+    console.error("Supabase error (unique_checklist update):", error);
     throw error;
   }
 
   if (data && data.length > 0) {
-     const logParams = data.map(task => ({
-        checklistId: task.task_id?.toString() || "",
-        action: "update",
-        department: task.department || "",
-        givenBy: task.given_by || "",
-        doerName: task.name || "",
-        frequency: task.frequency || "",
-        fromDate: task.task_start_date || "",
-        endDate: (task as any).planned_date || "", 
-        description: task.task_description || ""
-     }));
-     await logChecklistAction(logParams);
+    const logParams = data.map((task) => ({
+      checklistId: task.task_id?.toString() || "",
+      action: "update",
+      department: task.department || "",
+      givenBy: task.given_by || "",
+      doerName: task.name || "",
+      frequency: task.frequency || "",
+      fromDate: task.task_start_date || "",
+      endDate: task.task_end_date || "",
+      description: task.task_description || "",
+    }));
+    await logChecklistAction(logParams);
   }
 
-  return data as ChecklistTask[];
+  return (data ?? []) as unknown as ChecklistTask[];
 };
 
 /**
@@ -333,4 +336,101 @@ export const updateDelegationTaskApi = async (
   }
 
   return data as DelegationTask[];
+};
+
+// ============ Maintenance API ============
+
+export const fetchMaintenanceData = async (
+  page = 0,
+  pageSize = 50,
+  nameFilter = "",
+): Promise<PaginatedResponse<MaintenanceTask>> => {
+  try {
+    const [{ data, error }, { data: countData, error: countError }] = await Promise.all([
+      supabase.rpc("get_unique_maintenance_tasks", {
+        page_number: page,
+        page_size: pageSize,
+        name_filter: nameFilter || "",
+      }),
+      supabase.rpc("get_unique_maintenance_tasks_count", {
+        name_filter: nameFilter || "",
+      }),
+    ]);
+
+    if (error) {
+      console.error("Error fetching maintenance rpc", error);
+      return { data: [], total: 0 };
+    }
+    if (countError) console.error("Error fetching maintenance count", countError);
+
+    return {
+      data: (data as MaintenanceTask[]) || [],
+      total: typeof countData === "number" ? countData : 0,
+    };
+  } catch (error) {
+    console.error("Error from Supabase maintenance", error);
+    return { data: [], total: 0 };
+  }
+};
+
+export const deleteMaintenanceTasksApi = async (
+  tasks: MaintenanceTask[],
+): Promise<MaintenanceTask[]> => {
+  for (const task of tasks) {
+    // 1a. Delete machine_maintenance rows linked via FK (tasks created via assign task)
+    await supabase
+      .from("machine_maintenance")
+      .delete()
+      .eq("source_unique_id", task.task_id);
+
+    // 1b. Also delete by text match for rows inserted without source_unique_id
+    if (task.task_description && task.name && task.machine_name) {
+      await supabase
+        .from("machine_maintenance")
+        .delete()
+        .ilike("task_description", task.task_description.trim())
+        .ilike("doer_name", task.name.trim())
+        .ilike("machine_name", task.machine_name.trim());
+    }
+
+    // 2. Delete the template row itself
+    const { error } = await supabase
+      .from("unique_maintanence")
+      .delete()
+      .eq("task_id", task.task_id);
+    if (error) throw error;
+  }
+  return tasks;
+};
+
+export const updateMaintenanceTaskApi = async (
+  updatedTask: MaintenanceUpdatePayload,
+  originalTask: MaintenanceOriginalMatch,
+): Promise<MaintenanceTask[]> => {
+  const payload: Record<string, unknown> = {};
+
+  if (updatedTask.machine_name    !== undefined) payload.machine_name    = updatedTask.machine_name;
+  if (updatedTask.given_by        !== undefined) payload.given_by        = updatedTask.given_by;
+  if (updatedTask.name            !== undefined) payload.name            = updatedTask.name;
+  if (updatedTask.task_description !== undefined) payload.task_description = updatedTask.task_description;
+  if (updatedTask.frequency       !== undefined) payload.frequency       = updatedTask.frequency;
+  if (updatedTask.enable_reminder !== undefined) payload.enable_reminder = updatedTask.enable_reminder;
+  if (updatedTask.require_attachment !== undefined) payload.require_attachment = updatedTask.require_attachment;
+  if (updatedTask.task_start_date !== undefined) payload.task_start_date = updatedTask.task_start_date || null;
+  if (updatedTask.task_end_date   !== undefined) payload.task_end_date   = updatedTask.task_end_date || null;
+  if (updatedTask.image           !== undefined) payload.image           = updatedTask.image;
+
+  // Update the template; trg_sync_maintenance_from_template cascades to pending tasks
+  const { data, error } = await supabase
+    .from("unique_maintanence")
+    .update(payload)
+    .eq("task_id", originalTask.task_id)
+    .select();
+
+  if (error) {
+    console.error("Supabase error (unique_maintanence update):", error);
+    throw error;
+  }
+
+  return (data ?? []) as MaintenanceTask[];
 };

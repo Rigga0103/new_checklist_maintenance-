@@ -25,13 +25,16 @@ import {
   useUpdateChecklistTask,
   useDeleteDelegationTasks,
   useUpdateDelegationTask,
+  useMaintenanceTasksQuery,
+  useDeleteMaintenanceTasks,
+  useUpdateMaintenanceTask,
 } from "../server/tanstackQuery/useQuickTask";
 import { QuickTaskSkeleton } from "./QuickTaskSkeleton";
-import type { ChecklistTask, DelegationTask } from "../types/types";
+import type { ChecklistTask, DelegationTask, MaintenanceTask, MaintenanceUpdatePayload, MaintenanceOriginalMatch } from "../types/types";
 import { uploadChecklistImage } from "../../checklist/server/api/checklistUploadApi";
 
 export default function MainQuickTask() {
-  const [activeTab, setActiveTab] = useState<"checklist" | "delegation">(
+  const [activeTab, setActiveTab] = useState<"checklist" | "delegation" | "maintenance">(
     "checklist",
   );
   const [searchTerm, setSearchTerm] = useState("");
@@ -46,19 +49,20 @@ export default function MainQuickTask() {
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<ChecklistTask>>({});
   const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const [selectedDelegationTasks, setSelectedDelegationTasks] = useState<
-    DelegationTask[]
-  >([]);
-  const [delegationEditingId, setDelegationEditingId] = useState<number | null>(
-    null,
-  );
+  const [selectedDelegationTasks, setSelectedDelegationTasks] = useState<DelegationTask[]>([]);
+  const [delegationEditingId, setDelegationEditingId] = useState<number | null>(null);
+
+  const [selectedMaintenanceTasks, setSelectedMaintenanceTasks] = useState<MaintenanceTask[]>([]);
+  const [maintenanceEditingId, setMaintenanceEditingId] = useState<number | null>(null);
+  const [maintenanceEditFormData, setMaintenanceEditFormData] = useState<Partial<MaintenanceTask>>({});
+  const [maintenancePage, setMaintenancePage] = useState(0);
   const [delegationEditFormData, setDelegationEditFormData] = useState<
     Partial<DelegationTask>
   >({});
 
   // Delete Confirmation State
   const [deleteConfirmTask, setDeleteConfirmTask] = useState<
-    ChecklistTask | DelegationTask | null
+    ChecklistTask | DelegationTask | MaintenanceTask | null
   >(null);
   const [isBulkDeleteConfirm, setIsBulkDeleteConfirm] = useState(false);
 
@@ -81,6 +85,9 @@ export default function MainQuickTask() {
   const { data: delegationResponse, isLoading: delegationLoading } =
     useDelegationTasksQuery(delegationPage, pageSize, nameFilter);
 
+  const { data: maintenanceResponse, isLoading: maintenanceLoading } =
+    useMaintenanceTasksQuery(maintenancePage, pageSize, nameFilter);
+
   const { data: usersData } = useUsers();
 
   // Mutations
@@ -88,6 +95,8 @@ export default function MainQuickTask() {
   const updateChecklistMutation = useUpdateChecklistTask();
   const deleteDelegationMutation = useDeleteDelegationTasks();
   const updateDelegationMutation = useUpdateDelegationTask();
+  const deleteMaintenanceMutation = useDeleteMaintenanceTasks();
+  const updateMaintenanceMutation = useUpdateMaintenanceTask();
 
   // Data
   const checklistTasks = checklistResponse?.data || [];
@@ -95,6 +104,9 @@ export default function MainQuickTask() {
 
   const delegationTasks = delegationResponse?.data || [];
   const delegationTotal = delegationResponse?.total || 0;
+
+  const maintenanceTasks = maintenanceResponse?.data || [];
+  const maintenanceTotal = maintenanceResponse?.total || 0;
 
   const allNames = usersData?.map((u) => u.user_name) || [];
 
@@ -126,52 +138,58 @@ export default function MainQuickTask() {
   }, [checklistTasks, searchTerm, freqFilter]);
 
   const filteredDelegationTasks = useMemo(() => {
-    // Unique by task_id (safety check on current page)
     const unique = Array.from(
       new Map(delegationTasks.map((t) => [t.task_id, t])).values(),
     );
-
     let filtered = unique;
-    if (searchTerm) {
-      filtered = filtered.filter((t) =>
-        t.task_description?.toLowerCase().includes(searchTerm.toLowerCase()),
-      );
-    }
-    if (freqFilter) {
-      filtered = filtered.filter((t) => t.frequency === freqFilter);
-    }
+    if (searchTerm) filtered = filtered.filter((t) => t.task_description?.toLowerCase().includes(searchTerm.toLowerCase()));
+    if (freqFilter) filtered = filtered.filter((t) => t.frequency === freqFilter);
     return filtered;
   }, [delegationTasks, searchTerm, freqFilter]);
+
+  const filteredMaintenanceTasks = useMemo(() => {
+    const unique = Array.from(
+      new Map(maintenanceTasks.map((t) => [t.task_id, t])).values(),
+    );
+    let filtered = unique;
+    if (searchTerm) filtered = filtered.filter((t) => t.task_description?.toLowerCase().includes(searchTerm.toLowerCase()));
+    if (freqFilter) filtered = filtered.filter((t) => t.frequency === freqFilter);
+    return filtered;
+  }, [maintenanceTasks, searchTerm, freqFilter]);
 
   const tasks =
     activeTab === "checklist"
       ? filteredChecklistTasks
-      : filteredDelegationTasks;
+      : activeTab === "delegation"
+        ? filteredDelegationTasks
+        : filteredMaintenanceTasks;
 
   const isLoading =
-    activeTab === "checklist" ? checklistLoading : delegationLoading;
+    activeTab === "checklist" ? checklistLoading
+      : activeTab === "delegation" ? delegationLoading
+      : maintenanceLoading;
 
   // Pagination helpers
   const currentPage =
-    activeTab === "checklist" ? checklistPage : delegationPage;
+    activeTab === "checklist" ? checklistPage
+      : activeTab === "delegation" ? delegationPage
+      : maintenancePage;
   const totalCount =
-    activeTab === "checklist" ? checklistTotal : delegationTotal;
+    activeTab === "checklist" ? checklistTotal
+      : activeTab === "delegation" ? delegationTotal
+      : maintenanceTotal;
   const totalPages = Math.ceil(totalCount / pageSize);
 
   const handleNextPage = () => {
-    if (activeTab === "checklist") {
-      setChecklistPage((p) => Math.min(p + 1, totalPages - 1));
-    } else {
-      setDelegationPage((p) => Math.min(p + 1, totalPages - 1));
-    }
+    if (activeTab === "checklist") setChecklistPage((p) => Math.min(p + 1, totalPages - 1));
+    else if (activeTab === "delegation") setDelegationPage((p) => Math.min(p + 1, totalPages - 1));
+    else setMaintenancePage((p) => Math.min(p + 1, totalPages - 1));
   };
 
   const handlePrevPage = () => {
-    if (activeTab === "checklist") {
-      setChecklistPage((p) => Math.max(0, p - 1));
-    } else {
-      setDelegationPage((p) => Math.max(0, p - 1));
-    }
+    if (activeTab === "checklist") setChecklistPage((p) => Math.max(0, p - 1));
+    else if (activeTab === "delegation") setDelegationPage((p) => Math.max(0, p - 1));
+    else setMaintenancePage((p) => Math.max(0, p - 1));
   };
 
   const allFrequencies = ["daily", "weekly", "monthly", "one-time"];
@@ -192,24 +210,27 @@ export default function MainQuickTask() {
   };
 
   // Checkbox handlers
-  const handleCheckboxChange = (task: ChecklistTask | DelegationTask) => {
+  const handleCheckboxChange = (task: ChecklistTask | DelegationTask | MaintenanceTask) => {
     if (activeTab === "checklist") {
       const cTask = task as ChecklistTask;
       if (selectedTasks.find((t) => t.task_id === cTask.task_id)) {
-        setSelectedTasks(
-          selectedTasks.filter((t) => t.task_id !== cTask.task_id),
-        );
+        setSelectedTasks(selectedTasks.filter((t) => t.task_id !== cTask.task_id));
       } else {
         setSelectedTasks([...selectedTasks, cTask]);
       }
-    } else {
+    } else if (activeTab === "delegation") {
       const dTask = task as DelegationTask;
       if (selectedDelegationTasks.find((t) => t.task_id === dTask.task_id)) {
-        setSelectedDelegationTasks(
-          selectedDelegationTasks.filter((t) => t.task_id !== dTask.task_id),
-        );
+        setSelectedDelegationTasks(selectedDelegationTasks.filter((t) => t.task_id !== dTask.task_id));
       } else {
         setSelectedDelegationTasks([...selectedDelegationTasks, dTask]);
+      }
+    } else {
+      const mTask = task as MaintenanceTask;
+      if (selectedMaintenanceTasks.find((t) => t.task_id === mTask.task_id)) {
+        setSelectedMaintenanceTasks(selectedMaintenanceTasks.filter((t) => t.task_id !== mTask.task_id));
+      } else {
+        setSelectedMaintenanceTasks([...selectedMaintenanceTasks, mTask]);
       }
     }
   };
@@ -221,24 +242,30 @@ export default function MainQuickTask() {
       } else {
         setSelectedTasks([...filteredChecklistTasks]);
       }
-    } else {
+    } else if (activeTab === "delegation") {
       if (selectedDelegationTasks.length === filteredDelegationTasks.length) {
         setSelectedDelegationTasks([]);
       } else {
         setSelectedDelegationTasks([...filteredDelegationTasks]);
       }
+    } else {
+      if (selectedMaintenanceTasks.length === filteredMaintenanceTasks.length) {
+        setSelectedMaintenanceTasks([]);
+      } else {
+        setSelectedMaintenanceTasks([...filteredMaintenanceTasks]);
+      }
     }
   };
 
   // Delete handlers
-  const confirmDeleteTask = (task: ChecklistTask | DelegationTask) => {
+  const confirmDeleteTask = (task: ChecklistTask | DelegationTask | MaintenanceTask) => {
     setDeleteConfirmTask(task);
   };
 
   const confirmBulkDelete = () => {
     if (activeTab === "checklist" && selectedTasks.length === 0) return;
-    if (activeTab === "delegation" && selectedDelegationTasks.length === 0)
-      return;
+    if (activeTab === "delegation" && selectedDelegationTasks.length === 0) return;
+    if (activeTab === "maintenance" && selectedMaintenanceTasks.length === 0) return;
     setIsBulkDeleteConfirm(true);
   };
 
@@ -246,13 +273,11 @@ export default function MainQuickTask() {
     if (!deleteConfirmTask) return;
     try {
       if (activeTab === "checklist") {
-        await deleteChecklistMutation.mutateAsync([
-          deleteConfirmTask as ChecklistTask,
-        ]);
+        await deleteChecklistMutation.mutateAsync([deleteConfirmTask as ChecklistTask]);
+      } else if (activeTab === "delegation") {
+        await deleteDelegationMutation.mutateAsync([deleteConfirmTask as DelegationTask]);
       } else {
-        await deleteDelegationMutation.mutateAsync([
-          deleteConfirmTask as DelegationTask,
-        ]);
+        await deleteMaintenanceMutation.mutateAsync([deleteConfirmTask as MaintenanceTask]);
       }
       toast.success("Task deleted");
     } catch {
@@ -269,11 +294,16 @@ export default function MainQuickTask() {
         await deleteChecklistMutation.mutateAsync(selectedTasks);
         setSelectedTasks([]);
         toast.success(`Deleted ${selectedTasks.length} tasks`);
-      } else {
+      } else if (activeTab === "delegation") {
         if (selectedDelegationTasks.length === 0) return;
         await deleteDelegationMutation.mutateAsync(selectedDelegationTasks);
         setSelectedDelegationTasks([]);
         toast.success(`Deleted ${selectedDelegationTasks.length} tasks`);
+      } else {
+        if (selectedMaintenanceTasks.length === 0) return;
+        await deleteMaintenanceMutation.mutateAsync(selectedMaintenanceTasks);
+        setSelectedMaintenanceTasks([]);
+        toast.success(`Deleted ${selectedMaintenanceTasks.length} tasks`);
       }
     } catch {
       toast.error("Failed to delete tasks");
@@ -395,6 +425,55 @@ export default function MainQuickTask() {
     }
   };
 
+  // Maintenance edit handlers
+  const handleMaintenanceEditClick = (task: MaintenanceTask) => {
+    setMaintenanceEditingId(task.task_id);
+    setMaintenanceEditFormData({ ...task });
+  };
+
+  const handleMaintenanceCancelEdit = () => {
+    setMaintenanceEditingId(null);
+    setMaintenanceEditFormData({});
+  };
+
+  const handleMaintenanceFieldChange = (field: keyof MaintenanceTask, value: string) => {
+    setMaintenanceEditFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleMaintenanceSaveEdit = async () => {
+    if (!maintenanceEditingId) return;
+    const originalTask = maintenanceTasks.find((t) => t.task_id === maintenanceEditingId);
+    if (!originalTask) return;
+
+    try {
+      await updateMaintenanceMutation.mutateAsync({
+        updatedTask: {
+          machine_name: maintenanceEditFormData.machine_name || undefined,
+          given_by: maintenanceEditFormData.given_by || undefined,
+          name: maintenanceEditFormData.name || undefined,
+          task_description: maintenanceEditFormData.task_description || undefined,
+          frequency: maintenanceEditFormData.frequency || undefined,
+          enable_reminder: maintenanceEditFormData.enable_reminder || undefined,
+          require_attachment: maintenanceEditFormData.require_attachment || undefined,
+          task_start_date: maintenanceEditFormData.task_start_date || undefined,
+          task_end_date: maintenanceEditFormData.task_end_date || undefined,
+          image: maintenanceEditFormData.image || undefined,
+        },
+        originalTask: {
+          task_id: originalTask.task_id,
+          machine_name: originalTask.machine_name,
+          name: originalTask.name,
+          task_description: originalTask.task_description,
+        },
+      });
+      toast.success("Maintenance task updated");
+      setMaintenanceEditingId(null);
+      setMaintenanceEditFormData({});
+    } catch {
+      toast.error("Failed to update maintenance task");
+    }
+  };
+
   // Filter handlers
   const handleNameFilterSelect = (name: string) => {
     setNameFilter(name);
@@ -419,27 +498,10 @@ export default function MainQuickTask() {
 
     const headers =
       activeTab === "checklist"
-        ? [
-          "Task ID",
-          "Department",
-          "Given By",
-          "Name",
-          "Description",
-          "Start Date",
-          "End Date",
-          "Frequency",
-        ]
-        : [
-          "Task ID",
-          "Department",
-          "Given By",
-          "Name",
-          "Description",
-          "Start Date",
-          "Planned Date",
-          "Frequency",
-          "Status",
-        ];
+        ? ["Task ID", "Department", "Given By", "Name", "Description", "Start Date", "End Date", "Frequency"]
+        : activeTab === "delegation"
+          ? ["Task ID", "Department", "Given By", "Name", "Description", "Start Date", "Planned Date", "Frequency", "Status"]
+          : ["Task ID", "Machine", "Given By", "Doer Name", "Description", "Start Date", "End Date", "Frequency", "Reminder", "Attachment"];
 
     const csvRows = tasks.map((t) => {
       if (activeTab === "checklist") {
@@ -454,7 +516,7 @@ export default function MainQuickTask() {
           (task as any).planned_date || "",
           task.frequency || "",
         ];
-      } else {
+      } else if (activeTab === "delegation") {
         const task = t as DelegationTask;
         return [
           task.task_id,
@@ -466,6 +528,20 @@ export default function MainQuickTask() {
           task.planned_date || "",
           task.frequency || "",
           task.status || "",
+        ];
+      } else {
+        const task = t as MaintenanceTask;
+        return [
+          task.task_id,
+          `"${(task.machine_name || "").replace(/"/g, '""')}"`,
+          `"${(task.given_by || "").replace(/"/g, '""')}"`,
+          `"${(task.name || "").replace(/"/g, '""')}"`,
+          `"${(task.task_description || "").replace(/"/g, '""')}"`,
+          task.task_start_date || "",
+          task.task_end_date || "",
+          task.frequency || "",
+          task.enable_reminder || "",
+          task.require_attachment || "",
         ];
       }
     });
@@ -510,7 +586,9 @@ export default function MainQuickTask() {
     const isSelected =
       activeTab === "checklist"
         ? selectedTasks.find((t) => t.task_id === task.task_id)
-        : selectedDelegationTasks.find((t) => t.task_id === task.task_id);
+        : activeTab === "delegation"
+          ? selectedDelegationTasks.find((t) => t.task_id === task.task_id)
+          : selectedMaintenanceTasks.find((t) => t.task_id === task.task_id);
 
     if (isSelected)
       return "bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30";
@@ -543,9 +621,14 @@ export default function MainQuickTask() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Edit Tasks {totalCount > 0 && (
+            Edit Tasks{" "}
+            {totalCount > 0 && (
               <span className="text-blue-600 dark:text-blue-400">
-                ({totalCount})
+                ({totalCount}{" "}
+                <span className="text-base font-normal capitalize">
+                  {activeTab}
+                </span>
+                )
               </span>
             )}
           </h1>
@@ -581,12 +664,21 @@ export default function MainQuickTask() {
               setChecklistPage(0);
               setSelectedTasks([]);
             }}
-            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === "checklist"
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === "checklist"
               ? "bg-white dark:bg-neutral-700 text-blue-600 shadow-sm"
               : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               }`}
           >
             Checklist
+            {checklistTotal > 0 && (
+              <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${
+                activeTab === "checklist"
+                  ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400"
+                  : "bg-gray-200 dark:bg-neutral-600 text-gray-600 dark:text-gray-300"
+              }`}>
+                {checklistTotal}
+              </span>
+            )}
           </button>
           <button
             onClick={() => {
@@ -594,12 +686,43 @@ export default function MainQuickTask() {
               setDelegationPage(0);
               setSelectedTasks([]);
             }}
-            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === "delegation"
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === "delegation"
               ? "bg-white dark:bg-neutral-700 text-blue-600 shadow-sm"
               : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               }`}
           >
             Delegation
+            {delegationTotal > 0 && (
+              <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${
+                activeTab === "delegation"
+                  ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400"
+                  : "bg-gray-200 dark:bg-neutral-600 text-gray-600 dark:text-gray-300"
+              }`}>
+                {delegationTotal}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab("maintenance");
+              setMaintenancePage(0);
+              setSelectedMaintenanceTasks([]);
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === "maintenance"
+              ? "bg-white dark:bg-neutral-700 text-blue-600 shadow-sm"
+              : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              }`}
+          >
+            Maintenance
+            {maintenanceTotal > 0 && (
+              <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${
+                activeTab === "maintenance"
+                  ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400"
+                  : "bg-gray-200 dark:bg-neutral-600 text-gray-600 dark:text-gray-300"
+              }`}>
+                {maintenanceTotal}
+              </span>
+            )}
           </button>
         </div>
 
@@ -695,22 +818,24 @@ export default function MainQuickTask() {
           </div>
 
           {/* Bulk Delete */}
-          {(selectedTasks.length > 0 || selectedDelegationTasks.length > 0) &&
+          {(selectedTasks.length > 0 || selectedDelegationTasks.length > 0 || selectedMaintenanceTasks.length > 0) &&
             userRole === "admin" && (
               <button
                 onClick={confirmBulkDelete}
                 disabled={
                   activeTab === "checklist"
                     ? deleteChecklistMutation.isPending
-                    : deleteDelegationMutation.isPending
+                    : activeTab === "delegation"
+                      ? deleteDelegationMutation.isPending
+                      : deleteMaintenanceMutation.isPending
                 }
                 className="flex items-center gap-2 px-3 py-1.5 text-sm bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors ml-auto"
               >
-                {(
-                  activeTab === "checklist"
-                    ? deleteChecklistMutation.isPending
-                    : deleteDelegationMutation.isPending
-                ) ? (
+                {(activeTab === "checklist"
+                  ? deleteChecklistMutation.isPending
+                  : activeTab === "delegation"
+                    ? deleteDelegationMutation.isPending
+                    : deleteMaintenanceMutation.isPending) ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <Trash2 className="w-4 h-4" />
@@ -718,7 +843,9 @@ export default function MainQuickTask() {
                 Delete (
                 {activeTab === "checklist"
                   ? selectedTasks.length
-                  : selectedDelegationTasks.length}
+                  : activeTab === "delegation"
+                    ? selectedDelegationTasks.length
+                    : selectedMaintenanceTasks.length}
                 )
               </button>
             )}
@@ -749,12 +876,10 @@ export default function MainQuickTask() {
                         type="checkbox"
                         checked={
                           activeTab === "checklist"
-                            ? selectedTasks.length ===
-                            filteredChecklistTasks.length &&
-                            filteredChecklistTasks.length > 0
-                            : selectedDelegationTasks.length ===
-                            filteredDelegationTasks.length &&
-                            filteredDelegationTasks.length > 0
+                            ? selectedTasks.length === filteredChecklistTasks.length && filteredChecklistTasks.length > 0
+                            : activeTab === "delegation"
+                              ? selectedDelegationTasks.length === filteredDelegationTasks.length && filteredDelegationTasks.length > 0
+                              : selectedMaintenanceTasks.length === filteredMaintenanceTasks.length && filteredMaintenanceTasks.length > 0
                         }
                         onChange={handleSelectAll}
                         className="w-4 h-4 rounded border-gray-300 text-blue-600"
@@ -765,7 +890,7 @@ export default function MainQuickTask() {
                     Task ID
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
-                    Department
+                    {activeTab === "maintenance" ? "Machine" : "Department"}
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
                     Given By
@@ -796,16 +921,14 @@ export default function MainQuickTask() {
                       Add Image
                     </th>
                   )}
-                  {activeTab === "checklist" && (
+                  {activeTab === "maintenance" && (
                     <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
-                      Actions
+                      Image
                     </th>
                   )}
-                  {activeTab === "delegation" && (
-                    <th className="px-3 py-2 text-left text-xs font-medium text-blue-600 dark:text-blue-400 uppercase">
-                      Edit
-                    </th>
-                  )}
+                  <th className="px-3 py-2 text-left text-xs font-medium text-blue-600 dark:text-blue-400 uppercase">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-neutral-800 divide-y divide-gray-100 dark:divide-neutral-700">
@@ -815,6 +938,10 @@ export default function MainQuickTask() {
                     delegationEditingId === task.task_id;
                   const isChecklistEditing =
                     activeTab === "checklist" && editingTaskId === task.task_id;
+
+                  const isMaintenanceEditing =
+                    activeTab === "maintenance" &&
+                    maintenanceEditingId === task.task_id;
 
                   return (
                     <tr
@@ -827,12 +954,10 @@ export default function MainQuickTask() {
                             type="checkbox"
                             checked={
                               activeTab === "checklist"
-                                ? !!selectedTasks.find(
-                                  (t) => t.task_id === task.task_id,
-                                )
-                                : !!selectedDelegationTasks.find(
-                                  (t) => t.task_id === task.task_id,
-                                )
+                                ? !!selectedTasks.find((t) => t.task_id === task.task_id)
+                                : activeTab === "delegation"
+                                  ? !!selectedDelegationTasks.find((t) => t.task_id === task.task_id)
+                                  : !!selectedMaintenanceTasks.find((t) => t.task_id === task.task_id)
                             }
                             onChange={() => handleCheckboxChange(task)}
                             className="w-4 h-4 rounded border-gray-300 text-blue-600"
@@ -843,31 +968,33 @@ export default function MainQuickTask() {
                       <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap font-mono">
                         #{task.task_id}
                       </td>
-                      {/* DEPARTMENT */}
+                      {/* DEPARTMENT / MACHINE */}
                       <td className="px-3 py-3 text-sm text-gray-900 dark:text-white whitespace-nowrap">
                         {isChecklistEditing ? (
                           <input
                             type="text"
                             value={editFormData.department || ""}
-                            onChange={(e) =>
-                              handleInputChange("department", e.target.value)
-                            }
+                            onChange={(e) => handleInputChange("department", e.target.value)}
                             className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
                           />
                         ) : isDelegationEditing ? (
                           <input
                             type="text"
                             value={delegationEditFormData.department || ""}
-                            onChange={(e) =>
-                              handleDelegationFieldChange(
-                                "department",
-                                e.target.value,
-                              )
-                            }
+                            onChange={(e) => handleDelegationFieldChange("department", e.target.value)}
+                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
+                          />
+                        ) : isMaintenanceEditing ? (
+                          <input
+                            type="text"
+                            value={maintenanceEditFormData.machine_name || ""}
+                            onChange={(e) => handleMaintenanceFieldChange("machine_name", e.target.value)}
                             className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
                           />
                         ) : (
-                          task.department || "—"
+                          activeTab === "maintenance"
+                            ? (task as MaintenanceTask).machine_name || "—"
+                            : (task as ChecklistTask | DelegationTask).department || "—"
                         )}
                       </td>
                       {/* GIVEN BY */}
@@ -876,48 +1003,48 @@ export default function MainQuickTask() {
                           <input
                             type="text"
                             value={editFormData.given_by || ""}
-                            onChange={(e) =>
-                              handleInputChange("given_by", e.target.value)
-                            }
+                            onChange={(e) => handleInputChange("given_by", e.target.value)}
                             className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
                           />
                         ) : isDelegationEditing ? (
                           <input
                             type="text"
                             value={delegationEditFormData.given_by || ""}
-                            onChange={(e) =>
-                              handleDelegationFieldChange(
-                                "given_by",
-                                e.target.value,
-                              )
-                            }
+                            onChange={(e) => handleDelegationFieldChange("given_by", e.target.value)}
+                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
+                          />
+                        ) : isMaintenanceEditing ? (
+                          <input
+                            type="text"
+                            value={maintenanceEditFormData.given_by || ""}
+                            onChange={(e) => handleMaintenanceFieldChange("given_by", e.target.value)}
                             className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
                           />
                         ) : (
                           task.given_by || "—"
                         )}
                       </td>
-                      {/* NAME (Assign To) */}
+                      {/* NAME (Assign To / Doer) */}
                       <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
                         {isChecklistEditing ? (
                           <input
                             type="text"
                             value={editFormData.name || ""}
-                            onChange={(e) =>
-                              handleInputChange("name", e.target.value)
-                            }
+                            onChange={(e) => handleInputChange("name", e.target.value)}
                             className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
                           />
                         ) : isDelegationEditing ? (
                           <input
                             type="text"
                             value={delegationEditFormData.name || ""}
-                            onChange={(e) =>
-                              handleDelegationFieldChange(
-                                "name",
-                                e.target.value,
-                              )
-                            }
+                            onChange={(e) => handleDelegationFieldChange("name", e.target.value)}
+                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
+                          />
+                        ) : isMaintenanceEditing ? (
+                          <input
+                            type="text"
+                            value={maintenanceEditFormData.name || ""}
+                            onChange={(e) => handleMaintenanceFieldChange("name", e.target.value)}
                             className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
                           />
                         ) : (
@@ -929,26 +1056,21 @@ export default function MainQuickTask() {
                         {isChecklistEditing ? (
                           <textarea
                             value={editFormData.task_description || ""}
-                            onChange={(e) =>
-                              handleInputChange(
-                                "task_description",
-                                e.target.value,
-                              )
-                            }
+                            onChange={(e) => handleInputChange("task_description", e.target.value)}
                             className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
                             rows={2}
                           />
                         ) : isDelegationEditing ? (
                           <textarea
-                            value={
-                              delegationEditFormData.task_description || ""
-                            }
-                            onChange={(e) =>
-                              handleDelegationFieldChange(
-                                "task_description",
-                                e.target.value,
-                              )
-                            }
+                            value={delegationEditFormData.task_description || ""}
+                            onChange={(e) => handleDelegationFieldChange("task_description", e.target.value)}
+                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
+                            rows={2}
+                          />
+                        ) : isMaintenanceEditing ? (
+                          <textarea
+                            value={maintenanceEditFormData.task_description || ""}
+                            onChange={(e) => handleMaintenanceFieldChange("task_description", e.target.value)}
                             className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
                             rows={2}
                           />
@@ -963,49 +1085,49 @@ export default function MainQuickTask() {
                         {isDelegationEditing ? (
                           <input
                             type="date"
-                            value={
-                              delegationEditFormData.task_start_date
-                                ? new Date(
-                                  delegationEditFormData.task_start_date,
-                                )
-                                  .toISOString()
-                                  .split("T")[0]
-                                : ""
-                            }
-                            onChange={(e) =>
-                              handleDelegationFieldChange(
-                                "task_start_date",
-                                e.target.value,
-                              )
-                            }
+                            value={delegationEditFormData.task_start_date
+                              ? new Date(delegationEditFormData.task_start_date).toISOString().split("T")[0]
+                              : ""}
+                            onChange={(e) => handleDelegationFieldChange("task_start_date", e.target.value)}
+                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
+                          />
+                        ) : isMaintenanceEditing ? (
+                          <input
+                            type="date"
+                            value={maintenanceEditFormData.task_start_date
+                              ? new Date(maintenanceEditFormData.task_start_date).toISOString().split("T")[0]
+                              : ""}
+                            onChange={(e) => handleMaintenanceFieldChange("task_start_date", e.target.value)}
                             className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
                           />
                         ) : (
                           formatDate(task.task_start_date)
                         )}
                       </td>
-                      {/* END DATE (planned_date for delegation, submission_date for checklist) */}
+                      {/* END DATE (planned_date for delegation, task_end_date for maintenance, submission_date for checklist) */}
                       <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap bg-yellow-50 dark:bg-yellow-900/10">
                         {isDelegationEditing ? (
                           <input
                             type="date"
-                            value={
-                              delegationEditFormData.planned_date
-                                ? new Date(delegationEditFormData.planned_date)
-                                  .toISOString()
-                                  .split("T")[0]
-                                : ""
-                            }
-                            onChange={(e) =>
-                              handleDelegationFieldChange(
-                                "planned_date",
-                                e.target.value,
-                              )
-                            }
+                            value={delegationEditFormData.planned_date
+                              ? new Date(delegationEditFormData.planned_date).toISOString().split("T")[0]
+                              : ""}
+                            onChange={(e) => handleDelegationFieldChange("planned_date", e.target.value)}
                             className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
                           />
+                        ) : isMaintenanceEditing ? (
+                          <input
+                            type="date"
+                            value={maintenanceEditFormData.task_end_date
+                              ? new Date(maintenanceEditFormData.task_end_date).toISOString().split("T")[0]
+                              : ""}
+                            onChange={(e) => handleMaintenanceFieldChange("task_end_date", e.target.value)}
+                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
+                          />
+                        ) : activeTab === "maintenance" ? (
+                          formatDate((task as MaintenanceTask).task_end_date)
                         ) : (
-                          formatDate(task.submission_date)
+                          formatDate((task as ChecklistTask | DelegationTask).submission_date)
                         )}
                       </td>
                       {/* FREQUENCY */}
@@ -1013,12 +1135,18 @@ export default function MainQuickTask() {
                         {isDelegationEditing ? (
                           <select
                             value={delegationEditFormData.frequency || ""}
-                            onChange={(e) =>
-                              handleDelegationFieldChange(
-                                "frequency",
-                                e.target.value,
-                              )
-                            }
+                            onChange={(e) => handleDelegationFieldChange("frequency", e.target.value)}
+                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
+                          >
+                            <option value="daily">daily</option>
+                            <option value="weekly">weekly</option>
+                            <option value="monthly">monthly</option>
+                            <option value="one-time">one-time</option>
+                          </select>
+                        ) : isMaintenanceEditing ? (
+                          <select
+                            value={maintenanceEditFormData.frequency || ""}
+                            onChange={(e) => handleMaintenanceFieldChange("frequency", e.target.value)}
                             className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
                           >
                             <option value="daily">daily</option>
@@ -1027,9 +1155,7 @@ export default function MainQuickTask() {
                             <option value="one-time">one-time</option>
                           </select>
                         ) : (
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-xs font-medium ${getFrequencyBadge(task.frequency || "")}`}
-                          >
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getFrequencyBadge(task.frequency || "")}`}>
                             {task.frequency || "—"}
                           </span>
                         )}
@@ -1038,15 +1164,17 @@ export default function MainQuickTask() {
                       <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
                         {isDelegationEditing ? (
                           <select
-                            value={
-                              delegationEditFormData.enable_reminder || "no"
-                            }
-                            onChange={(e) =>
-                              handleDelegationFieldChange(
-                                "enable_reminder",
-                                e.target.value,
-                              )
-                            }
+                            value={delegationEditFormData.enable_reminder || "no"}
+                            onChange={(e) => handleDelegationFieldChange("enable_reminder", e.target.value)}
+                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
+                          >
+                            <option value="yes">yes</option>
+                            <option value="no">no</option>
+                          </select>
+                        ) : isMaintenanceEditing ? (
+                          <select
+                            value={maintenanceEditFormData.enable_reminder || "no"}
+                            onChange={(e) => handleMaintenanceFieldChange("enable_reminder", e.target.value)}
                             className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
                           >
                             <option value="yes">yes</option>
@@ -1061,12 +1189,7 @@ export default function MainQuickTask() {
                         {isChecklistEditing ? (
                           <select
                             value={editFormData.require_attachment || "no"}
-                            onChange={(e) =>
-                              handleInputChange(
-                                "require_attachment",
-                                e.target.value,
-                              )
-                            }
+                            onChange={(e) => handleInputChange("require_attachment", e.target.value)}
                             className="w-full px-2 py-1 text-xs border rounded bg-white dark:bg-neutral-700 text-gray-900 dark:text-white border-gray-200 dark:border-neutral-600 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                           >
                             <option value="no">No</option>
@@ -1074,15 +1197,17 @@ export default function MainQuickTask() {
                           </select>
                         ) : isDelegationEditing ? (
                           <select
-                            value={
-                              delegationEditFormData.require_attachment || "no"
-                            }
-                            onChange={(e) =>
-                              handleDelegationFieldChange(
-                                "require_attachment",
-                                e.target.value,
-                              )
-                            }
+                            value={delegationEditFormData.require_attachment || "no"}
+                            onChange={(e) => handleDelegationFieldChange("require_attachment", e.target.value)}
+                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
+                          >
+                            <option value="yes">yes</option>
+                            <option value="no">no</option>
+                          </select>
+                        ) : isMaintenanceEditing ? (
+                          <select
+                            value={maintenanceEditFormData.require_attachment || "no"}
+                            onChange={(e) => handleMaintenanceFieldChange("require_attachment", e.target.value)}
                             className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
                           >
                             <option value="yes">yes</option>
@@ -1092,7 +1217,7 @@ export default function MainQuickTask() {
                           task.require_attachment || "—"
                         )}
                       </td>
-                      {/* ADD IMAGE (Only for Checklist) */}
+                      {/* ADD IMAGE (Checklist) */}
                       {activeTab === "checklist" && (
                         <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
                           {isChecklistEditing ? (
@@ -1101,9 +1226,7 @@ export default function MainQuickTask() {
                                 type="text"
                                 placeholder="Paste Image URL"
                                 value={editFormData.image || ""}
-                                onChange={(e) =>
-                                  handleInputChange("image", e.target.value)
-                                }
+                                onChange={(e) => handleInputChange("image", e.target.value)}
                                 className="w-full px-2 py-1 text-xs border rounded bg-white dark:bg-neutral-700 text-gray-900 dark:text-white border-gray-200 dark:border-neutral-600 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                               />
                               <div className="relative">
@@ -1131,64 +1254,67 @@ export default function MainQuickTask() {
                                 )}
                               </div>
                               {editFormData.image && (
-                                <a
-                                  href={editFormData.image}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="flex items-center gap-2 mt-1"
-                                >
-                                  <img
-                                    src={editFormData.image}
-                                    alt="Preview"
-                                    className="w-8 h-8 object-cover rounded border border-gray-200 dark:border-neutral-600"
-                                  />
+                                <a href={editFormData.image} target="_blank" rel="noreferrer" className="flex items-center gap-2 mt-1">
+                                  <img src={editFormData.image} alt="Preview" className="w-8 h-8 object-cover rounded border border-gray-200 dark:border-neutral-600" />
                                   <span className="text-xs text-blue-500 hover:underline">Current</span>
                                 </a>
                               )}
                             </div>
-                          ) : (
-                            (task.sample_image || task.image) ? (
-                              <a
-                                href={task.sample_image || task.image || undefined}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="block w-10 h-10 overflow-hidden rounded border border-gray-200 dark:border-neutral-700 hover:opacity-80 transition-opacity"
-                              >
-                                <img
-                                  src={task.sample_image || task.image || undefined}
-                                  alt="Preview"
-                                  className="w-full h-full object-cover"
-                                />
-                              </a>
-                            ) : (
-                              "—"
-                            )
-                          )}
+                          ) : (() => {
+                              const ct = task as ChecklistTask;
+                              return (ct.sample_image || ct.image) ? (
+                                <a href={ct.sample_image || ct.image || undefined} target="_blank" rel="noreferrer" className="block w-10 h-10 overflow-hidden rounded border border-gray-200 dark:border-neutral-700 hover:opacity-80 transition-opacity">
+                                  <img src={ct.sample_image || ct.image || undefined} alt="Preview" className="w-full h-full object-cover" />
+                                </a>
+                              ) : "—";
+                            })()}
+                        </td>
+                      )}
+                      {/* IMAGE (Maintenance) */}
+                      {activeTab === "maintenance" && (
+                        <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
+                          {isMaintenanceEditing ? (
+                            <input
+                              type="text"
+                              placeholder="Paste Image URL"
+                              value={maintenanceEditFormData.image || ""}
+                              onChange={(e) => handleMaintenanceFieldChange("image", e.target.value)}
+                              className="w-full px-2 py-1 text-xs border rounded bg-white dark:bg-neutral-700 text-gray-900 dark:text-white border-gray-200 dark:border-neutral-600 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                            />
+                          ) : (task as MaintenanceTask).image ? (
+                            <a href={(task as MaintenanceTask).image!} target="_blank" rel="noreferrer" className="block w-10 h-10 overflow-hidden rounded border border-gray-200 dark:border-neutral-700 hover:opacity-80 transition-opacity">
+                              <img src={(task as MaintenanceTask).image!} alt="Preview" className="w-full h-full object-cover" />
+                            </a>
+                          ) : "—"}
                         </td>
                       )}
                       {/* ACTIONS */}
                       <td className="px-3 py-3">
                         <div className="flex gap-1">
-                          {isChecklistEditing || isDelegationEditing ? (
+                          {isChecklistEditing || isDelegationEditing || isMaintenanceEditing ? (
                             <>
                               <button
                                 onClick={
                                   activeTab === "checklist"
                                     ? handleSaveEdit
-                                    : handleDelegationSaveEdit
+                                    : activeTab === "delegation"
+                                      ? handleDelegationSaveEdit
+                                      : handleMaintenanceSaveEdit
                                 }
                                 disabled={
                                   activeTab === "checklist"
                                     ? updateChecklistMutation.isPending
-                                    : updateDelegationMutation.isPending
+                                    : activeTab === "delegation"
+                                      ? updateDelegationMutation.isPending
+                                      : updateMaintenanceMutation.isPending
                                 }
                                 className="p-1 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
                               >
-                                {(
-                                  activeTab === "checklist"
-                                    ? updateChecklistMutation.isPending
-                                    : updateDelegationMutation.isPending
-                                ) ? (
+                                {(activeTab === "checklist"
+                                  ? updateChecklistMutation.isPending
+                                  : activeTab === "delegation"
+                                    ? updateDelegationMutation.isPending
+                                    : updateMaintenanceMutation.isPending) ? (
                                   <Loader2 className="w-3 h-3 animate-spin" />
                                 ) : (
                                   <Save className="w-3 h-3" />
@@ -1198,7 +1324,9 @@ export default function MainQuickTask() {
                                 onClick={
                                   activeTab === "checklist"
                                     ? handleCancelEdit
-                                    : handleDelegationCancelEdit
+                                    : activeTab === "delegation"
+                                      ? handleDelegationCancelEdit
+                                      : handleMaintenanceCancelEdit
                                 }
                                 className="p-1 rounded bg-gray-200 dark:bg-neutral-700 hover:bg-gray-300"
                               >
@@ -1211,9 +1339,9 @@ export default function MainQuickTask() {
                                 onClick={() =>
                                   activeTab === "checklist"
                                     ? handleEditClick(task as ChecklistTask)
-                                    : handleDelegationEditClick(
-                                      task as DelegationTask,
-                                    )
+                                    : activeTab === "delegation"
+                                      ? handleDelegationEditClick(task as DelegationTask)
+                                      : handleMaintenanceEditClick(task as MaintenanceTask)
                                 }
                                 className="p-1 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 hover:bg-blue-200"
                               >
@@ -1225,7 +1353,9 @@ export default function MainQuickTask() {
                                   disabled={
                                     activeTab === "checklist"
                                       ? deleteChecklistMutation.isPending
-                                      : deleteDelegationMutation.isPending
+                                      : activeTab === "delegation"
+                                        ? deleteDelegationMutation.isPending
+                                        : deleteMaintenanceMutation.isPending
                                   }
                                   className="p-1 rounded bg-red-100 dark:bg-red-900/30 text-red-600 hover:bg-red-200 disabled:opacity-50"
                                 >
@@ -1283,7 +1413,9 @@ export default function MainQuickTask() {
               {isBulkDeleteConfirm
                 ? `Are you sure you want to delete ${activeTab === "checklist"
                   ? selectedTasks.length
-                  : selectedDelegationTasks.length
+                  : activeTab === "delegation"
+                    ? selectedDelegationTasks.length
+                    : selectedMaintenanceTasks.length
                 } selected tasks? This action cannot be undone.`
                 : `Are you sure you want to delete this task? This action cannot be undone.`}
             </p>
@@ -1298,21 +1430,23 @@ export default function MainQuickTask() {
                 Cancel
               </button>
               <button
-                onClick={
-                  isBulkDeleteConfirm ? executeBulkDelete : executeDeleteTask
-                }
+                onClick={isBulkDeleteConfirm ? executeBulkDelete : executeDeleteTask}
                 disabled={
                   activeTab === "checklist"
                     ? deleteChecklistMutation.isPending
-                    : deleteDelegationMutation.isPending
+                    : activeTab === "delegation"
+                      ? deleteDelegationMutation.isPending
+                      : deleteMaintenanceMutation.isPending
                 }
                 className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 rounded-lg"
               >
                 {(activeTab === "checklist"
                   ? deleteChecklistMutation.isPending
-                  : deleteDelegationMutation.isPending) && (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  )}
+                  : activeTab === "delegation"
+                    ? deleteDelegationMutation.isPending
+                    : deleteMaintenanceMutation.isPending) && (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                )}
                 Delete
               </button>
             </div>

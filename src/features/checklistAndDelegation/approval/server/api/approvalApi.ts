@@ -236,71 +236,60 @@ export async function markMultipleAsDone(
   }
 }
 
-// Fetch all checklist tasks for unique tasks view
+// Fetch unique checklist templates for unique tasks view.
+// Reads from unique_checklist (~1100 rows) instead of paginating through the
+// full checklist table (56 000+ rows), which was causing the page to never load.
 export async function fetchAllChecklistData(
   username: string | null = null,
   role: string | null = null,
 ): Promise<{ data: ApprovalTask[]; members: string[] }> {
-  let allData: any[] = [];
-  let page = 0;
-  const pageSize = 1000;
-  let hasMore = true;
+  let query = supabase
+    .from("unique_checklist")
+    .select(
+      "task_id, name, department, task_description, task_start_date, task_end_date, frequency, require_attachment, given_by, created_at",
+    )
+    .order("created_at", { ascending: false });
 
-  while (hasMore) {
-    const from = page * pageSize;
-    const to = from + pageSize - 1;
+  if (role === "user" && username) {
+    query = applyNameFilter(query, username);
+  }
 
-    let query = supabase.from("checklist").select("*").range(from, to);
+  const { data, error } = await query;
 
-    if (role === "user" && username) {
-      query = applyNameFilter(query, username);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      throw new Error(`Failed to fetch checklist data: ${error.message}`);
-    }
-
-    if (data && data.length > 0) {
-      allData = [...allData, ...data];
-    }
-
-    if (!data || data.length < pageSize) {
-      hasMore = false;
-    }
-
-    page++;
+  if (error) {
+    throw new Error(`Failed to fetch unique checklist data: ${error.message}`);
   }
 
   const membersSet = new Set<string>();
 
-  const processedData: ApprovalTask[] = allData.map((row: any, index: number) => {
-    const assignedTo = row.name || "Unassigned";
-    membersSet.add(assignedTo);
+  const processedData: ApprovalTask[] = (data || []).map(
+    (row: any, index: number) => {
+      const assignedTo = row.name || "Unassigned";
+      membersSet.add(assignedTo);
 
-    return {
-      _id: `checklist_all_${row.task_id}_${index}`,
-      _rowIndex: index + 1,
-      _taskId: String(row.task_id),
-      _sheetType: "checklist" as const,
-      task_id: row.task_id,
-      task_description: row.task_description,
-      name: row.name,
-      given_by: row.given_by,
-      department: row.department,
-      task_start_date: formatDateTime(row.task_start_date),
-      planned_date: formatDateTime(row.planned_date),
-      frequency: row.frequency,
-      enable_reminders: row.enable_reminders,
-      require_attachment: row.require_attachment,
-      submission_date: formatDateTime(row.submission_date),
-      status: row.status,
-      remark: row.remark,
-      image: row.image,
-      admin_done: row.admin_done,
-    };
-  });
+      return {
+        _id: `unique_checklist_${row.task_id}_${index}`,
+        _rowIndex: index + 1,
+        _taskId: String(row.task_id),
+        _sheetType: "checklist" as const,
+        task_id: row.task_id,
+        task_description: row.task_description,
+        name: row.name,
+        given_by: row.given_by,
+        department: row.department,
+        task_start_date: formatDateTime(row.task_start_date),
+        planned_date: formatDateTime(row.task_end_date),   // task_end_date → planned date column
+        frequency: row.frequency,
+        enable_reminders: null,
+        require_attachment: row.require_attachment,
+        submission_date: formatDateTime(row.task_start_date), // used for date-range filter
+        status: null,
+        remark: null,
+        image: null,
+        admin_done: null,
+      };
+    },
+  );
 
   return { data: processedData, members: Array.from(membersSet).sort() };
 }

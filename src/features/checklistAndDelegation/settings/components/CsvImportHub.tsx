@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Wrench, Cog, ClipboardList, FileCheck, ArrowLeft } from "lucide-react";
+import { Wrench, Cog, ClipboardList, FileCheck, ArrowLeft, Hammer } from "lucide-react";
 import CsvImportMaintenance from "./CsvImportMaintenance";
 import CsvImportMotors from "./CsvImportMotors";
+import CsvImportChecklist from "./CsvImportChecklist";
+import CsvImportDelegation from "./CsvImportDelegation";
+import CsvImportRepair from "./CsvImportRepair";
 
 // ────────────────────────────────────────────
 // Import categories config — add new ones here
@@ -50,7 +53,7 @@ const IMPORT_CATEGORIES: ImportCategory[] = [
   {
     id: "delegation",
     label: "Delegation Tasks",
-    description: "Coming soon — Import delegation tasks from CSV",
+    description: "Import delegation tasks from CSV with full status preservation (pending / done / extend)",
     icon: <ClipboardList size={28} />,
     color: "bg-amber-50 dark:bg-amber-900/20",
     hoverColor:
@@ -58,12 +61,12 @@ const IMPORT_CATEGORIES: ImportCategory[] = [
     borderColor: "border-amber-200 dark:border-amber-800",
     iconBg:
       "bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400",
-    component: null, // not yet implemented
+    component: <CsvImportDelegation />,
   },
   {
     id: "checklist",
     label: "Checklist Tasks",
-    description: "Coming soon — Import checklist tasks from CSV",
+    description: "Import unique checklist tasks from Google Sheets CSV and generate recurring tasks",
     icon: <FileCheck size={28} />,
     color: "bg-emerald-50 dark:bg-emerald-900/20",
     hoverColor:
@@ -71,7 +74,20 @@ const IMPORT_CATEGORIES: ImportCategory[] = [
     borderColor: "border-emerald-200 dark:border-emerald-800",
     iconBg:
       "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400",
-    component: null, // not yet implemented
+    component: <CsvImportChecklist />,
+  },
+  {
+    id: "repair",
+    label: "Repair Tasks",
+    description: "Import machine repair log from CSV with vendor, bill, warranty, and status fields",
+    icon: <Hammer size={28} />,
+    color: "bg-rose-50 dark:bg-rose-900/20",
+    hoverColor:
+      "hover:bg-rose-100 dark:hover:bg-rose-900/30 hover:border-rose-400",
+    borderColor: "border-rose-200 dark:border-rose-800",
+    iconBg:
+      "bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400",
+    component: <CsvImportRepair />,
   },
 ];
 
@@ -99,7 +115,7 @@ export default function CsvImportHub() {
           </div>
 
           {/* Category Cards Grid */}
-          <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
             {IMPORT_CATEGORIES.map((category) => {
               const isAvailable = category.component !== null;
 

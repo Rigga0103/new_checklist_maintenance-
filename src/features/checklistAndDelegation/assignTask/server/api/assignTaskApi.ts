@@ -179,7 +179,36 @@ export const fetchWorkingDaysApi = async (
   }
 };
 
-// Push generated tasks directly to Supabase (matching legacy behavior)
+// Resolve user names → user IDs in bulk (returns a Map<lowerName, id>)
+async function resolveUserIds(names: string[]): Promise<Map<string, number>> {
+  const unique = [...new Set(names.map((n) => n.trim()).filter(Boolean))];
+  if (unique.length === 0) return new Map();
+  const { data } = await supabase
+    .from("users")
+    .select("id, user_name")
+    .in("user_name", unique);
+  const map = new Map<string, number>();
+  (data || []).forEach((u) => {
+    if (u.user_name) map.set(u.user_name.trim().toLowerCase(), u.id);
+  });
+  return map;
+}
+
+// Resolve machine names → machine IDs in bulk
+async function resolveMachineIds(names: string[]): Promise<Map<string, number>> {
+  const unique = [...new Set(names.map((n) => n.trim()).filter(Boolean))];
+  if (unique.length === 0) return new Map();
+  const { data } = await supabase
+    .from("machines")
+    .select("id, machine_name")
+    .in("machine_name", unique);
+  const map = new Map<string, number>();
+  (data || []).forEach((m) => {
+    if (m.machine_name) map.set(m.machine_name.trim().toLowerCase(), m.id);
+  });
+  return map;
+}
+
 // Push generated tasks directly to Supabase
 export const pushAssignTaskApi = async (
   generatedTasks: GeneratedTask[],
@@ -202,28 +231,22 @@ export const pushAssignTaskApi = async (
           : "checklist";
     }
 
-    // 1. Fetch the current MAX task_id from the table to increment manually
-    const { data: maxIdData, error: maxIdError } = await supabase
-      .from(submitTable)
-      .select("task_id")
-      .order("task_id", { ascending: false })
-      .limit(1);
+    // 1. Resolve FK IDs for assignees, creators, and machines
+    const assigneeNames = generatedTasks.map((t) => t.assignTo);
+    const givenByNames  = generatedTasks.map((t) => t.givenBy).filter(Boolean) as string[];
+    const [userIdMap, machineIdMap] = await Promise.all([
+      resolveUserIds([...assigneeNames, ...givenByNames]),
+      section === "maintenance"
+        ? resolveMachineIds(generatedTasks.map((t) => t.department))
+        : Promise.resolve(new Map<string, number>()),
+    ]);
 
-    if (maxIdError) {
-      console.error("Error fetching max task_id:", maxIdError);
-      return { success: false, message: "Failed to generate Task IDs" };
-    }
-
-    const currentMaxId =
-      maxIdData && maxIdData.length > 0 ? Number(maxIdData[0].task_id) : 0;
-
-    // 2. Map tasks to database schema with sequential IDs
+    // 2. Map tasks to database schema — omit task_id so the identity sequence assigns it
     let tasksData: any[] = [];
 
     if (section === "maintenance") {
-      tasksData = generatedTasks.map((task, index) => ({
-        task_id: currentMaxId + index + 1,
-        machine_name: task.department, // For maintenance, department field holds machine name
+      tasksData = generatedTasks.map((task) => ({
+        machine_name: task.department,
         doer_name: task.assignTo,
         task_description: task.description,
         task_start_date: task.dueDate,
@@ -231,11 +254,13 @@ export const pushAssignTaskApi = async (
         created_at: new Date().toISOString(),
         enable_reminder: task.enableReminders ? "yes" : "no",
         require_attachment: task.requireAttachment ? "yes" : "no",
+        assignee_user_id:   userIdMap.get(task.assignTo.trim().toLowerCase()) ?? null,
+        created_by_user_id: task.givenBy ? (userIdMap.get(task.givenBy.trim().toLowerCase()) ?? null) : null,
+        machine_id:         machineIdMap.get(task.department.trim().toLowerCase()) ?? null,
       }));
     } else {
-      tasksData = generatedTasks.map((task, index) => {
+      tasksData = generatedTasks.map((task) => {
         const baseTask: any = {
-          task_id: currentMaxId + index + 1,
           department: task.department,
           given_by: task.givenBy,
           name: task.assignTo,
@@ -245,6 +270,8 @@ export const pushAssignTaskApi = async (
           enable_reminder: task.enableReminders ? "yes" : "no",
           require_attachment: task.requireAttachment ? "yes" : "no",
           created_at: new Date().toISOString(),
+          assignee_user_id:   userIdMap.get(task.assignTo.trim().toLowerCase()) ?? null,
+          created_by_user_id: task.givenBy ? (userIdMap.get(task.givenBy.trim().toLowerCase()) ?? null) : null,
         };
 
         if (submitTable === "checklist") {
@@ -254,18 +281,16 @@ export const pushAssignTaskApi = async (
         return baseTask;
       });
 
-      // If delegation (one-time), it supports status text
       if (submitTable === "delegation") {
         tasksData = tasksData.map((t, index) => ({
           ...t,
           status: "pending",
-          // Store the end date (deadline) as planned_date if provided
           planned_date: generatedTasks[index]?.endDate || null,
         }));
       }
     }
 
-    // 3. Insert into database
+    // 3. Insert — DB identity column assigns task_id
     const { data, error } = await supabase
       .from(submitTable)
       .insert(tasksData)
@@ -273,21 +298,24 @@ export const pushAssignTaskApi = async (
 
     if (error) {
       console.error("Error inserting tasks:", error);
+      if (error.code === "23505") {
+        return {
+          success: false,
+          message: "One or more tasks already exist (duplicate). Please check for duplicate entries.",
+        };
+      }
       return { success: false, message: error.message };
     }
 
-    console.log(
-      `Successfully inserted ${tasksData.length} tasks into ${submitTable}`,
-      data,
-    );
+    console.log(`Successfully inserted ${tasksData.length} tasks into ${submitTable}`, data);
 
-    // Call logChecklistApi to track action
+    // 4. Log action using the DB-assigned task_ids from the insert response
     if (data && data.length > 0) {
       if (section === "maintenance") {
         const logParamsArray = generatedTasks.map((task, index) => ({
-          maintenanceId: (currentMaxId + index + 1).toString(),
+          maintenanceId: String(data[index]?.task_id ?? ""),
           action: "created",
-          machine: task.department, // For maintenance, department field holds machine name
+          machine: task.department,
           givenBy: task.givenBy || "-",
           doer: task.assignTo,
           frequency: task.frequency,
@@ -297,7 +325,7 @@ export const pushAssignTaskApi = async (
         await logMaintenanceAction(logParamsArray);
       } else {
         const logParamsArray = generatedTasks.map((task, index) => ({
-          checklistId: (currentMaxId + index + 1).toString(),
+          checklistId: String(data[index]?.task_id ?? ""),
           action: "created",
           department: task.department,
           givenBy: task.givenBy || "-",
@@ -350,5 +378,100 @@ export const fetchUniqueTaskDescriptionsApi = async (
   } catch (error) {
     console.error("Error fetching unique task descriptions:", error);
     return [];
+  }
+};
+
+// Upsert a task template into unique_maintanence if the description+machine doesn't exist yet.
+// Called before inserting machine_maintenance tasks so new descriptions are always tracked.
+export const upsertUniqueMaintenanceTaskApi = async (params: {
+  description: string;
+  machineName: string;
+  givenBy: string;
+  doerName: string;
+  frequency: string;
+  enableReminders: boolean;
+  requireAttachment: boolean;
+  startDate: string;
+  sampleImage?: string;
+}): Promise<void> => {
+  try {
+    const descTrimmed = params.description.trim();
+    if (!descTrimmed) return;
+
+    const { data: existing } = await supabase
+      .from("unique_maintanence")
+      .select("task_id")
+      .ilike("task_description", descTrimmed)
+      .ilike("name", params.doerName.trim())
+      .limit(1);
+
+    if (existing && existing.length > 0) return;
+
+    const { error } = await supabase.from("unique_maintanence").insert({
+      machine_name:       params.machineName,
+      given_by:           params.givenBy,
+      name:               params.doerName,
+      task_description:   descTrimmed,
+      frequency:          params.frequency,
+      enable_reminder:    params.enableReminders ? "yes" : "no",
+      require_attachment: params.requireAttachment ? "yes" : "no",
+      task_start_date:    params.startDate || null,
+      image:              params.sampleImage || null,
+      created_at:         new Date().toISOString(),
+    });
+
+    if (error) console.error("Error inserting into unique_maintanence:", error);
+  } catch (error) {
+    console.error("Error in upsertUniqueMaintenanceTaskApi:", error);
+  }
+};
+
+// Upsert a task template into unique_checklist if the description doesn't exist yet.
+// Called before inserting checklist tasks so new descriptions are always tracked.
+export const upsertUniqueChecklistTaskApi = async (params: {
+  description: string;
+  name: string;
+  department: string;
+  givenBy: string;
+  frequency: string;
+  enableReminders: boolean;
+  requireAttachment: boolean;
+  startDate: string;
+  endDate?: string;
+  sampleImage?: string;
+}): Promise<void> => {
+  try {
+    const descTrimmed = params.description.trim();
+    if (!descTrimmed) return;
+
+    // Check if this description already exists
+    const { data: existing } = await supabase
+      .from("unique_checklist")
+      .select("task_id")
+      .ilike("task_description", descTrimmed)
+      .limit(1);
+
+    if (existing && existing.length > 0) return; // already in templates
+
+    // Insert new template row
+    const { error } = await supabase.from("unique_checklist").insert({
+      name: params.name,
+      department: params.department,
+      given_by: params.givenBy,
+      task_description: descTrimmed,
+      frequency: params.frequency,
+      enable_reminder: params.enableReminders ? "yes" : "no",
+      require_attachment: params.requireAttachment ? "yes" : "no",
+      task_start_date: params.startDate || null,
+      task_end_date: params.endDate || null,
+      image: params.sampleImage || null,
+      created_at: new Date().toISOString(),
+    });
+
+    if (error) {
+      console.error("Error inserting into unique_checklist:", error);
+    }
+  } catch (error) {
+    console.error("Error in upsertUniqueChecklistTaskApi:", error);
   }
 };

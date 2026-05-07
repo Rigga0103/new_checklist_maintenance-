@@ -9,15 +9,21 @@ import {
 import {
   fetchChecklistData,
   fetchDelegationData,
+  fetchMaintenanceData,
   fetchUsersData,
   deleteChecklistTasksApi,
   deleteDelegationTasksApi,
+  deleteMaintenanceTasksApi,
   updateChecklistTaskApi,
   updateDelegationTaskApi,
+  updateMaintenanceTaskApi,
 } from "../api/quickTaskApi";
 import type {
   ChecklistTask,
   DelegationTask,
+  MaintenanceTask,
+  MaintenanceUpdatePayload,
+  MaintenanceOriginalMatch,
   ChecklistUpdatePayload,
   ChecklistOriginalMatch,
   DelegationUpdatePayload,
@@ -32,6 +38,8 @@ export const quickTaskKeys = {
     [...quickTaskKeys.all, "checklist", nameFilter] as const,
   delegation: (nameFilter?: string) =>
     [...quickTaskKeys.all, "delegation", nameFilter] as const,
+  maintenance: (nameFilter?: string) =>
+    [...quickTaskKeys.all, "maintenance", nameFilter] as const,
   users: () => [...quickTaskKeys.all, "users"] as const,
 };
 
@@ -198,6 +206,46 @@ export function useUpdateDelegationTask() {
     }) => updateDelegationTaskApi(updatedTask, originalTask),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: quickTaskKeys.delegation() });
+    },
+  });
+}
+
+// ============ Maintenance Queries ============
+
+export function useMaintenanceTasksQuery(
+  page = 0,
+  pageSize = 50,
+  nameFilter = "",
+) {
+  return useQuery({
+    queryKey: [...quickTaskKeys.maintenance(nameFilter), "paginated", page],
+    queryFn: () => fetchMaintenanceData(page, pageSize, nameFilter),
+    placeholderData: (previousData) => previousData,
+  });
+}
+
+export function useDeleteMaintenanceTasks() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (tasks: MaintenanceTask[]) => deleteMaintenanceTasksApi(tasks),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: quickTaskKeys.maintenance() });
+    },
+  });
+}
+
+export function useUpdateMaintenanceTask() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      updatedTask,
+      originalTask,
+    }: {
+      updatedTask: MaintenanceUpdatePayload;
+      originalTask: MaintenanceOriginalMatch;
+    }) => updateMaintenanceTaskApi(updatedTask, originalTask),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: quickTaskKeys.maintenance() });
     },
   });
 }

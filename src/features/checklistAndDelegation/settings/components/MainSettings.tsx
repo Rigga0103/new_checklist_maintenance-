@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import {
   Plus,
   User,
@@ -48,11 +48,12 @@ import supabase from "@/utils/supabaseClient";
 import PermissionsModal from "./PermissionsModal";
 import CsvImportHub from "./CsvImportHub";
 import HolidayAndWorkingDays from "./HolidayAndWorkingDays";
+import WorkingDayCalendarSetup from "./WorkingDayCalendarSetup";
 
 const SETTINGS_ITEMS_PER_PAGE = 20;
 
 // Tab types
-type TabType = "users" | "departments" | "leave" | "import" | "holiday" | "migrate";
+type TabType = "users" | "departments" | "leave" | "import" | "holiday" | "migrate" | "calendar";
 type DeptSubTab = "departments" | "givenBy";
 
 // Initial form states
@@ -90,6 +91,7 @@ export default function MainSettings() {
     useState<DeptSubTab>("departments");
 
   // Migrate Tasks state
+  const [migrateTaskType, setMigrateTaskType] = useState<"checklist" | "maintenance">("checklist");
   const [migrateFrom, setMigrateFrom] = useState("");
   const [migrateTo, setMigrateTo] = useState("");
   const [migrateCutoffDate, setMigrateCutoffDate] = useState("");
@@ -97,6 +99,11 @@ export default function MainSettings() {
   const [migratePreviewCount, setMigratePreviewCount] = useState<number | null>(null);
   const [migrateAffectedCount, setMigrateAffectedCount] = useState<number | null>(null);
   const [migrateError, setMigrateError] = useState<string | null>(null);
+  const [migratePreviewTasks, setMigratePreviewTasks] = useState<any[]>([]);
+  const [showFromDropdown, setShowFromDropdown] = useState(false);
+  const [showToDropdown, setShowToDropdown] = useState(false);
+  const [migrationHistory, setMigrationHistory] = useState<any[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   // Permission Modal state
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
@@ -204,80 +211,136 @@ export default function MainSettings() {
   }, []);
 
   // Migration handlers
+  const loadMigrationHistory = useCallback(async () => {
+    setIsLoadingHistory(true);
+    try {
+      const { data } = await supabase
+        .from("task_migration_log")
+        .select("*")
+        .order("migrated_at", { ascending: false })
+        .limit(30);
+      setMigrationHistory(data ?? []);
+    } catch {
+      // silently fail — table may not exist in all envs
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "migrate") loadMigrationHistory();
+  }, [activeTab, loadMigrationHistory]);
+
   const handleMigratePreview = useCallback(async () => {
     if (!migrateFrom.trim() || !migrateTo.trim() || !migrateCutoffDate) {
       toast.error("Please fill in all migration fields before previewing.");
       return;
     }
+    if (migrateFrom.trim() === migrateTo.trim()) {
+      toast.error("From and To users cannot be the same.");
+      return;
+    }
     setMigrateStatus("previewing");
     setMigrateError(null);
     setMigratePreviewCount(null);
+    setMigratePreviewTasks([]);
     try {
       const cutoffTimestamp = `${migrateCutoffDate}T00:00:00`;
-      const { count, error } = await supabase
-        .from("checklist")
-        .select("*", { count: "exact", head: true })
-        .eq("name", migrateFrom.trim())
-        .gt("task_start_date", cutoffTimestamp);
+      const table = migrateTaskType === "checklist" ? "checklist" : "machine_maintenance";
+      const nameField = migrateTaskType === "checklist" ? "name" : "doer_name";
+      const descCols = migrateTaskType === "checklist"
+        ? "task_id,task_description,department,task_start_date,frequency"
+        : "task_id,task_description,machine_name,task_start_date,frequency";
+
+      const [{ count, error }, { data: sampleTasks }] = await Promise.all([
+        supabase.from(table).select("*", { count: "exact", head: true })
+          .eq(nameField, migrateFrom.trim()).gt("task_start_date", cutoffTimestamp),
+        supabase.from(table).select(descCols)
+          .eq(nameField, migrateFrom.trim()).gt("task_start_date", cutoffTimestamp)
+          .order("task_start_date", { ascending: true }).limit(10),
+      ]);
 
       if (error) throw error;
       setMigratePreviewCount(count ?? 0);
+      setMigratePreviewTasks(sampleTasks ?? []);
       setMigrateStatus("previewed");
     } catch (err: any) {
       setMigrateError(err?.message || "Failed to fetch preview count.");
       setMigrateStatus("error");
     }
-  }, [migrateFrom, migrateTo, migrateCutoffDate]);
+  }, [migrateFrom, migrateTo, migrateCutoffDate, migrateTaskType]);
 
   const handleMigrateExecute = useCallback(async () => {
-    if (migratePreviewCount === 0) {
+    if (!migratePreviewCount || migratePreviewCount === 0) {
       toast.info("No tasks to migrate.");
       return;
     }
-    if (
-      !confirm(
-        `This will reassign ${migratePreviewCount} checklist task(s) from "${migrateFrom}" to "${migrateTo}". This action cannot be undone. Proceed?`
-      )
-    )
-      return;
+    const label = migrateTaskType === "checklist" ? "checklist" : "machine maintenance";
+    if (!confirm(
+      `This will reassign ${migratePreviewCount} ${label} task(s) from "${migrateFrom}" to "${migrateTo}" for all dates after ${migrateCutoffDate}.\n\nTasks before this date will stay as-is so you can track who did them.\n\nThis action cannot be undone. Proceed?`
+    )) return;
 
     setMigrateStatus("migrating");
     setMigrateError(null);
     try {
       const cutoffTimestamp = `${migrateCutoffDate}T00:00:00`;
-      const { error } = await supabase
-        .from("checklist")
-        .update({ name: migrateTo.trim() })
-        .eq("name", migrateFrom.trim())
+      const now = new Date().toISOString();
+      const table = migrateTaskType === "checklist" ? "checklist" : "machine_maintenance";
+      const nameField = migrateTaskType === "checklist" ? "name" : "doer_name";
+
+      const [{ data: toUserData }, { data: fromUserData }] = await Promise.all([
+        supabase.from("users").select("id").eq("user_name", migrateTo.trim()).single(),
+        supabase.from("users").select("id").eq("user_name", migrateFrom.trim()).single(),
+      ]);
+      const toUserId = toUserData?.id ?? null;
+      const fromUserId = fromUserData?.id ?? null;
+
+      const updatePayload: Record<string, unknown> = {
+        [nameField]: migrateTo.trim(),
+        is_migrated: true,
+        migrated_at: now,
+        migrated_from_user_id: fromUserId,
+      };
+      if (toUserId !== null) updatePayload.assignee_user_id = toUserId;
+
+      const { error } = await supabase.from(table)
+        .update(updatePayload)
+        .eq(nameField, migrateFrom.trim())
         .gt("task_start_date", cutoffTimestamp);
 
       if (error) throw error;
 
-      // Verify remaining count
-      const { count: remaining, error: verifyErr } = await supabase
-        .from("checklist")
-        .select("*", { count: "exact", head: true })
-        .eq("name", migrateFrom.trim())
-        .gt("task_start_date", cutoffTimestamp);
-
-      if (verifyErr) throw verifyErr;
+      const adminName = typeof window !== "undefined" ? localStorage.getItem("user-name") ?? "admin" : "admin";
+      await supabase.from("task_migration_log").insert({
+        migrated_by:    adminName,
+        from_user_id:   fromUserId,
+        to_user_id:     toUserId,
+        from_user_name: migrateFrom.trim(),
+        to_user_name:   migrateTo.trim(),
+        task_type:      migrateTaskType,
+        tasks_migrated: migratePreviewCount ?? 0,
+        reason:         `Migrated via settings panel — cutoff: ${migrateCutoffDate}`,
+      });
 
       setMigrateAffectedCount(migratePreviewCount);
-      setMigratePreviewCount(remaining ?? 0);
+      setMigratePreviewCount(0);
+      setMigratePreviewTasks([]);
       setMigrateStatus("done");
-      toast.success(`Migration complete! ${migratePreviewCount} task(s) reassigned successfully.`);
+      toast.success(`Migration complete! ${migratePreviewCount} task(s) reassigned to ${migrateTo}.`);
+      loadMigrationHistory();
     } catch (err: any) {
       setMigrateError(err?.message || "Migration failed. Please try again.");
       setMigrateStatus("error");
       toast.error("Migration failed.");
     }
-  }, [migrateFrom, migrateTo, migrateCutoffDate, migratePreviewCount]);
+  }, [migrateFrom, migrateTo, migrateCutoffDate, migratePreviewCount, migrateTaskType, loadMigrationHistory]);
 
   const handleMigrateReset = useCallback(() => {
     setMigrateStatus("idle");
     setMigratePreviewCount(null);
     setMigrateAffectedCount(null);
     setMigrateError(null);
+    setMigratePreviewTasks([]);
   }, []);
 
   const handleAddButtonClick = useCallback(() => {
@@ -676,6 +739,16 @@ export default function MainSettings() {
               Holiday List
             </button>
             <button
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors ${activeTab === "calendar"
+                ? "bg-blue-600 text-white"
+                : "bg-white dark:bg-neutral-800 text-foreground hover:bg-gray-100 dark:hover:bg-neutral-700"
+                }`}
+              onClick={() => handleTabChange("calendar")}
+            >
+              <Calendar size={16} />
+              Work Calendar
+            </button>
+            <button
               className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors ${activeTab === "migrate"
                 ? "bg-orange-600 text-white"
                 : "bg-white dark:bg-neutral-800 text-foreground hover:bg-gray-100 dark:hover:bg-neutral-700"
@@ -696,8 +769,8 @@ export default function MainSettings() {
             Refresh
           </button>
 
-          {/* Add Button - hide for leave, import, holiday, migrate tabs */}
-          {activeTab !== "leave" && activeTab !== "import" && activeTab !== "holiday" && activeTab !== "migrate" && canWrite && (
+          {/* Add Button - hide for leave, import, holiday, migrate, calendar tabs */}
+          {activeTab !== "leave" && activeTab !== "import" && activeTab !== "holiday" && activeTab !== "migrate" && activeTab !== "calendar" && canWrite && (
             <button
               onClick={handleAddButtonClick}
               className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors dark:bg-black dark:border-gray-300 border"
@@ -1503,6 +1576,9 @@ export default function MainSettings() {
       {/* Holiday Tab */}
       {activeTab === "holiday" && <HolidayAndWorkingDays />}
 
+      {/* Work Calendar Tab */}
+      {activeTab === "calendar" && <WorkingDayCalendarSetup />}
+
       {/* Migrate Tasks Tab */}
       {activeTab === "migrate" && (
         <div className="space-y-6">
@@ -1512,8 +1588,7 @@ export default function MainSettings() {
             <div className="text-sm text-orange-800 dark:text-orange-300">
               <p className="font-semibold mb-1">Task Migration Tool</p>
               <p>
-                Reassign checklist tasks from one staff member to another for all tasks with a
-                start date <strong>after</strong> the cutoff date. Always preview before executing.
+                Reassign <strong>Checklist</strong> or <strong>Machine Maintenance</strong> tasks from one staff member to another. Only tasks with a start date <strong>after</strong> the cutoff date will be migrated — past tasks remain unchanged so you can track who originally did them.
               </p>
             </div>
           </div>
@@ -1526,53 +1601,134 @@ export default function MainSettings() {
                 Migration Configuration
               </h2>
               <p className="text-xs text-muted-foreground mt-1">
-                Define the source staff, target staff, and cutoff date for the migration.
+                Select task type, source staff, target staff, and cutoff date.
               </p>
             </div>
 
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* From */}
-                <div>
+            <div className="p-6 space-y-6">
+              {/* Task Type Selector */}
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                  Task System
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setMigrateTaskType("checklist"); handleMigrateReset(); }}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                      migrateTaskType === "checklist"
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white dark:bg-neutral-900 text-foreground border-gray-200 dark:border-neutral-700 hover:border-blue-400"
+                    }`}
+                  >
+                    <CheckCircle2 size={15} />
+                    Checklist
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setMigrateTaskType("maintenance"); handleMigrateReset(); }}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                      migrateTaskType === "maintenance"
+                        ? "bg-orange-500 text-white border-orange-500"
+                        : "bg-white dark:bg-neutral-900 text-foreground border-gray-200 dark:border-neutral-700 hover:border-orange-400"
+                    }`}
+                  >
+                    <ArrowRightLeft size={15} />
+                    Machine Maintenance
+                  </button>
+                </div>
+              </div>
+
+              {/* From / To row */}
+              <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4 items-end">
+                {/* From Dropdown */}
+                <div className="relative">
                   <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                     From (Current Assignee)
                   </label>
                   <input
                     type="text"
                     value={migrateFrom}
-                    onChange={(e) => { setMigrateFrom(e.target.value); handleMigrateReset(); }}
-                    placeholder="e.g. Hemlata Verma"
+                    onChange={(e) => { setMigrateFrom(e.target.value); handleMigrateReset(); setShowFromDropdown(true); }}
+                    onFocus={() => setShowFromDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowFromDropdown(false), 150)}
+                    placeholder="Search user…"
                     className="w-full px-3 py-2.5 text-sm bg-white dark:bg-neutral-900 text-foreground border border-gray-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
                   />
+                  {showFromDropdown && (
+                    <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {(userData || [])
+                        .filter((u) => u.user_name && (!migrateFrom || u.user_name.toLowerCase().includes(migrateFrom.toLowerCase())))
+                        .slice(0, 20)
+                        .map((u) => (
+                          <button
+                            key={u.id}
+                            type="button"
+                            onMouseDown={() => { setMigrateFrom(u.user_name || ""); setShowFromDropdown(false); handleMigrateReset(); }}
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-orange-50 dark:hover:bg-orange-950/30 text-foreground flex items-center justify-between gap-2"
+                          >
+                            <span>{u.user_name}</span>
+                            <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${u.status === "active" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-500 dark:bg-neutral-800"}`}>
+                              {u.status}
+                            </span>
+                          </button>
+                        ))}
+                      {(userData || []).filter((u) => u.user_name && (!migrateFrom || u.user_name.toLowerCase().includes(migrateFrom.toLowerCase()))).length === 0 && (
+                        <p className="px-3 py-2 text-sm text-muted-foreground">No users found</p>
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                {/* Arrow visual */}
-                <div className="flex items-end justify-center pb-2">
+                {/* Arrow */}
+                <div className="flex items-center justify-center pb-1">
                   <div className="flex flex-col items-center gap-1">
-                    <span className="text-xs font-medium text-muted-foreground">reassign to</span>
-                    <ArrowRightLeft size={22} className="text-orange-500" />
+                    <span className="text-xs text-muted-foreground">reassign to</span>
+                    <ArrowRightLeft size={20} className="text-orange-500" />
                   </div>
                 </div>
 
-                {/* To */}
-                <div>
+                {/* To Dropdown */}
+                <div className="relative">
                   <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                     To (New Assignee)
                   </label>
                   <input
                     type="text"
                     value={migrateTo}
-                    onChange={(e) => { setMigrateTo(e.target.value); handleMigrateReset(); }}
-                    placeholder="e.g. Ritu Sahu"
+                    onChange={(e) => { setMigrateTo(e.target.value); handleMigrateReset(); setShowToDropdown(true); }}
+                    onFocus={() => setShowToDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowToDropdown(false), 150)}
+                    placeholder="Search active user…"
                     className="w-full px-3 py-2.5 text-sm bg-white dark:bg-neutral-900 text-foreground border border-gray-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
                   />
+                  {showToDropdown && (
+                    <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {(userData || [])
+                        .filter((u) => u.user_name && u.status === "active" && (!migrateTo || u.user_name.toLowerCase().includes(migrateTo.toLowerCase())))
+                        .slice(0, 20)
+                        .map((u) => (
+                          <button
+                            key={u.id}
+                            type="button"
+                            onMouseDown={() => { setMigrateTo(u.user_name || ""); setShowToDropdown(false); handleMigrateReset(); }}
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-orange-50 dark:hover:bg-orange-950/30 text-foreground"
+                          >
+                            {u.user_name}
+                          </button>
+                        ))}
+                      {(userData || []).filter((u) => u.user_name && u.status === "active" && (!migrateTo || u.user_name.toLowerCase().includes(migrateTo.toLowerCase()))).length === 0 && (
+                        <p className="px-3 py-2 text-sm text-muted-foreground">No active users found</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Cutoff Date */}
-              <div className="mt-6">
+              <div>
                 <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                  Task Start Date Cutoff (tasks <em>after</em> this date will be migrated)
+                  Task Start Date Cutoff — tasks <em>after</em> this date will be migrated
                 </label>
                 <input
                   type="date"
@@ -1580,24 +1736,23 @@ export default function MainSettings() {
                   onChange={(e) => { setMigrateCutoffDate(e.target.value); handleMigrateReset(); }}
                   className="px-3 py-2.5 text-sm bg-white dark:bg-neutral-900 text-foreground border border-gray-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
                 />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Tasks on or before this date stay with <strong>{migrateFrom || "original user"}</strong> — only future tasks move to the new assignee.
+                </p>
               </div>
 
               {/* Action Buttons */}
-              <div className="mt-6 flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <button
                   onClick={handleMigratePreview}
                   disabled={migrateStatus === "previewing" || migrateStatus === "migrating" || !migrateFrom.trim() || !migrateTo.trim() || !migrateCutoffDate}
                   className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
                 >
-                  {migrateStatus === "previewing" ? (
-                    <Loader2 size={16} className="animate-spin" />
-                  ) : (
-                    <Search size={16} />
-                  )}
+                  {migrateStatus === "previewing" ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
                   Preview Migration
                 </button>
 
-                {(migrateStatus === "previewed") && (
+                {migrateStatus === "previewed" && (
                   <button
                     onClick={handleMigrateExecute}
                     disabled={migratePreviewCount === 0}
@@ -1610,7 +1765,7 @@ export default function MainSettings() {
 
                 {(migrateStatus === "done" || migrateStatus === "error") && (
                   <button
-                    onClick={() => { handleMigrateReset(); }}
+                    onClick={handleMigrateReset}
                     className="flex items-center gap-2 px-5 py-2.5 bg-gray-200 hover:bg-gray-300 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-foreground text-sm font-medium rounded-lg transition-colors"
                   >
                     <RefreshCw size={16} />
@@ -1621,7 +1776,7 @@ export default function MainSettings() {
             </div>
           </div>
 
-          {/* Result / Preview Panel */}
+          {/* Error Panel */}
           {migrateStatus === "error" && migrateError && (
             <div className="flex items-start gap-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl p-4">
               <AlertTriangle size={18} className="text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
@@ -1632,19 +1787,24 @@ export default function MainSettings() {
             </div>
           )}
 
+          {/* Preview Panel */}
           {(migrateStatus === "previewed" || migrateStatus === "migrating") && migratePreviewCount !== null && (
             <div className="bg-white dark:bg-neutral-800 shadow-sm rounded-xl border border-blue-100 dark:border-blue-900 overflow-hidden">
-              <div className="bg-blue-50 dark:bg-blue-950/30 border-b border-blue-100 dark:border-blue-900 px-6 py-3">
+              <div className="bg-blue-50 dark:bg-blue-950/30 border-b border-blue-100 dark:border-blue-900 px-6 py-3 flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-300 flex items-center gap-2">
                   <Info size={16} />
-                  Preview Result
+                  Preview — {migratePreviewCount} task{migratePreviewCount !== 1 ? "s" : ""} will be migrated
                 </h3>
+                <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                  {migrateTaskType === "checklist" ? "Checklist" : "Machine Maintenance"}
+                </span>
               </div>
-              <div className="p-6">
+              <div className="p-6 space-y-4">
+                {/* Summary stats */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="bg-gray-50 dark:bg-neutral-900 rounded-lg p-4 text-center">
                     <p className="text-3xl font-bold text-blue-600">{migratePreviewCount}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Tasks to be migrated</p>
+                    <p className="text-xs text-muted-foreground mt-1">Tasks to migrate</p>
                   </div>
                   <div className="bg-gray-50 dark:bg-neutral-900 rounded-lg p-4 text-center">
                     <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 truncate">{migrateFrom}</p>
@@ -1655,20 +1815,62 @@ export default function MainSettings() {
                     <p className="text-xs text-muted-foreground mt-1">To</p>
                   </div>
                 </div>
+
+                {/* Sample tasks table */}
+                {migratePreviewTasks.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                      Sample tasks (first {migratePreviewTasks.length})
+                    </p>
+                    <div className="overflow-x-auto rounded-lg border border-gray-100 dark:border-neutral-700">
+                      <table className="w-full text-xs">
+                        <thead className="bg-gray-50 dark:bg-neutral-900">
+                          <tr>
+                            <th className="px-3 py-2 text-left text-muted-foreground font-semibold">Task ID</th>
+                            <th className="px-3 py-2 text-left text-muted-foreground font-semibold">
+                              {migrateTaskType === "checklist" ? "Department" : "Machine"}
+                            </th>
+                            <th className="px-3 py-2 text-left text-muted-foreground font-semibold">Description</th>
+                            <th className="px-3 py-2 text-left text-muted-foreground font-semibold">Start Date</th>
+                            <th className="px-3 py-2 text-left text-muted-foreground font-semibold">Frequency</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-neutral-700">
+                          {migratePreviewTasks.map((t: any) => (
+                            <tr key={t.task_id} className="hover:bg-gray-50 dark:hover:bg-neutral-900/50">
+                              <td className="px-3 py-2 text-muted-foreground font-mono">{t.task_id}</td>
+                              <td className="px-3 py-2 text-foreground">{migrateTaskType === "checklist" ? t.department : t.machine_name}</td>
+                              <td className="px-3 py-2 text-foreground max-w-50 truncate" title={t.task_description}>{t.task_description}</td>
+                              <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{t.task_start_date ? new Date(t.task_start_date).toLocaleDateString() : "—"}</td>
+                              <td className="px-3 py-2 text-muted-foreground">{t.frequency}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {migratePreviewCount > migratePreviewTasks.length && (
+                      <p className="mt-2 text-xs text-muted-foreground text-right">
+                        …and {migratePreviewCount - migratePreviewTasks.length} more
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {migratePreviewCount === 0 && (
-                  <p className="mt-4 text-sm text-muted-foreground text-center">
+                  <p className="text-sm text-muted-foreground text-center py-4">
                     No matching tasks found for the given criteria. Nothing to migrate.
                   </p>
                 )}
                 {migratePreviewCount > 0 && migrateStatus === "previewed" && (
-                  <p className="mt-4 text-sm text-orange-700 dark:text-orange-400">
-                    ⚠ Click <strong>Run Migration</strong> above to reassign these tasks. This action is irreversible.
+                  <p className="text-sm text-orange-700 dark:text-orange-400">
+                    ⚠ Click <strong>Run Migration</strong> above to reassign these tasks. This action cannot be undone.
                   </p>
                 )}
               </div>
             </div>
           )}
 
+          {/* Migrating spinner */}
           {migrateStatus === "migrating" && (
             <div className="flex items-center justify-center gap-3 py-8">
               <Loader2 size={22} className="animate-spin text-orange-500" />
@@ -1676,6 +1878,7 @@ export default function MainSettings() {
             </div>
           )}
 
+          {/* Done Panel */}
           {migrateStatus === "done" && (
             <div className="bg-white dark:bg-neutral-800 shadow-sm rounded-xl border border-green-100 dark:border-green-900 overflow-hidden">
               <div className="bg-green-50 dark:bg-green-950/30 border-b border-green-100 dark:border-green-900 px-6 py-3">
@@ -1691,8 +1894,8 @@ export default function MainSettings() {
                     <p className="text-xs text-muted-foreground mt-1">Tasks migrated</p>
                   </div>
                   <div className="bg-gray-50 dark:bg-neutral-900 rounded-lg p-4 text-center">
-                    <p className="text-3xl font-bold text-gray-400">{migratePreviewCount}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Remaining (un-migrated)</p>
+                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 truncate">{migrateFrom}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Previous assignee</p>
                   </div>
                   <div className="bg-gray-50 dark:bg-neutral-900 rounded-lg p-4 text-center">
                     <p className="text-sm font-semibold text-green-700 dark:text-green-300 truncate">{migrateTo}</p>
@@ -1700,11 +1903,77 @@ export default function MainSettings() {
                   </div>
                 </div>
                 <p className="mt-4 text-sm text-green-700 dark:text-green-400">
-                  ✓ All matching tasks have been successfully reassigned from <strong>{migrateFrom}</strong> to <strong>{migrateTo}</strong>.
+                  ✓ All future {migrateTaskType === "checklist" ? "checklist" : "maintenance"} tasks after <strong>{migrateCutoffDate}</strong> have been reassigned from <strong>{migrateFrom}</strong> to <strong>{migrateTo}</strong>. Past tasks remain unchanged for audit purposes.
                 </p>
               </div>
             </div>
           )}
+
+          {/* Migration History */}
+          <div className="bg-white dark:bg-neutral-800 shadow-sm rounded-xl border border-gray-100 dark:border-neutral-700 overflow-hidden">
+            <div className="bg-neutral-100 dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-700 px-6 py-4 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <RefreshCw size={15} className="text-muted-foreground" />
+                Migration History
+              </h3>
+              <button
+                type="button"
+                onClick={loadMigrationHistory}
+                disabled={isLoadingHistory}
+                className="text-xs text-blue-600 hover:underline flex items-center gap-1 disabled:opacity-50"
+              >
+                {isLoadingHistory ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                Refresh
+              </button>
+            </div>
+            <div className="overflow-x-auto">
+              {isLoadingHistory ? (
+                <div className="flex items-center justify-center py-8 gap-2">
+                  <Loader2 size={18} className="animate-spin text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Loading history…</span>
+                </div>
+              ) : migrationHistory.length === 0 ? (
+                <div className="py-10 text-center text-sm text-muted-foreground">
+                  No migrations recorded yet.
+                </div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 dark:bg-neutral-900">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Date</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Type</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">From</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">To</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tasks</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Migrated By</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-neutral-700">
+                    {migrationHistory.map((h: any) => (
+                      <tr key={h.id} className="hover:bg-gray-50 dark:hover:bg-neutral-900/50">
+                        <td className="px-4 py-3 text-muted-foreground whitespace-nowrap text-xs">
+                          {h.migrated_at ? new Date(h.migrated_at).toLocaleString() : "—"}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${h.task_type === "checklist" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" : "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"}`}>
+                            {h.task_type === "checklist" ? "Checklist" : "Maintenance"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-foreground font-medium">{h.from_user_name || "—"}</td>
+                        <td className="px-4 py-3 text-foreground font-medium">{h.to_user_name || "—"}</td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="inline-flex items-center justify-center w-8 h-6 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-bold rounded">
+                            {h.tasks_migrated ?? 0}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground text-xs">{h.migrated_by || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

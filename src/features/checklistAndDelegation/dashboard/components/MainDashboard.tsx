@@ -830,7 +830,7 @@ export default function MainDashboard() {
                 }}
               >
                 <Clock className="w-4 h-4" />
-                Recent & Today
+                {dashboardType === "delegation" ? "All Pending" : "Recent & Today"}
               </button>
               <button
                 className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${taskView === "upcoming"
@@ -843,7 +843,7 @@ export default function MainDashboard() {
                 }}
               >
                 <Calendar className="w-4 h-4" />
-                Upcoming
+                {dashboardType === "delegation" ? "Due Next 7 Days" : "Upcoming"}
               </button>
               <button
                 className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${taskView === "overdue"

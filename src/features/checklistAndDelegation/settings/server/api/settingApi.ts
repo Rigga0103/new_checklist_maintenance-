@@ -327,6 +327,97 @@ export const updateDepartmentDataApi = async (
   return data as Department;
 };
 
+// ============ Working Day Calendar APIs ============
+
+export interface WorkingDayRow {
+  working_date: string;
+  day: string;
+  week_num: number;
+  month: number;
+}
+
+function getISOWeek(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+}
+
+export const fetchHolidaysForYearApi = async (year: number): Promise<string[]> => {
+  const { data, error } = await supabase
+    .from("holidays")
+    .select("leave_date")
+    .gte("leave_date", `${year}-01-01`)
+    .lte("leave_date", `${year}-12-31`);
+  if (error) throw error;
+  return (data || []).map((h) => h.leave_date as string);
+};
+
+// fromDate: "YYYY-MM-DD" — calendar is generated from this date to Dec 31 of that year
+export const fetchWorkingDayCountForDateApi = async (fromDate: string): Promise<number> => {
+  const year = fromDate.split("-")[0];
+  const { count, error } = await supabase
+    .from("working_day_calender")
+    .select("*", { count: "exact", head: true })
+    .gte("working_date", fromDate)
+    .lte("working_date", `${year}-12-31`);
+  if (error) throw error;
+  return count ?? 0;
+};
+
+export const initializeWorkingCalendarApi = async (
+  fromDate: string,
+  skipSunday: boolean,
+  onProgress?: (inserted: number, total: number) => void,
+): Promise<number> => {
+  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const year = parseInt(fromDate.split("-")[0], 10);
+
+  const holidays = await fetchHolidaysForYearApi(year);
+  const holidaySet = new Set(holidays);
+
+  const rows: WorkingDayRow[] = [];
+  const [y, m, day] = fromDate.split("-").map(Number);
+  const d = new Date(y, m - 1, day);
+  while (d.getFullYear() === year) {
+    const dow = d.getDay();
+    if (!(skipSunday && dow === 0)) {
+      const iso = d.toISOString().split("T")[0];
+      if (!holidaySet.has(iso)) {
+        rows.push({
+          working_date: iso,
+          day: dayNames[dow],
+          week_num: getISOWeek(d),
+          month: d.getMonth() + 1,
+        });
+      }
+    }
+    d.setDate(d.getDate() + 1);
+  }
+
+  // Delete existing rows from fromDate to end of year
+  const { error: delError } = await supabase
+    .from("working_day_calender")
+    .delete()
+    .gte("working_date", fromDate)
+    .lte("working_date", `${year}-12-31`);
+  if (delError) throw delError;
+
+  // Batch insert in chunks of 100
+  const CHUNK = 100;
+  let inserted = 0;
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const chunk = rows.slice(i, i + CHUNK);
+    const { error } = await supabase.from("working_day_calender").insert(chunk);
+    if (error) throw error;
+    inserted += chunk.length;
+    onProgress?.(inserted, rows.length);
+  }
+
+  return inserted;
+};
+
 // ============ Permission APIs ============
 
 /**

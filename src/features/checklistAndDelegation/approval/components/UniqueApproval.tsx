@@ -8,6 +8,8 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  ListChecks,
+  Wrench,
 } from "lucide-react";
 import { useAllChecklistTasks } from "../server/tanstackQuery/useApproval";
 import { useAllMaintenanceQuery } from "@/features/machineMaintenance/maintenance/server/tanstackQuery/useMaintenanceQueries";
@@ -87,6 +89,27 @@ export default function UniqueApproval() {
       [];
     return [...new Set([...checklistMembers, ...maintenanceMembers])].sort();
   }, [checklistData, maintenanceData]);
+
+  // Total unique counts for both tabs (always computed, independent of activeTab)
+  const uniqueChecklistCount = useMemo(() => {
+    const raw = checklistData?.data || [];
+    const seen = new Set<string>();
+    raw.forEach((item) => {
+      const key = `${item.task_description || ""}|${item.department || ""}`.toLowerCase().trim();
+      if (key) seen.add(key);
+    });
+    return seen.size;
+  }, [checklistData]);
+
+  const uniqueMaintenanceCount = useMemo(() => {
+    const raw = maintenanceData || [];
+    const seen = new Set<string>();
+    raw.forEach((item) => {
+      const key = `${item.task_description || ""}|${item.machine_name || ""}`.toLowerCase().trim();
+      if (key) seen.add(key);
+    });
+    return seen.size;
+  }, [maintenanceData]);
 
   // Transform maintenance data to a common format if needed, but we'll use conditional rendering
   const uniqueTasks = useMemo(() => {
@@ -242,33 +265,84 @@ export default function UniqueApproval() {
         </button>
       </div>
 
+      {/* Count cards */}
+      <div className="grid grid-cols-2 gap-4">
+        <div
+          onClick={() => { setActiveTab("checklist"); setCurrentPage(1); resetFilters(); }}
+          className={`cursor-pointer rounded-xl border p-4 flex items-center gap-4 transition-all ${
+            activeTab === "checklist"
+              ? "bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700"
+              : "bg-white dark:bg-neutral-800 border-gray-100 dark:border-neutral-700 hover:border-blue-200 dark:hover:border-blue-800"
+          }`}
+        >
+          <div className={`p-3 rounded-lg ${activeTab === "checklist" ? "bg-blue-100 dark:bg-blue-900/40" : "bg-gray-100 dark:bg-neutral-700"}`}>
+            <ListChecks className={`w-6 h-6 ${activeTab === "checklist" ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"}`} />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Checklist Tasks</p>
+            {isLoadingChecklist ? (
+              <div className="h-7 w-16 bg-gray-200 dark:bg-neutral-700 rounded animate-pulse mt-1" />
+            ) : (
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{uniqueChecklistCount.toLocaleString()}</p>
+            )}
+          </div>
+        </div>
+
+        <div
+          onClick={() => { setActiveTab("maintenance"); setCurrentPage(1); resetFilters(); }}
+          className={`cursor-pointer rounded-xl border p-4 flex items-center gap-4 transition-all ${
+            activeTab === "maintenance"
+              ? "bg-orange-50 dark:bg-orange-900/20 border-orange-300 dark:border-orange-700"
+              : "bg-white dark:bg-neutral-800 border-gray-100 dark:border-neutral-700 hover:border-orange-200 dark:hover:border-orange-800"
+          }`}
+        >
+          <div className={`p-3 rounded-lg ${activeTab === "maintenance" ? "bg-orange-100 dark:bg-orange-900/40" : "bg-gray-100 dark:bg-neutral-700"}`}>
+            <Wrench className={`w-6 h-6 ${activeTab === "maintenance" ? "text-orange-600 dark:text-orange-400" : "text-gray-500 dark:text-gray-400"}`} />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Maintenance Tasks</p>
+            {isLoadingMaintenance ? (
+              <div className="h-7 w-16 bg-gray-200 dark:bg-neutral-700 rounded animate-pulse mt-1" />
+            ) : (
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{uniqueMaintenanceCount.toLocaleString()}</p>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Tabs */}
       <div className="flex gap-2">
         <button
-          onClick={() => {
-            setActiveTab("checklist");
-            setCurrentPage(1);
-            resetFilters();
-          }}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === "checklist"
+          onClick={() => { setActiveTab("checklist"); setCurrentPage(1); resetFilters(); }}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            activeTab === "checklist"
               ? "bg-blue-600 text-white"
               : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
-            }`}
+          }`}
         >
+          <ListChecks className="w-4 h-4" />
           Checklist Tasks
+          <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
+            activeTab === "checklist" ? "bg-white/20 text-white" : "bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400"
+          }`}>
+            {isLoadingChecklist ? "…" : uniqueChecklistCount.toLocaleString()}
+          </span>
         </button>
         <button
-          onClick={() => {
-            setActiveTab("maintenance");
-            setCurrentPage(1);
-            resetFilters();
-          }}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === "maintenance"
-              ? "bg-blue-600 text-white"
+          onClick={() => { setActiveTab("maintenance"); setCurrentPage(1); resetFilters(); }}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            activeTab === "maintenance"
+              ? "bg-orange-500 text-white"
               : "bg-gray-100 dark:bg-neutral-700 text-foreground dark:text-gray-300"
-            }`}
+          }`}
         >
+          <Wrench className="w-4 h-4" />
           Maintenance Tasks
+          <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
+            activeTab === "maintenance" ? "bg-white/20 text-white" : "bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400"
+          }`}>
+            {isLoadingMaintenance ? "…" : uniqueMaintenanceCount.toLocaleString()}
+          </span>
         </button>
       </div>
 
@@ -363,7 +437,7 @@ export default function UniqueApproval() {
           </div>
 
           {/* Search Term */}
-          <div className="flex-1 min-w-[200px]">
+          <div className="flex-1 min-w-50">
             <label className="block text-sm font-medium text-foreground dark:text-gray-300 mb-1">
               Search Tasks
             </label>
@@ -441,7 +515,7 @@ export default function UniqueApproval() {
                     Attach Req
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wider">
-                    Actual Date
+                    Start Date
                   </th>
                 </tr>
               </thead>
@@ -487,7 +561,7 @@ export default function UniqueApproval() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                         {subCategory}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-300 max-w-[300px] truncate" title={taskDescription}>
+                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-300 max-w-75 truncate" title={taskDescription}>
                         {taskDescription}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">

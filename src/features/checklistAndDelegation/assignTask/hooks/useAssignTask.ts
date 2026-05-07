@@ -7,6 +7,8 @@ import {
   fetchWorkingDaysApi,
   pushAssignTaskApi,
   fetchUniqueTaskDescriptionsApi,
+  upsertUniqueChecklistTaskApi,
+  upsertUniqueMaintenanceTaskApi,
 } from "../server/api/assignTaskApi";
 import { uploadSampleImage } from "../server/api/assignTaskImageApi";
 import { fetchActiveMachines } from "@/features/machineMaintenance/machines/server/api/machinesApi";
@@ -640,11 +642,52 @@ export function useAssignTask(
           return;
         }
 
+        // For maintenance tasks, ensure template exists in unique_maintanence first
+        if (selectedSection === "maintenance" && formData.description.trim()) {
+          await upsertUniqueMaintenanceTaskApi({
+            description:       formData.description,
+            machineName:       formData.department, // department field holds machine name for maintenance
+            givenBy:           formData.givenBy,
+            doerName:          formData.assignTo,
+            frequency:         formData.frequency,
+            enableReminders:   formData.enableReminders,
+            requireAttachment: formData.requireAttachment,
+            startDate:         selectedDate ? selectedDate.toISOString() : "",
+            sampleImage:       formData.sampleImage,
+          });
+        }
+
+        // For checklist tasks, ensure description exists in unique_checklist first
+        const isChecklistTask =
+          selectedSection === "checklist" &&
+          formData.frequency !== "one-time";
+        if (isChecklistTask && formData.description.trim()) {
+          await upsertUniqueChecklistTaskApi({
+            description: formData.description,
+            name: formData.assignTo,
+            department: formData.department,
+            givenBy: formData.givenBy,
+            frequency: formData.frequency,
+            enableReminders: formData.enableReminders,
+            requireAttachment: formData.requireAttachment,
+            startDate: selectedDate ? selectedDate.toISOString() : "",
+            endDate: selectedEndDate ? selectedEndDate.toISOString() : undefined,
+            sampleImage: formData.sampleImage,
+          });
+        }
+
         // Use the original GeneratedTask directly - the API handles mapping
         const result = await pushAssignTaskApi(generatedTasks, selectedSection);
 
         if (result.success) {
           toast.success(result.message);
+
+          // Refresh autocomplete suggestions so the new description appears immediately
+          if (isChecklistTask || selectedSection === "maintenance") {
+            fetchUniqueTaskDescriptionsApi(selectedSection)
+              .then(setTaskSuggestions)
+              .catch(() => {});
+          }
 
           // Reset form
           setFormData({
@@ -664,7 +707,7 @@ export function useAssignTask(
         setIsSubmitting(false);
       }
     },
-    [generatedTasks, formData.department, selectedSection],
+    [generatedTasks, formData, selectedSection, selectedDate, selectedEndDate],
   );
 
   // Export to CSV

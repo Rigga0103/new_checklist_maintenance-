@@ -84,6 +84,43 @@ export interface DelegationTask {
   delay: string | null;
 }
 
+// ============ Maintenance Types ============
+
+export interface MaintenanceTask {
+  task_id: number;
+  machine_name: string | null;
+  given_by: string | null;
+  name: string | null;           // doer name
+  task_description: string | null;
+  task_start_date: string | null;
+  task_end_date: string | null;
+  frequency: string | null;
+  enable_reminder: string | null;
+  require_attachment: string | null;
+  image: string | null;
+  created_at: string | null;
+}
+
+export interface MaintenanceUpdatePayload {
+  machine_name?: string;
+  given_by?: string;
+  name?: string;
+  task_description?: string;
+  frequency?: string;
+  enable_reminder?: string;
+  require_attachment?: string;
+  task_start_date?: string;
+  task_end_date?: string;
+  image?: string;
+}
+
+export interface MaintenanceOriginalMatch {
+  task_id: number;
+  machine_name: string | null;
+  name: string | null;
+  task_description: string | null;
+}
+
 // ============ User Types ============
 
 export interface User {

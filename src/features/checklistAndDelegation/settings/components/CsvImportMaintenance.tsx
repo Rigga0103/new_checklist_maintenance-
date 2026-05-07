@@ -21,15 +21,20 @@ import { fetchWorkingDaysApi } from "../../assignTask/server/api/assignTaskApi";
 // ────────────────────────────────────────────
 
 interface CsvRow {
-  "Machine Name": string;
-  "Given By": string;
-  Name: string;
-  "Task Description": string;
-  "Task Start Date": string;
-  Freq: string;
-  "Enable Reminders": string;
-  "Require Attachment": string;
-  [key: string]: string;
+  "Machine Name"?: string;
+  "Given By"?: string;
+  Name?: string;
+  "Task Description"?: string;
+  // Accept both naming conventions
+  "Start Date"?: string;
+  "Task Start Date"?: string;
+  "Frequency"?: string;
+  Freq?: string;
+  "Reminder"?: string;
+  "Enable Reminders"?: string;
+  "Attachment Required"?: string;
+  "Require Attachment"?: string;
+  [key: string]: string | undefined;
 }
 
 interface ParsedTask {
@@ -50,10 +55,13 @@ interface ParsedTask {
 
 interface GeneratedMaintenanceTask {
   machine_name: string;
+  given_by: string;
   doer_name: string;
   task_description: string;
   task_start_date: string;
   frequency: string;
+  enable_reminder: string;
+  require_attachment: string;
   status: string;
   created_at: string;
 }
@@ -153,8 +161,10 @@ export default function CsvImportMaintenance() {
   const [isUploading, setIsUploading] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [fileName, setFileName] = useState<string>("");
+  const [progress, setProgress] = useState({ step: "", pct: 0 });
   const [importResult, setImportResult] = useState<{
-    success: number;
+    templates: number;
+    tasks: number;
     failed: number;
   } | null>(null);
 
@@ -218,8 +228,8 @@ export default function CsvImportMaintenance() {
               const taskDescription = (row["Task Description"] ?? "").trim();
               if (!taskDescription) errors.push("Missing task description");
 
-              // Date
-              const rawDate = (row["Task Start Date"] ?? "").trim();
+              // Date — accept "Start Date" OR "Task Start Date"
+              const rawDate = (row["Start Date"] ?? row["Task Start Date"] ?? "").trim();
               const parsedDate = parseDateString(rawDate);
               if (!rawDate) {
                 errors.push("Missing start date");
@@ -227,14 +237,20 @@ export default function CsvImportMaintenance() {
                 errors.push(`Invalid date format: "${rawDate}"`);
               }
 
-              // Frequency
-              const rawFreq = (row["Freq"] ?? "").trim();
+              // Frequency — accept "Frequency" OR "Freq"
+              const rawFreq = (row["Frequency"] ?? row["Freq"] ?? "").trim();
               const normalizedFreq = normalizeFrequency(rawFreq);
               if (!rawFreq) {
                 errors.push("Missing frequency");
               } else if (!normalizedFreq) {
                 errors.push(`Unknown frequency: "${rawFreq}"`);
               }
+
+              // Reminders — accept "Reminder" OR "Enable Reminders"
+              const reminderRaw = (row["Reminder"] ?? row["Enable Reminders"] ?? "").trim().toLowerCase();
+
+              // Attachment — accept "Attachment Required" OR "Require Attachment"
+              const attachmentRaw = (row["Attachment Required"] ?? row["Require Attachment"] ?? "").trim().toLowerCase();
 
               return {
                 id: index + 1,
@@ -245,12 +261,8 @@ export default function CsvImportMaintenance() {
                 taskStartDate: parsedDate ?? "",
                 frequency: normalizedFreq ?? rawFreq.toLowerCase(),
                 originalFrequency: rawFreq,
-                enableReminders:
-                  (row["Enable Reminders"] ?? "").trim().toLowerCase() ===
-                  "yes",
-                requireAttachment:
-                  (row["Require Attachment"] ?? "").trim().toLowerCase() ===
-                  "yes",
+                enableReminders: reminderRaw === "yes",
+                requireAttachment: attachmentRaw === "yes",
                 isValid: errors.length === 0,
                 validationErrors: errors,
               };
@@ -309,19 +321,23 @@ export default function CsvImportMaintenance() {
       };
 
       // One-time: just one task
+      const makeRow = (date: Date): GeneratedMaintenanceTask => ({
+        machine_name: task.machineName,
+        given_by: task.givenBy,
+        doer_name: task.doerName,
+        task_description: task.taskDescription,
+        task_start_date: formatDateTimeForStorage(date, "09:00"),
+        frequency: task.frequency,
+        enable_reminder: task.enableReminders ? "yes" : "no",
+        require_attachment: task.requireAttachment ? "yes" : "no",
+        status: "pending",
+        created_at: new Date().toISOString(),
+      });
+
       if (task.frequency === "one-time") {
         const taskDate = findNextWorkingDay(startDate);
         if (taskDate) {
-          const taskDateObj = new Date(taskDate.split("/").reverse().join("-"));
-          tasks.push({
-            machine_name: task.machineName,
-            doer_name: task.doerName,
-            task_description: task.taskDescription,
-            task_start_date: formatDateTimeForStorage(taskDateObj, "09:00"),
-            frequency: task.frequency,
-            status: "pending",
-            created_at: new Date().toISOString(),
-          });
+          tasks.push(makeRow(new Date(taskDate.split("/").reverse().join("-"))));
         }
         return tasks;
       }
@@ -335,15 +351,7 @@ export default function CsvImportMaintenance() {
         if (!taskDate) break;
 
         const taskDateObj = new Date(taskDate.split("/").reverse().join("-"));
-        tasks.push({
-          machine_name: task.machineName,
-          doer_name: task.doerName,
-          task_description: task.taskDescription,
-          task_start_date: formatDateTimeForStorage(taskDateObj, "09:00"),
-          frequency: task.frequency,
-          status: "pending",
-          created_at: new Date().toISOString(),
-        });
+        tasks.push(makeRow(taskDateObj));
 
         taskCount++;
 
@@ -392,85 +400,99 @@ export default function CsvImportMaintenance() {
     }
 
     setIsImporting(true);
+    setImportResult(null);
 
     try {
-      // 1. Fetch working days
-      const workingDays = await fetchWorkingDaysApi();
-      if (workingDays.length === 0) {
-        toast.error("Working days calendar not loaded. Cannot generate tasks.");
-        setIsImporting(false);
-        return;
-      }
+      // ── Step 1: Insert templates into unique_maintanence ──
+      setProgress({ step: "Saving templates…", pct: 10 });
 
-      // 2. Generate all recurring tasks
-      let allGeneratedTasks: GeneratedMaintenanceTask[] = [];
-      for (const task of validTasks) {
-        const generated = generateRecurringTasks(task, workingDays);
-        allGeneratedTasks = allGeneratedTasks.concat(generated);
-      }
-
-      if (allGeneratedTasks.length === 0) {
-        toast.error(
-          "No tasks could be generated from the working day calendar",
-        );
-        setIsImporting(false);
-        return;
-      }
-
-      // 3. Fetch current MAX task_id
-      const { data: maxIdData, error: maxIdError } = await supabase
-        .from("machine_maintenance")
-        .select("task_id")
-        .order("task_id", { ascending: false })
-        .limit(1);
-
-      if (maxIdError) {
-        console.error("Error fetching max task_id:", maxIdError);
-        toast.error("Failed to generate task IDs");
-        setIsImporting(false);
-        return;
-      }
-
-      const currentMaxId =
-        maxIdData && maxIdData.length > 0 ? Number(maxIdData[0].task_id) : 0;
-
-      // 4. Assign sequential task_ids
-      const tasksWithIds = allGeneratedTasks.map((task, index) => ({
-        task_id: currentMaxId + index + 1,
-        ...task,
+      const templateInserts = validTasks.map((t) => ({
+        machine_name:       t.machineName,
+        given_by:           t.givenBy,
+        name:               t.doerName,
+        task_description:   t.taskDescription,
+        task_start_date:    t.taskStartDate,
+        frequency:          t.frequency,
+        enable_reminder:    t.enableReminders ? "yes" : "no",
+        require_attachment: t.requireAttachment ? "yes" : "no",
+        created_at:         new Date().toISOString(),
       }));
 
-      // 5. Batch insert in chunks of 500
+      const { data: insertedTemplates, error: templateErr } = await supabase
+        .from("unique_maintanence")
+        .insert(templateInserts)
+        .select("task_id");
+
+      if (templateErr) {
+        if (templateErr.code === "23505") {
+          throw new Error("One or more tasks already exist in the templates table. Remove duplicate rows from your CSV and try again.");
+        }
+        throw new Error(`Template insert failed: ${templateErr.message}`);
+      }
+
+      const templateIds = (insertedTemplates ?? []).map((t) => t.task_id as number);
+
+      // ── Step 2: Fetch working days ──
+      setProgress({ step: "Loading working days…", pct: 30 });
+      const workingDays = await fetchWorkingDaysApi();
+      if (workingDays.length === 0) {
+        toast.warning(`${templateIds.length} templates saved, but no working day calendar — tasks not generated.`);
+        setImportResult({ templates: templateIds.length, tasks: 0, failed: 0 });
+        setIsImporting(false);
+        return;
+      }
+
+      // ── Step 3: Generate machine_maintenance rows ──
+      setProgress({ step: "Generating tasks…", pct: 50 });
+      let allGeneratedTasks: (GeneratedMaintenanceTask & { source_unique_id: number })[] = [];
+      validTasks.forEach((task, i) => {
+        const generated = generateRecurringTasks(task, workingDays);
+        const sourceId  = templateIds[i] ?? 0;
+        generated.forEach((g) => allGeneratedTasks.push({ ...g, source_unique_id: sourceId }));
+      });
+
+      if (allGeneratedTasks.length === 0) {
+        toast.warning(`${templateIds.length} templates saved. No tasks fit working day calendar.`);
+        setImportResult({ templates: templateIds.length, tasks: 0, failed: 0 });
+        setIsImporting(false);
+        return;
+      }
+
+      // ── Step 4: Batch insert in chunks of 500 ──
+      setProgress({ step: `Inserting ${allGeneratedTasks.length} tasks…`, pct: 65 });
       const chunkSize = 500;
       let successCount = 0;
       let failCount = 0;
 
-      for (let i = 0; i < tasksWithIds.length; i += chunkSize) {
-        const chunk = tasksWithIds.slice(i, i + chunkSize);
-        const { error } = await supabase
-          .from("machine_maintenance")
-          .insert(chunk);
-
+      for (let i = 0; i < allGeneratedTasks.length; i += chunkSize) {
+        const chunk = allGeneratedTasks.slice(i, i + chunkSize);
+        const { error } = await supabase.from("machine_maintenance").insert(chunk);
         if (error) {
           console.error("Error inserting chunk:", error);
+          if (error.code === "23505") {
+            toast.error("Some tasks already exist (duplicate). Skipping duplicates.");
+          }
           failCount += chunk.length;
         } else {
           successCount += chunk.length;
         }
+        setProgress({
+          step: `Inserting tasks… (${successCount + failCount} / ${allGeneratedTasks.length})`,
+          pct:  65 + Math.round(((successCount + failCount) / allGeneratedTasks.length) * 30),
+        });
       }
 
-      setImportResult({ success: successCount, failed: failCount });
+      setProgress({ step: "Done", pct: 100 });
+      setImportResult({ templates: templateIds.length, tasks: successCount, failed: failCount });
 
       if (failCount === 0) {
-        toast.success(
-          `Successfully imported ${successCount} maintenance tasks!`,
-        );
+        toast.success(`Saved ${templateIds.length} templates and generated ${successCount} maintenance tasks!`);
       } else {
-        toast.warning(`Imported ${successCount} tasks, ${failCount} failed.`);
+        toast.warning(`Templates: ${templateIds.length}, Tasks: ${successCount}, Failed: ${failCount}`);
       }
     } catch (error) {
       console.error("Import error:", error);
-      toast.error("Failed to import tasks");
+      toast.error((error as any)?.message ?? "Failed to import tasks");
     } finally {
       setIsImporting(false);
     }
@@ -483,6 +505,7 @@ export default function CsvImportMaintenance() {
     setParsedTasks([]);
     setFileName("");
     setImportResult(null);
+    setProgress({ step: "", pct: 0 });
   }, []);
 
   // ────────────────────────────────────────
@@ -491,28 +514,30 @@ export default function CsvImportMaintenance() {
   const handleDownloadSample = useCallback(() => {
     const sampleData = [
       [
-        "Timestamp",
+        "Created At",
         "Task ID",
         "Machine Name",
         "Given By",
         "Name",
         "Task Description",
-        "Task Start Date",
-        "Freq",
-        "Enable Reminders",
-        "Require Attachment",
+        "Start Date",
+        "Frequency",
+        "Reminder",
+        "Attachment Required",
+        "Synced On",
       ],
       [
         "25/07/2025 00:00:00",
         "1",
         "Machine A",
-        "Admin",
+        "MD Sir",
         "Pratap Kumar Rout",
         "Machine panel clean",
         "22/11/2025 00:00:00",
         "Weekly",
-        "No",
-        "No",
+        "no",
+        "no",
+        "",
       ],
     ];
 
@@ -597,15 +622,37 @@ export default function CsvImportMaintenance() {
             )}
           </div>
 
+          {/* Progress bar */}
+          {isImporting && (
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>{progress.step}</span>
+                <span>{progress.pct}%</span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-neutral-700 rounded-full h-2">
+                <div
+                  className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${progress.pct}%` }}
+                />
+              </div>
+            </div>
+          )}
+
           {/* Import Result */}
           {importResult && (
-            <div className="mt-4 p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 size={20} className="text-green-600" />
-                <span className="text-sm font-medium text-green-800 dark:text-green-300">
-                  Import Complete: {importResult.success} tasks created
-                  {importResult.failed > 0 && `, ${importResult.failed} failed`}
-                </span>
+            <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+              <div className="flex items-start gap-2">
+                <CheckCircle2 size={18} className="text-green-600 mt-0.5 shrink-0" />
+                <div className="text-sm text-green-800 dark:text-green-300">
+                  <p className="font-semibold">Import Complete</p>
+                  <ul className="mt-1 space-y-0.5 text-xs">
+                    <li>Templates saved to <strong>unique_maintanence</strong>: <strong>{importResult.templates}</strong></li>
+                    <li>Tasks generated in <strong>machine_maintenance</strong>: <strong>{importResult.tasks}</strong></li>
+                    {importResult.failed > 0 && (
+                      <li className="text-orange-600 dark:text-orange-400">Failed rows: {importResult.failed}</li>
+                    )}
+                  </ul>
+                </div>
               </div>
             </div>
           )}
@@ -744,7 +791,7 @@ export default function CsvImportMaintenance() {
                         )}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground dark:text-gray-300 max-w-[200px] truncate">
+                    <td className="px-4 py-3 text-sm text-muted-foreground dark:text-gray-300 max-w-50 truncate">
                       {task.taskDescription || (
                         <span className="text-red-400 italic">Missing</span>
                       )}
