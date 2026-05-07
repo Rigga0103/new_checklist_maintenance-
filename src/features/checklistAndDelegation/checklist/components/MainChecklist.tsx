@@ -65,6 +65,7 @@ export default function MainChecklist({ initialNameFilter }: { initialNameFilter
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "pending">("all");
+  const [frequencyFilter, setFrequencyFilter] = useState("");
 
   // Read role and username from localStorage for role-based filtering
   const [role, setRole] = useState<string | null>(null);
@@ -181,6 +182,7 @@ export default function MainChecklist({ initialNameFilter }: { initialNameFilter
         if (t.name !== nameFilter) keep = false;
       }
     }
+    if (frequencyFilter && t.frequency !== frequencyFilter) keep = false;
     if (activeTab === "last7days" && statusFilter === "pending") {
       if (
         t.status === "yes" ||
@@ -711,6 +713,22 @@ export default function MainChecklist({ initialNameFilter }: { initialNameFilter
             )}
           </div>
         )}
+
+        {/* Frequency Filter */}
+        <select
+          value={frequencyFilter}
+          onChange={(e) => {
+            setFrequencyFilter(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="px-3 py-1.5 text-sm border border-gray-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-gray-700 dark:text-gray-200 focus:outline-none"
+        >
+          <option value="">All Freq</option>
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
+          <option value="one-time">One-time</option>
+        </select>
 
         {/* Status filter for Last 7 Days */}
         {activeTab === "last7days" && (
