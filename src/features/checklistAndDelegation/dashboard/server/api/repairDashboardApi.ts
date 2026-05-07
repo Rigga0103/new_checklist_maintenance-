@@ -286,21 +286,19 @@ export const fetchMaintenanceLast7Days = async (
   }
 };
 
-// Fetch overdue maintenance tasks (task start date < today and actual date is null)
+// Fetch overdue maintenance tasks (task start date < Monday of current week and actual date is null)
 export const fetchMaintenanceOverdue = async (
   searchTerm = "",
   role: string | null = null,
   username: string | null = null,
 ): Promise<MachineMaintenanceTask[]> => {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // start of today
-    const startOfTodayISO = today.toISOString();
+    const { start: startOfWeek } = getWeekRange();
 
     let query = supabase
       .from("machine_maintenance")
       .select("*")
-      .lt("task_start_date", startOfTodayISO)
+      .lt("task_start_date", `${startOfWeek}T00:00:00.000Z`)
       .is("actual_date", null)
       .order("task_start_date", { ascending: true });
 

@@ -21,9 +21,9 @@ export const fetchPendingMaintenance = async (
   endDate?: string,
 ): Promise<MaintenanceFetchResponse> => {
   try {
-    const endOfToday = new Date();
-    endOfToday.setHours(23, 59, 59, 999);
-    const endOfTodayISO = endOfToday.toISOString();
+    // Show tasks within the current week (Monday–Saturday).
+    // A task assigned on Monday stays "pending" until Saturday of that same week.
+    const { start: weekStart, end: weekEnd } = getWeekRange();
 
     const from = (page - 1) * limit;
     const to = from + limit - 1;
@@ -31,12 +31,13 @@ export const fetchPendingMaintenance = async (
     let query = supabase
       .from("machine_maintenance")
       .select("*", { count: "exact" })
-      .lte("task_start_date", endOfTodayISO)
+      .gte("task_start_date", weekStart)
+      .lte("task_start_date", weekEnd)
       .is("actual_date", null)
       .order("task_start_date", { ascending: true })
       .range(from, to);
 
-    // Apply date filter
+    // Admin date-range override
     if (startDate) {
       query = query.gte("task_start_date", `${startDate}T00:00:00.000Z`);
     }
@@ -172,9 +173,8 @@ export const fetchAllOverdueMaintenance = async (
   username: string | null = null,
 ): Promise<MaintenanceFetchResponse> => {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // start of today
-    const startOfTodayISO = today.toISOString();
+    // Overdue = tasks from BEFORE this week's Monday that are still incomplete.
+    const { start: weekStart } = getWeekRange();
 
     const from = (page - 1) * limit;
     const to = from + limit - 1;
@@ -182,7 +182,7 @@ export const fetchAllOverdueMaintenance = async (
     let query = supabase
       .from("machine_maintenance")
       .select("*", { count: "exact" })
-      .lt("task_start_date", startOfTodayISO)
+      .lt("task_start_date", weekStart)
       .is("actual_date", null)
       .order("task_start_date", { ascending: true })
       .range(from, to);

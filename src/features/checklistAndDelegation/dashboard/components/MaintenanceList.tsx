@@ -733,8 +733,8 @@ export default function MaintenanceList({
             <table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
               <thead className="bg-gray-50 dark:bg-neutral-900/50 sticky top-0 z-10">
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase w-10">
-                    Seq
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase w-16">
+                    Task ID
                   </th>
                   {(activeTab === "pending" ||
 
@@ -845,8 +845,8 @@ export default function MaintenanceList({
                       : ""
                       }`}
                   >
-                    <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
-                      {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
+                    <td className="px-3 py-3 text-sm font-mono text-muted-foreground whitespace-nowrap">
+                      #{task.task_id}
                     </td>
                     {(activeTab === "pending" ||
 
