@@ -12,7 +12,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { useAllChecklistTasks } from "../server/tanstackQuery/useApproval";
-import { useAllMaintenanceQuery } from "@/features/machineMaintenance/maintenance/server/tanstackQuery/useMaintenanceQueries";
+import { useUniqueMaintenanceTemplates } from "@/features/machineMaintenance/maintenance/server/tanstackQuery/useMaintenanceQueries";
 import { ApprovalTask } from "../types/types";
 import { MachineMaintenance } from "@/features/machineMaintenance/types/types";
 
@@ -72,7 +72,7 @@ export default function UniqueApproval() {
     data: maintenanceData,
     isLoading: isLoadingMaintenance,
     refetch: refetchMaintenance,
-  } = useAllMaintenanceQuery();
+  } = useUniqueMaintenanceTemplates();
 
   const isLoading = isLoadingChecklist || isLoadingMaintenance;
 
@@ -92,23 +92,11 @@ export default function UniqueApproval() {
 
   // Total unique counts for both tabs (always computed, independent of activeTab)
   const uniqueChecklistCount = useMemo(() => {
-    const raw = checklistData?.data || [];
-    const seen = new Set<string>();
-    raw.forEach((item) => {
-      const key = `${item.task_description || ""}|${item.department || ""}`.toLowerCase().trim();
-      if (key) seen.add(key);
-    });
-    return seen.size;
+    return checklistData?.data?.length ?? 0;
   }, [checklistData]);
 
   const uniqueMaintenanceCount = useMemo(() => {
-    const raw = maintenanceData || [];
-    const seen = new Set<string>();
-    raw.forEach((item) => {
-      const key = `${item.task_description || ""}|${item.machine_name || ""}`.toLowerCase().trim();
-      if (key) seen.add(key);
-    });
-    return seen.size;
+    return maintenanceData?.length ?? 0;
   }, [maintenanceData]);
 
   // Transform maintenance data to a common format if needed, but we'll use conditional rendering
@@ -128,19 +116,9 @@ export default function UniqueApproval() {
       });
       return Array.from(uniqueMap.values());
     } else {
-      const raw = [...(maintenanceData || [])].sort((a, b) => {
-        const dateA = parseISO(a.actual_date || a.task_start_date) || new Date(0);
-        const dateB = parseISO(b.actual_date || b.task_start_date) || new Date(0);
-        return dateB.getTime() - dateA.getTime();
-      });
-      const uniqueMap = new Map<string, MachineMaintenance>();
-      raw.forEach((item) => {
-        const key = `${item.task_description || ""}|${item.machine_name || ""}`.toLowerCase().trim();
-        if (key && !uniqueMap.has(key)) {
-          uniqueMap.set(key, item);
-        }
-      });
-      return Array.from(uniqueMap.values());
+      return [...(maintenanceData || [])].sort((a, b) =>
+        (a.task_description || "").localeCompare(b.task_description || ""),
+      );
     }
   }, [activeTab, checklistData, maintenanceData]);
 

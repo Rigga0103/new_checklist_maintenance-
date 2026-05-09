@@ -383,7 +383,7 @@ export const initializeWorkingCalendarApi = async (
   while (d.getFullYear() === year) {
     const dow = d.getDay();
     if (!(skipSunday && dow === 0)) {
-      const iso = d.toISOString().split("T")[0];
+      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       if (!holidaySet.has(iso)) {
         rows.push({
           working_date: iso,

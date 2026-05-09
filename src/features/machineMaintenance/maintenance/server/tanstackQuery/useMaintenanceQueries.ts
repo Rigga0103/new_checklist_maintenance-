@@ -6,6 +6,7 @@ import {
   fetchAllOverdueMaintenance,
   fetchUpcomingMaintenance,
   fetchAllMaintenance,
+  fetchUniqueMaintenanceTemplates,
   completeMaintenance,
   bulkCompleteMaintenance,
   getUniqueMachines,
@@ -250,6 +251,14 @@ export const useAllMaintenanceQuery = () => {
   return useQuery({
     queryKey: maintenanceKeys.allTasks(),
     queryFn: () => fetchAllMaintenance(),
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    staleTime: 1000 * 60 * 5,
+  });
+};
+
+export const useUniqueMaintenanceTemplates = () => {
+  return useQuery({
+    queryKey: ["maintenance", "uniqueTemplates"],
+    queryFn: () => fetchUniqueMaintenanceTemplates(),
+    staleTime: 1000 * 60 * 5,
   });
 };

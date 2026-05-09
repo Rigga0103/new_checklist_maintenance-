@@ -388,6 +388,40 @@ export const fetchAllMaintenance = async (): Promise<MachineMaintenance[]> => {
   }
 };
 
+/**
+ * Fetch all unique maintenance templates from unique_maintanence table.
+ * Used by the Unique Tasks page to show the canonical 42 templates, not
+ * deduplicated instances from machine_maintenance (which only shows 36 because
+ * 6 templates have no scheduled instances yet).
+ */
+export const fetchUniqueMaintenanceTemplates = async (): Promise<MachineMaintenance[]> => {
+  const { data, error } = await supabase
+    .from("unique_maintanence")
+    .select("*")
+    .order("task_description", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching unique maintenance templates:", error);
+    return [];
+  }
+
+  // Map `name` → `doer_name` to satisfy MachineMaintenance type
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data || []).map((row: any) => ({
+    ...row,
+    doer_name: row.name ?? null,
+    actual_date: null,
+    serial_no: null,
+    department: null,
+    delay: null,
+    status: null,
+    remarks: null,
+    image_url: null,
+    maintenance_cost: null,
+    sample_image: null,
+  })) as MachineMaintenance[];
+};
+
 // ============ Submit Maintenance Task ============
 
 /**
