@@ -102,19 +102,13 @@ export default function UniqueApproval() {
   // Transform maintenance data to a common format if needed, but we'll use conditional rendering
   const uniqueTasks = useMemo(() => {
     if (activeTab === "checklist") {
-      const raw = [...(checklistData?.data || [])].sort((a, b) => {
-        const dateA = parseDateFromDDMMYYYY(a.submission_date) || new Date(0);
-        const dateB = parseDateFromDDMMYYYY(b.submission_date) || new Date(0);
-        return dateB.getTime() - dateA.getTime();
+      // unique_checklist is already the template table — no dedup needed.
+      // Sort by name then task_description for a predictable display order.
+      return [...(checklistData?.data || [])].sort((a, b) => {
+        const nameCompare = (a.name || "").localeCompare(b.name || "");
+        if (nameCompare !== 0) return nameCompare;
+        return (a.task_description || "").localeCompare(b.task_description || "");
       });
-      const uniqueMap = new Map<string, ApprovalTask>();
-      raw.forEach((item) => {
-        const key = `${item.task_description || ""}|${item.department || ""}`.toLowerCase().trim();
-        if (key && !uniqueMap.has(key)) {
-          uniqueMap.set(key, item);
-        }
-      });
-      return Array.from(uniqueMap.values());
     } else {
       return [...(maintenanceData || [])].sort((a, b) =>
         (a.task_description || "").localeCompare(b.task_description || ""),
