@@ -238,15 +238,28 @@ export const updateChecklistTaskApi = async (
   // unique_checklist stores the image in the `image` column
   if (updatedTask.image !== undefined)
     updatePayload.image = updatedTask.image;
+  if (updatedTask.task_start_date !== undefined) {
+    updatePayload.task_start_date = updatedTask.task_start_date
+      ? new Date(updatedTask.task_start_date).toISOString()
+      : null;
+  }
 
   // Update the template in unique_checklist.
-  // The trg_sync_checklist_from_template trigger automatically cascades
-  // the change to all pending checklist rows linked via source_unique_id.
   const { data, error } = await supabase
     .from("unique_checklist")
     .update(updatePayload)
     .eq("task_id", originalTask.task_id)
     .select();
+
+  // If task_start_date changed, cascade to all pending checklist rows
+  if (updatedTask.task_start_date) {
+    const newDate = updatedTask.task_start_date;
+    await supabase
+      .from("checklist")
+      .update({ task_start_date: `${newDate}T00:00:00` })
+      .eq("source_unique_id", originalTask.task_id)
+      .is("submission_date", null);
+  }
 
   if (error) {
     console.error("Supabase error (unique_checklist update):", error);

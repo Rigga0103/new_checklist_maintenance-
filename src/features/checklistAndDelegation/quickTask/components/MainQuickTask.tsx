@@ -345,6 +345,7 @@ export default function MainQuickTask() {
             undefined,
           remark: editFormData.remark || undefined,
           image: editFormData.image || undefined,
+          task_start_date: editFormData.task_start_date || undefined,
         },
         originalTask: {
           task_id: originalTask.task_id,
@@ -1082,7 +1083,16 @@ export default function MainQuickTask() {
                       </td>
                       {/* START DATE */}
                       <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap bg-yellow-50 dark:bg-yellow-900/10">
-                        {isDelegationEditing ? (
+                        {isChecklistEditing ? (
+                          <input
+                            type="date"
+                            value={editFormData.task_start_date
+                              ? new Date(editFormData.task_start_date).toISOString().split("T")[0]
+                              : ""}
+                            onChange={(e) => handleInputChange("task_start_date", e.target.value)}
+                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
+                          />
+                        ) : isDelegationEditing ? (
                           <input
                             type="date"
                             value={delegationEditFormData.task_start_date

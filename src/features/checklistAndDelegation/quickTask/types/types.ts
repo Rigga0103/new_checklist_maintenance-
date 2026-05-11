@@ -32,6 +32,7 @@ export interface ChecklistUpdatePayload {
   require_attachment?: "yes" | "no";
   remark?: string;
   image?: string;
+  task_start_date?: string;
 }
 
 export interface ChecklistOriginalMatch {
