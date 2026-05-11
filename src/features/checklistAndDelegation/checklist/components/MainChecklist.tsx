@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 
 import {
   RefreshCw,
@@ -17,6 +17,7 @@ import {
   ChevronDown,
   Calendar,
   Download,
+  Trash2,
 } from "lucide-react";
 // import Image from "next/image";
 import {
@@ -27,6 +28,7 @@ import {
   useChecklistLast7Days,
   useChecklistUpcoming7Days,
   useChecklistOverdue,
+  useDeleteChecklistRow,
 } from "../server/tanstackQuery/useChecklist";
 import { useUsers } from "../../quickTask/server/tanstackQuery/useQuickTask";
 import { useUploadChecklistImage } from "../server/tanstackQuery/useChecklistUpload";
@@ -130,6 +132,41 @@ export default function MainChecklist({ initialNameFilter }: { initialNameFilter
 
     return Array.from(new Set(validNames)).sort();
   }, [usersData]);
+
+  // Triple-click to delete (admin only)
+  const [tripleClickTaskId, setTripleClickTaskId] = useState<number | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const clickCountsRef = useRef<Record<number, number>>({});
+  const clickTimersRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
+  const deleteRowMutation = useDeleteChecklistRow();
+
+  const handleRowClick = (taskId: number) => {
+    if (!isAdmin) return;
+    if (clickTimersRef.current[taskId]) clearTimeout(clickTimersRef.current[taskId]);
+    clickCountsRef.current[taskId] = (clickCountsRef.current[taskId] || 0) + 1;
+    if (clickCountsRef.current[taskId] >= 3) {
+      clickCountsRef.current[taskId] = 0;
+      setTripleClickTaskId(taskId);
+      setDeleteConfirmId(taskId);
+    } else {
+      clickTimersRef.current[taskId] = setTimeout(() => {
+        clickCountsRef.current[taskId] = 0;
+      }, 600);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirmId) return;
+    try {
+      await deleteRowMutation.mutateAsync(deleteConfirmId);
+      toast.success("Task deleted");
+    } catch {
+      toast.error("Failed to delete task");
+    } finally {
+      setDeleteConfirmId(null);
+      setTripleClickTaskId(null);
+    }
+  };
 
   const submitMutation = useSubmitChecklist();
   const uploadImageMutation = useUploadChecklistImage();
@@ -978,7 +1015,8 @@ export default function MainChecklist({ initialNameFilter }: { initialNameFilter
                   return (
                     <tr
                       key={task.task_id || index}
-                      className={`hover:bg-gray-50 dark:hover:bg-neutral-700/50 ${selectedTasks.has(task.task_id)
+                      onClick={() => handleRowClick(task.task_id)}
+                      className={`hover:bg-gray-50 dark:hover:bg-neutral-700/50 cursor-default ${selectedTasks.has(task.task_id)
                         ? "bg-blue-50 dark:bg-blue-900/20"
                         : ""
                         }`}
@@ -1358,6 +1396,47 @@ export default function MainChecklist({ initialNameFilter }: { initialNameFilter
           </div>
         )}
       </div>
+
+      {/* Triple-click Delete Confirmation Modal (admin only) */}
+      {deleteConfirmId !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-xl w-full max-w-sm p-6">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Delete Task
+              </h3>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
+              Task ID: <span className="font-medium text-gray-900 dark:text-white">#{deleteConfirmId}</span>
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+              This will permanently delete this checklist instance. This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setDeleteConfirmId(null);
+                  setTripleClickTaskId(null);
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:bg-neutral-700 dark:text-gray-300 dark:hover:bg-neutral-600 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                disabled={deleteRowMutation.isPending}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 rounded-lg"
+              >
+                {deleteRowMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

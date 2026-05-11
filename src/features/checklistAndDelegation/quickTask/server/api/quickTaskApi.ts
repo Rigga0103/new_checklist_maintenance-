@@ -251,14 +251,17 @@ export const updateChecklistTaskApi = async (
     .eq("task_id", originalTask.task_id)
     .select();
 
-  // If task_start_date changed, cascade to all pending checklist rows
+  // If task_start_date changed, delete pending rows that are before the new
+  // start date (they're no longer relevant). Rows on/after the new date keep
+  // their own scheduled dates so recurring instances stay intact.
   if (updatedTask.task_start_date) {
     const newDate = updatedTask.task_start_date;
     await supabase
       .from("checklist")
-      .update({ task_start_date: `${newDate}T00:00:00` })
+      .delete()
       .eq("source_unique_id", originalTask.task_id)
-      .is("submission_date", null);
+      .is("submission_date", null)
+      .lt("task_start_date", `${newDate}T00:00:00`);
   }
 
   if (error) {

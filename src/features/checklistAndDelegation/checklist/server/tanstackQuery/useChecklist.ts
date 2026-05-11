@@ -14,6 +14,7 @@ import {
   fetchChecklistOverdue,
   updateChecklistData,
   postChecklistAdminDone,
+  deleteChecklistRowApi,
 } from "../api/checklistApi";
 import type { ChecklistItem, ChecklistSubmissionItem } from "../../types/types";
 
@@ -259,6 +260,19 @@ export function useSubmitChecklist() {
       updateChecklistData(submissionData),
     onSuccess: () => {
       // Invalidate both active and history queries
+      queryClient.invalidateQueries({ queryKey: checklistKeys.all });
+    },
+  });
+}
+
+/**
+ * Delete a single checklist row by task_id (admin triple-click)
+ */
+export function useDeleteChecklistRow() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (taskId: number) => deleteChecklistRowApi(taskId),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: checklistKeys.all });
     },
   });

@@ -485,3 +485,13 @@ export const postChecklistAdminDone = async (
     return { error: error as Error };
   }
 };
+
+// ============ Delete Checklist Row ============
+
+export const deleteChecklistRowApi = async (taskId: number): Promise<void> => {
+  const { error } = await supabase
+    .from("checklist")
+    .delete()
+    .eq("task_id", taskId);
+  if (error) throw error;
+};
