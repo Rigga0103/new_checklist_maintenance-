@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 import {
   Wrench,
@@ -99,6 +101,16 @@ export default function RepairingDashboard() {
     if (typeof window === "undefined") return "";
     return localStorage.getItem("role") || "user";
   });
+
+  // Searchable dropdown states
+  const [machineSearch, setMachineSearch] = useState("");
+  const [machineTypeSearch, setMachineTypeSearch] = useState("");
+  const [assignedOpen, setAssignedOpen] = useState(false);
+  const [assignedSearch, setAssignedSearch] = useState("");
+  const [vendorOpen, setVendorOpen] = useState(false);
+  const [vendorSearch, setVendorSearch] = useState("");
+  const [partOpen, setPartOpen] = useState(false);
+  const [partSearch, setPartSearch] = useState("");
 
   useEffect(() => {
     const handleStorageChange = () => {
@@ -212,6 +224,55 @@ export default function RepairingDashboard() {
     document.body.removeChild(link);
   };
 
+  const exportToPDF = () => {
+    if (filteredData.length === 0) {
+      alert("No data to export");
+      return;
+    }
+
+    const doc = new jsPDF({ orientation: "landscape" });
+
+    doc.setFontSize(14);
+    doc.text("Repair Dashboard Report", 14, 15);
+    doc.setFontSize(9);
+    doc.text(
+      `Exported: ${new Date().toLocaleDateString("en-IN")}  |  Total: ${filteredData.length}`,
+      14,
+      22,
+    );
+
+    autoTable(doc, {
+      head: [[
+        "Task ID", "Date", "Machine Name", "Machine Type",
+        "Issue Detail", "Part Replaced", "Assigned To",
+        "Vendor", "Warranty", "Bill Amount", "Status", "Remarks",
+      ]],
+      body: filteredData.map((task) => [
+        task.task_id || task.id || "—",
+        formatDate(task.created_at),
+        task.machine_name || "—",
+        task.machine_type || "—",
+        task.issue_detail || "—",
+        task.part_replaced || "—",
+        task.assigned_to || "—",
+        task.vendor_name || "—",
+        task.warranty_start_date
+          ? `${formatDate(task.warranty_start_date)} to ${formatDate(task.warranty_end_date)}`
+          : "—",
+        task.bill_amount ? `₹${task.bill_amount}` : "—",
+        task.status || "—",
+        task.remarks || "—",
+      ]),
+      startY: 27,
+      styles: { fontSize: 7.5, cellPadding: 2 },
+      headStyles: { fillColor: [234, 88, 12], textColor: 255, fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [245, 247, 250] },
+      columnStyles: { 4: { cellWidth: 40 }, 11: { cellWidth: 30 } },
+    });
+
+    doc.save(`repair_dashboard_${new Date().toISOString().split("T")[0]}.pdf`);
+  };
+
   // ---- Initial loading: show full skeleton ----
   if (repairLoading && !repairData.length) {
     return <RepairingDashboardPageSkeleton />;
@@ -309,7 +370,19 @@ export default function RepairingDashboard() {
             </div>
             {showMachineTypeDropdown && (
               <div className="absolute z-20 w-full mt-1 overflow-y-auto bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-600 rounded-lg shadow-lg max-h-60 top-full">
-                <div className="sticky top-0 p-2 bg-white dark:bg-neutral-800 border-b border-gray-200 dark:border-neutral-700">
+                <div className="sticky top-0 p-2 bg-white dark:bg-neutral-800 border-b border-gray-200 dark:border-neutral-700 space-y-1.5">
+                  <div className="relative">
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                    <input
+                      autoFocus
+                      type="text"
+                      placeholder="Search types..."
+                      value={machineTypeSearch}
+                      onChange={(e) => setMachineTypeSearch(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-full pl-7 pr-3 py-1.5 text-sm bg-gray-50 dark:bg-neutral-700 border border-gray-200 dark:border-neutral-600 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500/40 text-gray-900 dark:text-white"
+                    />
+                  </div>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -320,7 +393,7 @@ export default function RepairingDashboard() {
                     Clear Selection
                   </button>
                 </div>
-                {machineTypesList.map((machineType) => (
+                {machineTypesList.filter((t) => t.toLowerCase().includes(machineTypeSearch.toLowerCase())).map((machineType) => (
                   <div
                     key={machineType}
                     onClick={(e) => {
@@ -371,7 +444,19 @@ export default function RepairingDashboard() {
             </div>
             {showMachineDropdown && (
               <div className="absolute z-20 w-full mt-1 overflow-y-auto bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-600 rounded-lg shadow-lg max-h-60 top-full">
-                <div className="sticky top-0 p-2 bg-white dark:bg-neutral-800 border-b border-gray-200 dark:border-neutral-700">
+                <div className="sticky top-0 p-2 bg-white dark:bg-neutral-800 border-b border-gray-200 dark:border-neutral-700 space-y-1.5">
+                  <div className="relative">
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                    <input
+                      autoFocus
+                      type="text"
+                      placeholder="Search machines..."
+                      value={machineSearch}
+                      onChange={(e) => setMachineSearch(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-full pl-7 pr-3 py-1.5 text-sm bg-gray-50 dark:bg-neutral-700 border border-gray-200 dark:border-neutral-600 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500/40 text-gray-900 dark:text-white"
+                    />
+                  </div>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -382,7 +467,7 @@ export default function RepairingDashboard() {
                     Clear Selection
                   </button>
                 </div>
-                {machinesList.map((machine) => (
+                {machinesList.filter((m) => m.toLowerCase().includes(machineSearch.toLowerCase())).map((machine) => (
                   <div
                     key={machine}
                     onClick={(e) => {
@@ -431,60 +516,138 @@ export default function RepairingDashboard() {
           </div>
 
           {/* Assigned To */}
-          <div className="flex flex-col min-w-37.5">
+          <div className="flex flex-col min-w-37.5 relative">
             <label className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
               Assigned To
             </label>
-            <select
-              value={selectedAssignedTo}
-              onChange={(e) => setSelectedAssignedTo(e.target.value)}
-              className="px-3 py-2 border border-gray-200 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+            <button
+              onClick={() => { setAssignedOpen(!assignedOpen); setAssignedSearch(""); setVendorOpen(false); setPartOpen(false); }}
+              className="px-3 py-2 border border-gray-200 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 flex items-center justify-between min-h-10.5 text-left"
             >
-              <option value="all">All Assignees</option>
-              {assignedToList.map((person) => (
-                <option key={person} value={person}>
-                  {person}
-                </option>
-              ))}
-            </select>
+              <span className="text-gray-700 dark:text-gray-200 truncate text-sm">
+                {selectedAssignedTo === "all" ? "All Assignees" : selectedAssignedTo}
+              </span>
+              <ChevronDown className={`w-4 h-4 text-gray-500 dark:text-gray-400 shrink-0 transition-transform ${assignedOpen ? "rotate-180" : ""}`} />
+            </button>
+            {assignedOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setAssignedOpen(false)} />
+                <div className="absolute z-20 w-full mt-1 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-600 rounded-lg shadow-lg top-full overflow-hidden">
+                  <div className="p-2 border-b border-gray-100 dark:border-neutral-700">
+                    <div className="relative">
+                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                      <input autoFocus type="text" placeholder="Search assignees..." value={assignedSearch} onChange={(e) => setAssignedSearch(e.target.value)}
+                        className="w-full pl-7 pr-3 py-1.5 text-sm bg-gray-50 dark:bg-neutral-700 border border-gray-200 dark:border-neutral-600 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500/40 text-gray-900 dark:text-white" />
+                    </div>
+                  </div>
+                  <div className="max-h-52 overflow-y-auto p-1">
+                    <button onClick={() => { setSelectedAssignedTo("all"); setAssignedOpen(false); }}
+                      className={`w-full text-left px-3 py-2 text-sm rounded hover:bg-orange-50 dark:hover:bg-neutral-700 transition-colors ${selectedAssignedTo === "all" ? "text-orange-600 dark:text-orange-400 font-medium bg-orange-50/50 dark:bg-orange-900/20" : "text-gray-700 dark:text-gray-200"}`}>
+                      All Assignees
+                    </button>
+                    {assignedToList.filter((p) => p.toLowerCase().includes(assignedSearch.toLowerCase())).map((person) => (
+                      <button key={person} onClick={() => { setSelectedAssignedTo(person); setAssignedOpen(false); }}
+                        className={`w-full text-left px-3 py-2 text-sm rounded hover:bg-orange-50 dark:hover:bg-neutral-700 transition-colors ${selectedAssignedTo === person ? "text-orange-600 dark:text-orange-400 font-medium bg-orange-50/50 dark:bg-orange-900/20" : "text-gray-700 dark:text-gray-200"}`}>
+                        {person}
+                      </button>
+                    ))}
+                    {assignedToList.filter((p) => p.toLowerCase().includes(assignedSearch.toLowerCase())).length === 0 && (
+                      <p className="px-3 py-2 text-sm text-muted-foreground">No assignees found</p>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Vendor */}
-          <div className="flex flex-col min-w-37.5">
+          <div className="flex flex-col min-w-37.5 relative">
             <label className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
               Vendor
             </label>
-            <select
-              value={selectedVendor}
-              onChange={(e) => setSelectedVendor(e.target.value)}
-              className="px-3 py-2 border border-gray-200 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+            <button
+              onClick={() => { setVendorOpen(!vendorOpen); setVendorSearch(""); setAssignedOpen(false); setPartOpen(false); }}
+              className="px-3 py-2 border border-gray-200 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 flex items-center justify-between min-h-10.5 text-left"
             >
-              <option value="all">All Vendors</option>
-              {vendorsList.map((vendor) => (
-                <option key={vendor} value={vendor}>
-                  {vendor}
-                </option>
-              ))}
-            </select>
+              <span className="text-gray-700 dark:text-gray-200 truncate text-sm">
+                {selectedVendor === "all" ? "All Vendors" : selectedVendor}
+              </span>
+              <ChevronDown className={`w-4 h-4 text-gray-500 dark:text-gray-400 shrink-0 transition-transform ${vendorOpen ? "rotate-180" : ""}`} />
+            </button>
+            {vendorOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setVendorOpen(false)} />
+                <div className="absolute z-20 w-full mt-1 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-600 rounded-lg shadow-lg top-full overflow-hidden">
+                  <div className="p-2 border-b border-gray-100 dark:border-neutral-700">
+                    <div className="relative">
+                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                      <input autoFocus type="text" placeholder="Search vendors..." value={vendorSearch} onChange={(e) => setVendorSearch(e.target.value)}
+                        className="w-full pl-7 pr-3 py-1.5 text-sm bg-gray-50 dark:bg-neutral-700 border border-gray-200 dark:border-neutral-600 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500/40 text-gray-900 dark:text-white" />
+                    </div>
+                  </div>
+                  <div className="max-h-52 overflow-y-auto p-1">
+                    <button onClick={() => { setSelectedVendor("all"); setVendorOpen(false); }}
+                      className={`w-full text-left px-3 py-2 text-sm rounded hover:bg-orange-50 dark:hover:bg-neutral-700 transition-colors ${selectedVendor === "all" ? "text-orange-600 dark:text-orange-400 font-medium bg-orange-50/50 dark:bg-orange-900/20" : "text-gray-700 dark:text-gray-200"}`}>
+                      All Vendors
+                    </button>
+                    {vendorsList.filter((v) => v.toLowerCase().includes(vendorSearch.toLowerCase())).map((vendor) => (
+                      <button key={vendor} onClick={() => { setSelectedVendor(vendor); setVendorOpen(false); }}
+                        className={`w-full text-left px-3 py-2 text-sm rounded hover:bg-orange-50 dark:hover:bg-neutral-700 transition-colors ${selectedVendor === vendor ? "text-orange-600 dark:text-orange-400 font-medium bg-orange-50/50 dark:bg-orange-900/20" : "text-gray-700 dark:text-gray-200"}`}>
+                        {vendor}
+                      </button>
+                    ))}
+                    {vendorsList.filter((v) => v.toLowerCase().includes(vendorSearch.toLowerCase())).length === 0 && (
+                      <p className="px-3 py-2 text-sm text-muted-foreground">No vendors found</p>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Part Replaced */}
-          <div className="flex flex-col min-w-37.5">
+          <div className="flex flex-col min-w-37.5 relative">
             <label className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
               Part Replaced
             </label>
-            <select
-              value={selectedPart}
-              onChange={(e) => setSelectedPart(e.target.value)}
-              className="px-3 py-2 border border-gray-200 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+            <button
+              onClick={() => { setPartOpen(!partOpen); setPartSearch(""); setAssignedOpen(false); setVendorOpen(false); }}
+              className="px-3 py-2 border border-gray-200 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 flex items-center justify-between min-h-10.5 text-left"
             >
-              <option value="all">All Parts</option>
-              {partsList.map((part) => (
-                <option key={part} value={part}>
-                  {part}
-                </option>
-              ))}
-            </select>
+              <span className="text-gray-700 dark:text-gray-200 truncate text-sm">
+                {selectedPart === "all" ? "All Parts" : selectedPart}
+              </span>
+              <ChevronDown className={`w-4 h-4 text-gray-500 dark:text-gray-400 shrink-0 transition-transform ${partOpen ? "rotate-180" : ""}`} />
+            </button>
+            {partOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setPartOpen(false)} />
+                <div className="absolute z-20 w-full mt-1 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-600 rounded-lg shadow-lg top-full overflow-hidden">
+                  <div className="p-2 border-b border-gray-100 dark:border-neutral-700">
+                    <div className="relative">
+                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                      <input autoFocus type="text" placeholder="Search parts..." value={partSearch} onChange={(e) => setPartSearch(e.target.value)}
+                        className="w-full pl-7 pr-3 py-1.5 text-sm bg-gray-50 dark:bg-neutral-700 border border-gray-200 dark:border-neutral-600 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500/40 text-gray-900 dark:text-white" />
+                    </div>
+                  </div>
+                  <div className="max-h-52 overflow-y-auto p-1">
+                    <button onClick={() => { setSelectedPart("all"); setPartOpen(false); }}
+                      className={`w-full text-left px-3 py-2 text-sm rounded hover:bg-orange-50 dark:hover:bg-neutral-700 transition-colors ${selectedPart === "all" ? "text-orange-600 dark:text-orange-400 font-medium bg-orange-50/50 dark:bg-orange-900/20" : "text-gray-700 dark:text-gray-200"}`}>
+                      All Parts
+                    </button>
+                    {partsList.filter((p) => p.toLowerCase().includes(partSearch.toLowerCase())).map((part) => (
+                      <button key={part} onClick={() => { setSelectedPart(part); setPartOpen(false); }}
+                        className={`w-full text-left px-3 py-2 text-sm rounded hover:bg-orange-50 dark:hover:bg-neutral-700 transition-colors ${selectedPart === part ? "text-orange-600 dark:text-orange-400 font-medium bg-orange-50/50 dark:bg-orange-900/20" : "text-gray-700 dark:text-gray-200"}`}>
+                        {part}
+                      </button>
+                    ))}
+                    {partsList.filter((p) => p.toLowerCase().includes(partSearch.toLowerCase())).length === 0 && (
+                      <p className="px-3 py-2 text-sm text-muted-foreground">No parts found</p>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Date Range */}
@@ -529,6 +692,15 @@ export default function RepairingDashboard() {
           >
             <Download className="w-4 h-4" />
             Export CSV
+          </button>
+
+          {/* Export to PDF */}
+          <button
+            onClick={exportToPDF}
+            className="flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            <FileText className="w-4 h-4" />
+            Export PDF
           </button>
         </div>
 

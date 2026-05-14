@@ -34,6 +34,8 @@ import { useUsers } from "../../quickTask/server/tanstackQuery/useQuickTask";
 import { useUploadChecklistImage } from "../server/tanstackQuery/useChecklistUpload";
 import { ChecklistSubmissionItem } from "../types/types";
 import { toast } from "sonner";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const ITEMS_PER_PAGE = 50;
 
@@ -44,6 +46,7 @@ export default function MainChecklist({ initialNameFilter }: { initialNameFilter
   const [searchTerm, setSearchTerm] = useState("");
   const [nameFilter, setNameFilter] = useState(initialNameFilter || "");
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [nameSearchQuery, setNameSearchQuery] = useState("");
   const [selectedTasks, setSelectedTasks] = useState<Set<number>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [taskRemarks, setTaskRemarks] = useState<Record<number, string>>({});
@@ -66,7 +69,7 @@ export default function MainChecklist({ initialNameFilter }: { initialNameFilter
   // Date range filters
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "pending">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "done">("all");
   const [frequencyFilter, setFrequencyFilter] = useState("");
 
   // Read role and username from localStorage for role-based filtering
@@ -235,6 +238,9 @@ export default function MainChecklist({ initialNameFilter }: { initialNameFilter
         // Also exclude tasks that are considered "Overdue"
         keep = false;
       }
+    }
+    if (activeTab === "last7days" && statusFilter === "done") {
+      if (t.status !== "Done") keep = false;
     }
     return keep;
   });
@@ -575,6 +581,70 @@ export default function MainChecklist({ initialNameFilter }: { initialNameFilter
     document.body.removeChild(link);
   };
 
+  const exportToPDF = () => {
+    const exportTasks =
+      selectedTasks.size > 0
+        ? tasks.filter((t) => selectedTasks.has(t.task_id))
+        : tasks;
+
+    if (exportTasks.length === 0) {
+      toast.error("No data to export");
+      return;
+    }
+
+    const doc = new jsPDF({ orientation: "landscape" });
+
+    doc.setFontSize(14);
+    doc.text("Checklist Tasks", 14, 15);
+    doc.setFontSize(9);
+    doc.text(
+      `Tab: ${activeTab}  |  Exported: ${new Date().toLocaleDateString("en-IN")}  |  Total: ${exportTasks.length}`,
+      14,
+      22,
+    );
+
+    const columns = [
+      "Task ID",
+      "Timestamp",
+      "Department",
+      "Given By",
+      "Name",
+      "Description",
+      "Plan Date",
+      ...(activeTab === "history" || activeTab === "last7days" ? ["Submitted Date"] : []),
+      "Status",
+      "Freq",
+      "Remarks",
+    ];
+
+    const rows = exportTasks.map((t) => [
+      t.task_id,
+      formatDate(t.created_at),
+      t.department || "—",
+      t.given_by || "—",
+      t.name || "—",
+      t.task_description || "—",
+      formatDate(t.task_start_date),
+      ...(activeTab === "history" || activeTab === "last7days" ? [formatDate(t.submission_date)] : []),
+      t.status || "Pending",
+      t.frequency || "One-time",
+      t.remark || "—",
+    ]);
+
+    autoTable(doc, {
+      head: [columns],
+      body: rows,
+      startY: 27,
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [22, 163, 74], textColor: 255, fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [245, 247, 250] },
+      columnStyles: { 5: { cellWidth: 55 } },
+    });
+
+    doc.save(`Checklist_${activeTab}_Tasks_${new Date().toISOString().split("T")[0]}.pdf`);
+    toast.success(`PDF exported (${exportTasks.length} task${exportTasks.length !== 1 ? "s" : ""})`);
+  };
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -713,40 +783,69 @@ export default function MainChecklist({ initialNameFilter }: { initialNameFilter
         {isAdmin && (
           <div className="relative">
             <button
-              onClick={() => setDropdownOpen(!dropdownOpen)}
+              onClick={() => {
+                setDropdownOpen(!dropdownOpen);
+                setNameSearchQuery("");
+              }}
               className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800"
             >
-              {nameFilter || "Filter by Name"}
+              <span className="max-w-28 truncate">{nameFilter || "Filter by Name"}</span>
               <ChevronDown
                 className={`w-4 h-4 transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
               />
             </button>
             {dropdownOpen && (
-              <div className="absolute z-50 mt-1 w-48 max-h-60 overflow-auto rounded-lg bg-white dark:bg-neutral-800 shadow-lg border border-gray-200 dark:border-neutral-700">
-                <button
-                  onClick={() => {
-                    setNameFilter("");
-                    setDropdownOpen(false);
-                    setCurrentPage(1);
-                  }}
-                  className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700"
-                >
-                  All Names
-                </button>
-                {allNames.map((name) => (
-                  <button
-                    key={name}
-                    onClick={() => {
-                      setNameFilter(name);
-                      setDropdownOpen(false);
-                      setCurrentPage(1);
-                    }}
-                    className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700"
-                  >
-                    {name}
-                  </button>
-                ))}
-              </div>
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setDropdownOpen(false)}
+                />
+                <div className="absolute z-50 mt-1 w-52 rounded-lg bg-white dark:bg-neutral-800 shadow-lg border border-gray-200 dark:border-neutral-700 overflow-hidden">
+                  <div className="p-2 border-b border-gray-100 dark:border-neutral-700">
+                    <div className="relative">
+                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                      <input
+                        autoFocus
+                        type="text"
+                        placeholder="Search names..."
+                        value={nameSearchQuery}
+                        onChange={(e) => setNameSearchQuery(e.target.value)}
+                        className="w-full pl-7 pr-3 py-1.5 text-sm bg-gray-50 dark:bg-neutral-700 border border-gray-200 dark:border-neutral-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/40 text-gray-900 dark:text-white"
+                      />
+                    </div>
+                  </div>
+                  <div className="max-h-52 overflow-y-auto p-1">
+                    <button
+                      onClick={() => {
+                        setNameFilter("");
+                        setDropdownOpen(false);
+                        setCurrentPage(1);
+                      }}
+                      className={`block w-full text-left px-3 py-2 text-sm rounded transition-colors hover:bg-gray-100 dark:hover:bg-neutral-700 ${!nameFilter ? "text-blue-600 dark:text-blue-400 font-medium bg-blue-50/50 dark:bg-blue-900/20" : "text-gray-700 dark:text-gray-200"}`}
+                    >
+                      All Names
+                    </button>
+                    {allNames
+                      .filter((name) => name.toLowerCase().includes(nameSearchQuery.toLowerCase()))
+                      .map((name) => (
+                        <button
+                          key={name}
+                          onClick={() => {
+                            setNameFilter(name);
+                            setDropdownOpen(false);
+                            setCurrentPage(1);
+                          }}
+                          className={`block w-full text-left px-3 py-2 text-sm rounded transition-colors hover:bg-gray-100 dark:hover:bg-neutral-700 ${nameFilter === name ? "text-blue-600 dark:text-blue-400 font-medium bg-blue-50/50 dark:bg-blue-900/20" : "text-gray-700 dark:text-gray-200"}`}
+                        >
+                          {name}
+                        </button>
+                      ))}
+                    {allNames.filter((name) => name.toLowerCase().includes(nameSearchQuery.toLowerCase())).length === 0 && (
+                      <p className="px-3 py-2 text-sm text-muted-foreground">No names found</p>
+                    )}
+                  </div>
+                </div>
+              </>
             )}
           </div>
         )}
@@ -773,14 +872,14 @@ export default function MainChecklist({ initialNameFilter }: { initialNameFilter
             <select
               value={statusFilter}
               onChange={(e) => {
-                setStatusFilter(e.target.value as "all" | "pending");
+                setStatusFilter(e.target.value as "all" | "pending" | "done");
                 setCurrentPage(1);
               }}
               className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 focus:outline-none"
             >
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
-
+              <option value="done">Done</option>
             </select>
           </div>
         )}
@@ -830,6 +929,13 @@ export default function MainChecklist({ initialNameFilter }: { initialNameFilter
         >
           <Download className="w-4 h-4" />
           Download CSV
+        </button>
+        <button
+          onClick={exportToPDF}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+        >
+          <FileText className="w-4 h-4" />
+          Download PDF
         </button>
 
         {(activeTab === "pending" || activeTab === "overdue" || activeTab === "last7days" || activeTab === "upcoming7days") && tasks.length > 0 && (

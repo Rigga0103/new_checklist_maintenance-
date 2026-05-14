@@ -26,6 +26,8 @@ export interface MachineRepair {
   Type_of_Work?: string | null;
   qty?: number | null;
   purchase_date?: string | null;
+  amc?: string | null;
+  next_repairing_date?: string | null;
 }
 
 export interface MachineMaintenance {
@@ -86,6 +88,8 @@ export interface RepairProcessFormData {
   warrantyToDate?: string;
   workDoneBy?: string;
   typeOfWork?: string;
+  amc?: string;
+  nextRepairingDate?: string;
 }
 
 export type RepairStatus =

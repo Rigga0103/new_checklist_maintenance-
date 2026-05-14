@@ -25,6 +25,7 @@ import {
   useRepairHistoryQuery,
   useRepairLast7DaysQuery,
   useProcessRepairMutation,
+  useAMCRepairsQuery,
 } from "../server/tanstackQuery/useRepairingQueries";
 import type { MachineRepair, RepairProcessFormData } from "../../types/types";
 import { useMachineTypesQuery } from "../server/tanstackQuery/useMachineTypes";
@@ -47,7 +48,7 @@ const WORK_DONE_OPTIONS: { value: string; label: string }[] = [
 ];
 
 interface RepairingListProps {
-  initialTab?: "pending" | "history" | "last7days" | "overdue";
+  initialTab?: "pending" | "history" | "last7days" | "overdue" | "next_service";
   showTabs?: boolean;
 }
 
@@ -56,7 +57,7 @@ export default function RepairingList({
   showTabs = true,
 }: RepairingListProps) {
   const [activeTab, setActiveTab] = useState<
-    "pending" | "history" | "last7days" | "overdue"
+    "pending" | "history" | "last7days" | "overdue" | "next_service"
   >(initialTab);
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
@@ -132,6 +133,8 @@ export default function RepairingList({
     username,
   );
 
+  const amcQuery = useAMCRepairsQuery(page, limit, searchTerm);
+
   const processMutation = useProcessRepairMutation();
 
   const getActiveQuery = () => {
@@ -144,6 +147,8 @@ export default function RepairingList({
         return historyQuery;
       case "last7days":
         return last7DaysQuery;
+      case "next_service":
+        return amcQuery;
     }
   };
 
@@ -176,6 +181,8 @@ export default function RepairingList({
     warrantyToDate: "",
     workDoneBy: "",
     typeOfWork: "",
+    amc: "",
+    nextRepairingDate: "",
   });
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [billFile, setBillFile] = useState<File | null>(null);
@@ -183,7 +190,7 @@ export default function RepairingList({
   const [hasWarranty, setHasWarranty] = useState(false);
 
   const handleTabChange = (
-    tab: "pending" | "history" | "last7days" | "overdue",
+    tab: "pending" | "history" | "last7days" | "overdue" | "next_service",
   ) => {
     setActiveTab(tab);
     setPage(1);
@@ -207,6 +214,8 @@ export default function RepairingList({
       warrantyToDate: repair.warranty_end_date || "",
       workDoneBy: repair.Work_Done_By || "",
       typeOfWork: repair.Type_of_Work || "",
+      amc: repair.amc || "",
+      nextRepairingDate: repair.next_repairing_date || "",
     });
     setPhotoFile(null);
     setBillFile(null);
@@ -239,6 +248,10 @@ export default function RepairingList({
 
   const handleProcessSubmit = async () => {
     if (!selectedRepair) return;
+    if (processForm.amc === "yes" && !processForm.nextRepairingDate) {
+      toast.error("Next Repairing Date is required when AMC is Yes");
+      return;
+    }
     try {
       await processMutation.mutateAsync({
         taskId: selectedRepair.task_id,
@@ -394,7 +407,7 @@ export default function RepairingList({
   };
 
   const canRead =
-    activeTab === "pending" || activeTab === "overdue"
+    activeTab === "pending" || activeTab === "overdue" || activeTab === "next_service"
       ? canReadPending
       : canReadHistory;
   if (!canRead && role) {
@@ -417,7 +430,9 @@ export default function RepairingList({
                 ? "All Overdue Repairs"
                 : activeTab === "history"
                   ? "Repair History"
-                  : "Repairing Last 7 Days"}
+                  : activeTab === "next_service"
+                    ? "Next Service Date (AMC)"
+                    : "Repairing Last 7 Days"}
           </h1>
           <p className="text-muted-foreground text-sm">
             {viewMyTasksOnly && username
@@ -477,6 +492,12 @@ export default function RepairingList({
             className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all whitespace-nowrap ${activeTab === "last7days" ? "bg-gray-600 dark:bg-neutral-500 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"}`}
           >
             Last 7 Days
+          </button>
+          <button
+            onClick={() => handleTabChange("next_service")}
+            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all whitespace-nowrap ${activeTab === "next_service" ? "bg-purple-600 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"}`}
+          >
+            Next Service Date
           </button>
         </div>
 
@@ -552,7 +573,7 @@ export default function RepairingList({
         ) : repairs.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground flex flex-col items-center">
             <FileText className="w-12 h-12 text-neutral-300 dark:text-neutral-600 mb-4" />
-            <p>No {activeTab} repairs found</p>
+            <p>{activeTab === "next_service" ? "No AMC repairs with a next service date found" : `No ${activeTab} repairs found`}</p>
           </div>
         ) : (
           <div
@@ -606,6 +627,11 @@ export default function RepairingList({
                   {(activeTab === "history" || activeTab === "last7days") && (
                     <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                       Completed Date
+                    </th>
+                  )}
+                  {activeTab === "next_service" && (
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                      Next Service Date
                     </th>
                   )}
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
@@ -676,6 +702,11 @@ export default function RepairingList({
                         {formatDate(repair.actual_date)}
                       </td>
                     )}
+                    {activeTab === "next_service" && (
+                      <td className="px-4 py-3 text-sm font-semibold text-purple-600 dark:text-purple-400">
+                        {formatDate(repair.next_repairing_date)}
+                      </td>
+                    )}
                     <td className="px-4 py-3">
                       {getStatusBadge(repair.status)}
                     </td>
@@ -688,7 +719,15 @@ export default function RepairingList({
                       </td>
                     )}
                     <td className="px-4 py-3">
-                      {activeTab === "pending" || activeTab === "overdue" ? (
+                      {activeTab === "next_service" ? (
+                        <button
+                          onClick={() => setViewDetailRepair(repair)}
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-foreground bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 rounded-lg transition-colors"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          View
+                        </button>
+                      ) : activeTab === "pending" || activeTab === "overdue" ? (
                         canEditPending ? (
                           <button
                             onClick={() => openProcessModal(repair)}
@@ -1120,6 +1159,48 @@ export default function RepairingList({
                       placeholder="Additional notes..."
                       className="w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground resize-none"
                     />
+                  </div>
+
+                  {/* AMC */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1.5">
+                        AMC
+                      </label>
+                      <select
+                        value={processForm.amc || ""}
+                        onChange={(e) =>
+                          setProcessForm((prev) => ({
+                            ...prev,
+                            amc: e.target.value,
+                            nextRepairingDate: e.target.value !== "yes" ? "" : prev.nextRepairingDate,
+                          }))
+                        }
+                        className="w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground"
+                      >
+                        <option value="">Select</option>
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                      </select>
+                    </div>
+                    {processForm.amc === "yes" && (
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1.5">
+                          Next Repairing Date
+                        </label>
+                        <input
+                          type="date"
+                          value={processForm.nextRepairingDate || ""}
+                          onChange={(e) =>
+                            setProcessForm((prev) => ({
+                              ...prev,
+                              nextRepairingDate: e.target.value,
+                            }))
+                          }
+                          className="w-full px-4 py-2.5 bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-foreground"
+                        />
+                      </div>
+                    )}
                   </div>
                 </>
               )}

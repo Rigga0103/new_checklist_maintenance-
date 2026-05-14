@@ -555,6 +555,54 @@ export const deleteRepair = async (
   }
 };
 
+// ============ Fetch AMC Repairs ============
+
+/**
+ * Fetch repairs where AMC = yes and next_repairing_date is set, ordered by next service date asc
+ */
+export const fetchAMCRepairs = async (
+  page = 1,
+  limit = 50,
+  searchTerm = "",
+): Promise<RepairFetchResponse> => {
+  try {
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    let query = supabase
+      .from("machine_repair")
+      .select("*", { count: "exact" })
+      .eq("amc", "yes")
+      .not("next_repairing_date", "is", null)
+      .order("next_repairing_date", { ascending: true })
+      .range(from, to);
+
+    if (searchTerm && searchTerm.trim() !== "") {
+      const searchValue = searchTerm.trim();
+      const isNumeric = /^\d+$/.test(searchValue);
+      const orConditions = [
+        `machine_name.ilike.%${searchValue}%`,
+        `issue_detail.ilike.%${searchValue}%`,
+        `machine_type.ilike.%${searchValue}%`,
+      ];
+      if (isNumeric) orConditions.push(`task_id.eq.${searchValue}`);
+      query = query.or(orConditions.join(","));
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error("Error fetching AMC repairs:", error);
+      return { data: [], totalCount: 0 };
+    }
+
+    return { data: data as MachineRepair[], totalCount: count || 0 };
+  } catch (error) {
+    console.error("Error from Supabase:", error);
+    return { data: [], totalCount: 0 };
+  }
+};
+
 // ============ Process Repair (Admin) ============
 
 /**
@@ -645,6 +693,8 @@ export const processRepair = async (
       warranty_end_date: processData.warrantyToDate || null,
       Work_Done_By: processData.workDoneBy || null,
       Type_of_Work: processData.typeOfWork || null,
+      amc: processData.amc || null,
+      next_repairing_date: processData.nextRepairingDate || null,
       task_start_date: new Date().toISOString(),
     };
 

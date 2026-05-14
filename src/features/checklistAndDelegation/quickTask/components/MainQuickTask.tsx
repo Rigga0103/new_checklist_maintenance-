@@ -17,6 +17,8 @@ import {
   Download,
 } from "lucide-react";
 import { toast } from "sonner";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import {
   useChecklistTasksQuery,
   useDelegationTasksQuery,
@@ -44,6 +46,7 @@ export default function MainQuickTask() {
     name: false,
     frequency: false,
   });
+  const [userSearchQuery, setUserSearchQuery] = useState("");
 
   const [selectedTasks, setSelectedTasks] = useState<ChecklistTask[]>([]);
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
@@ -192,7 +195,7 @@ export default function MainQuickTask() {
     else setMaintenancePage((p) => Math.max(0, p - 1));
   };
 
-  const allFrequencies = ["daily", "weekly", "monthly", "one-time"];
+  const allFrequencies = ["daily", "weekly", "monthly", "one-time", "yearly", "quarterly", "fortnightly"];
 
   // Format date
   const formatDate = (dateStr: string | null) => {
@@ -568,6 +571,97 @@ export default function MainQuickTask() {
     toast.success("CSV exported successfully (current page)");
   };
 
+  const handleExportPDF = () => {
+    // Determine which rows to export: selected if any, otherwise all filtered tasks
+    const exportTasks: (ChecklistTask | DelegationTask | MaintenanceTask)[] =
+      activeTab === "checklist"
+        ? selectedTasks.length > 0 ? selectedTasks : tasks
+        : activeTab === "delegation"
+          ? selectedDelegationTasks.length > 0 ? selectedDelegationTasks : tasks
+          : selectedMaintenanceTasks.length > 0 ? selectedMaintenanceTasks : tasks;
+
+    if (exportTasks.length === 0) {
+      toast.error("No tasks to export");
+      return;
+    }
+
+    const doc = new jsPDF({ orientation: "landscape" });
+
+    const title =
+      activeTab === "checklist"
+        ? "Checklist Tasks"
+        : activeTab === "delegation"
+          ? "Delegation Tasks"
+          : "Maintenance Tasks";
+
+    doc.setFontSize(14);
+    doc.text(title, 14, 15);
+    doc.setFontSize(9);
+    doc.text(`Exported: ${new Date().toLocaleDateString("en-IN")}  |  Total: ${exportTasks.length}`, 14, 22);
+
+    const columns =
+      activeTab === "checklist"
+        ? ["Task ID", "Department", "Given By", "Name", "Description", "Start Date", "Frequency"]
+        : activeTab === "delegation"
+          ? ["Task ID", "Department", "Given By", "Name", "Description", "Start Date", "Planned Date", "Frequency", "Status"]
+          : ["Task ID", "Machine", "Given By", "Doer Name", "Description", "Start Date", "End Date", "Frequency", "Reminder", "Attachment"];
+
+    const rows = exportTasks.map((t) => {
+      if (activeTab === "checklist") {
+        const task = t as ChecklistTask;
+        return [
+          task.task_id,
+          task.department || "—",
+          task.given_by || "—",
+          task.name || "—",
+          task.task_description || "—",
+          task.task_start_date ? formatDate(task.task_start_date) : "—",
+          task.frequency || "—",
+        ];
+      } else if (activeTab === "delegation") {
+        const task = t as DelegationTask;
+        return [
+          task.task_id,
+          task.department || "—",
+          task.given_by || "—",
+          task.name || "—",
+          task.task_description || "—",
+          task.task_start_date ? formatDate(task.task_start_date) : "—",
+          task.planned_date ? formatDate(task.planned_date) : "—",
+          task.frequency || "—",
+          task.status || "—",
+        ];
+      } else {
+        const task = t as MaintenanceTask;
+        return [
+          task.task_id,
+          task.machine_name || "—",
+          task.given_by || "—",
+          task.name || "—",
+          task.task_description || "—",
+          task.task_start_date ? formatDate(task.task_start_date) : "—",
+          task.task_end_date ? formatDate(task.task_end_date) : "—",
+          task.frequency || "—",
+          task.enable_reminder || "—",
+          task.require_attachment || "—",
+        ];
+      }
+    });
+
+    autoTable(doc, {
+      head: [columns],
+      body: rows,
+      startY: 27,
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [245, 247, 250] },
+      columnStyles: { 4: { cellWidth: 55 } },
+    });
+
+    doc.save(`${activeTab}_tasks_${new Date().toISOString().split("T")[0]}.pdf`);
+    toast.success(`PDF exported (${exportTasks.length} task${exportTasks.length !== 1 ? "s" : ""})`);
+  };
+
   // Frequency badge
   const getFrequencyBadge = (freq: string) => {
     const colors: Record<string, string> = {
@@ -651,6 +745,13 @@ export default function MainQuickTask() {
           >
             <Download className="w-4 h-4" />
             Export CSV
+          </button>
+          <button
+            onClick={handleExportPDF}
+            className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+          >
+            <FileText className="w-4 h-4" />
+            Export PDF
           </button>
         </div>
       </div>
@@ -744,9 +845,10 @@ export default function MainQuickTask() {
           {/* Name Filter */}
           <div className="relative">
             <button
-              onClick={() =>
-                setDropdownOpen({ ...dropdownOpen, name: !dropdownOpen.name })
-              }
+              onClick={() => {
+                setDropdownOpen({ ...dropdownOpen, name: !dropdownOpen.name });
+                setUserSearchQuery("");
+              }}
               className="flex items-center gap-2 px-3 py-1.5 text-sm border border-gray-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-neutral-700"
             >
               <Filter className="w-4 h-4" />
@@ -756,23 +858,49 @@ export default function MainQuickTask() {
               <ChevronDown className="w-4 h-4 opacity-50" />
             </button>
             {dropdownOpen.name && (
-              <div className="absolute z-50 mt-1 w-48 max-h-60 overflow-auto bg-white dark:bg-neutral-800 rounded-lg shadow-lg border border-gray-200 dark:border-neutral-700 p-1">
-                <button
-                  onClick={clearNameFilter}
-                  className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700 rounded text-gray-700 dark:text-gray-200"
-                >
-                  All Users
-                </button>
-                {allNames.map((name) => (
-                  <button
-                    key={name}
-                    onClick={() => handleNameFilterSelect(name)}
-                    className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700 rounded text-gray-700 dark:text-gray-200"
-                  >
-                    {name}
-                  </button>
-                ))}
-              </div>
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setDropdownOpen({ ...dropdownOpen, name: false })}
+                />
+                <div className="absolute z-50 mt-1 w-52 bg-white dark:bg-neutral-800 rounded-lg shadow-lg border border-gray-200 dark:border-neutral-700 overflow-hidden">
+                  <div className="p-2 border-b border-gray-100 dark:border-neutral-700">
+                    <div className="relative">
+                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                      <input
+                        autoFocus
+                        type="text"
+                        placeholder="Search users..."
+                        value={userSearchQuery}
+                        onChange={(e) => setUserSearchQuery(e.target.value)}
+                        className="w-full pl-7 pr-3 py-1.5 text-sm bg-gray-50 dark:bg-neutral-700 border border-gray-200 dark:border-neutral-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/40 text-gray-900 dark:text-white"
+                      />
+                    </div>
+                  </div>
+                  <div className="max-h-52 overflow-y-auto p-1">
+                    <button
+                      onClick={clearNameFilter}
+                      className={`w-full text-left px-2 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700 rounded transition-colors ${!nameFilter ? "text-blue-600 dark:text-blue-400 font-medium bg-blue-50/50 dark:bg-blue-900/20" : "text-gray-700 dark:text-gray-200"}`}
+                    >
+                      All Users
+                    </button>
+                    {allNames
+                      .filter((name) => name.toLowerCase().includes(userSearchQuery.toLowerCase()))
+                      .map((name) => (
+                        <button
+                          key={name}
+                          onClick={() => handleNameFilterSelect(name)}
+                          className={`w-full text-left px-2 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700 rounded transition-colors ${nameFilter === name ? "text-blue-600 dark:text-blue-400 font-medium bg-blue-50/50 dark:bg-blue-900/20" : "text-gray-700 dark:text-gray-200"}`}
+                        >
+                          {name}
+                        </button>
+                      ))}
+                    {allNames.filter((name) => name.toLowerCase().includes(userSearchQuery.toLowerCase())).length === 0 && (
+                      <p className="px-2 py-1.5 text-sm text-muted-foreground">No users found</p>
+                    )}
+                  </div>
+                </div>
+              </>
             )}
           </div>
 

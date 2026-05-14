@@ -58,6 +58,10 @@ export default function MainDashboard() {
   const [startDate, setStartDate] = useState(dateRange.startDate || "");
   const [endDate, setEndDate] = useState(dateRange.endDate || "");
   const [taskPage, setTaskPage] = useState(1);
+  const [isStaffDropdownOpen, setIsStaffDropdownOpen] = useState(false);
+  const [staffSearchQuery, setStaffSearchQuery] = useState("");
+  const [isDeptDropdownOpen, setIsDeptDropdownOpen] = useState(false);
+  const [deptSearchQuery, setDeptSearchQuery] = useState("");
 
   const applyDateRange = () => {
     if (startDate && endDate) {
@@ -776,41 +780,148 @@ export default function MainDashboard() {
             </select>
 
             {userRole === "admin" && availableStaff.length > 0 && (
-              <select
-                value={dashboardStaffFilter}
-                onChange={(e) => {
-                  setDashboardStaffFilter(e.target.value);
-                  setTaskPage(1);
-                }}
-                className="px-3 py-2 rounded-lg border border-gray-200 dark:border-neutral-600 bg-gray-50 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition-all cursor-pointer"
-              >
-                <option value="all">All Staff</option>
-                {availableStaff.map((staff) => (
-                  <option key={staff} value={staff}>
-                    {staff}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setIsStaffDropdownOpen(!isStaffDropdownOpen);
+                    setStaffSearchQuery("");
+                    setIsDeptDropdownOpen(false);
+                  }}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-neutral-600 bg-gray-50 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition-all cursor-pointer min-w-32"
+                >
+                  <Users className="w-3.5 h-3.5 opacity-60 shrink-0" />
+                  <span className="flex-1 text-left truncate">
+                    {dashboardStaffFilter === "all" ? "All Staff" : dashboardStaffFilter}
+                  </span>
+                  <ChevronDown className="w-3.5 h-3.5 opacity-50 shrink-0" />
+                </button>
+                {isStaffDropdownOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setIsStaffDropdownOpen(false)}
+                    />
+                    <div className="absolute left-0 top-full mt-1 w-52 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-600 rounded-lg shadow-lg z-20 overflow-hidden">
+                      <div className="p-2 border-b border-gray-100 dark:border-neutral-700">
+                        <div className="relative">
+                          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                          <input
+                            autoFocus
+                            type="text"
+                            placeholder="Search staff..."
+                            value={staffSearchQuery}
+                            onChange={(e) => setStaffSearchQuery(e.target.value)}
+                            className="w-full pl-7 pr-3 py-1.5 text-sm bg-gray-50 dark:bg-neutral-700 border border-gray-200 dark:border-neutral-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/40 text-gray-900 dark:text-white"
+                          />
+                        </div>
+                      </div>
+                      <div className="max-h-48 overflow-y-auto">
+                        <button
+                          onClick={() => {
+                            setDashboardStaffFilter("all");
+                            setTaskPage(1);
+                            setIsStaffDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors ${dashboardStaffFilter === "all" ? "text-blue-600 dark:text-blue-400 font-medium bg-blue-50/50 dark:bg-blue-900/20" : "text-gray-700 dark:text-gray-200"}`}
+                        >
+                          All Staff
+                        </button>
+                        {availableStaff
+                          .filter((s) => s.toLowerCase().includes(staffSearchQuery.toLowerCase()))
+                          .map((staff) => (
+                            <button
+                              key={staff}
+                              onClick={() => {
+                                setDashboardStaffFilter(staff);
+                                setTaskPage(1);
+                                setIsStaffDropdownOpen(false);
+                              }}
+                              className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors ${dashboardStaffFilter === staff ? "text-blue-600 dark:text-blue-400 font-medium bg-blue-50/50 dark:bg-blue-900/20" : "text-gray-700 dark:text-gray-200"}`}
+                            >
+                              {staff}
+                            </button>
+                          ))}
+                        {availableStaff.filter((s) => s.toLowerCase().includes(staffSearchQuery.toLowerCase())).length === 0 && (
+                          <p className="px-3 py-2 text-sm text-muted-foreground">No staff found</p>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             )}
 
-            {dashboardType === "checklist" &&
-              availableDepartments.length > 0 && (
-                <select
-                  value={departmentFilter}
-                  onChange={(e) => {
-                    setDepartmentFilter(e.target.value);
-                    setTaskPage(1);
+            {dashboardType === "checklist" && availableDepartments.length > 0 && (
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setIsDeptDropdownOpen(!isDeptDropdownOpen);
+                    setDeptSearchQuery("");
+                    setIsStaffDropdownOpen(false);
                   }}
-                  className="px-3 py-2 rounded-lg border border-gray-200 dark:border-neutral-600 bg-gray-50 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition-all cursor-pointer"
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-neutral-600 bg-gray-50 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition-all cursor-pointer min-w-36"
                 >
-                  <option value="all">All Departments</option>
-                  {availableDepartments.map((dept) => (
-                    <option key={dept} value={dept}>
-                      {dept}
-                    </option>
-                  ))}
-                </select>
-              )}
+                  <ClockCheck className="w-3.5 h-3.5 opacity-60 shrink-0" />
+                  <span className="flex-1 text-left truncate">
+                    {departmentFilter === "all" ? "All Departments" : departmentFilter}
+                  </span>
+                  <ChevronDown className="w-3.5 h-3.5 opacity-50 shrink-0" />
+                </button>
+                {isDeptDropdownOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setIsDeptDropdownOpen(false)}
+                    />
+                    <div className="absolute left-0 top-full mt-1 w-56 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-600 rounded-lg shadow-lg z-20 overflow-hidden">
+                      <div className="p-2 border-b border-gray-100 dark:border-neutral-700">
+                        <div className="relative">
+                          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                          <input
+                            autoFocus
+                            type="text"
+                            placeholder="Search departments..."
+                            value={deptSearchQuery}
+                            onChange={(e) => setDeptSearchQuery(e.target.value)}
+                            className="w-full pl-7 pr-3 py-1.5 text-sm bg-gray-50 dark:bg-neutral-700 border border-gray-200 dark:border-neutral-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/40 text-gray-900 dark:text-white"
+                          />
+                        </div>
+                      </div>
+                      <div className="max-h-48 overflow-y-auto">
+                        <button
+                          onClick={() => {
+                            setDepartmentFilter("all");
+                            setTaskPage(1);
+                            setIsDeptDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors ${departmentFilter === "all" ? "text-blue-600 dark:text-blue-400 font-medium bg-blue-50/50 dark:bg-blue-900/20" : "text-gray-700 dark:text-gray-200"}`}
+                        >
+                          All Departments
+                        </button>
+                        {availableDepartments
+                          .filter((d) => d.toLowerCase().includes(deptSearchQuery.toLowerCase()))
+                          .map((dept) => (
+                            <button
+                              key={dept}
+                              onClick={() => {
+                                setDepartmentFilter(dept);
+                                setTaskPage(1);
+                                setIsDeptDropdownOpen(false);
+                              }}
+                              className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors ${departmentFilter === dept ? "text-blue-600 dark:text-blue-400 font-medium bg-blue-50/50 dark:bg-blue-900/20" : "text-gray-700 dark:text-gray-200"}`}
+                            >
+                              {dept}
+                            </button>
+                          ))}
+                        {availableDepartments.filter((d) => d.toLowerCase().includes(deptSearchQuery.toLowerCase())).length === 0 && (
+                          <p className="px-3 py-2 text-sm text-muted-foreground">No departments found</p>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Staff Summary Section (Admin Only) */}
