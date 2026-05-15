@@ -249,7 +249,7 @@ export default function RepairingList({
   const handleProcessSubmit = async () => {
     if (!selectedRepair) return;
     if (processForm.amc === "yes" && !processForm.nextRepairingDate) {
-      toast.error("Next Repairing Date is required when AMC is Yes");
+      toast.error("Next Service Date is required when AMC is Yes");
       return;
     }
     try {
@@ -1186,7 +1186,7 @@ export default function RepairingList({
                     {processForm.amc === "yes" && (
                       <div>
                         <label className="block text-sm font-medium text-foreground mb-1.5">
-                          Next Repairing Date
+                          Next Service Date
                         </label>
                         <input
                           type="date"

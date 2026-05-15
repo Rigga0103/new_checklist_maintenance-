@@ -90,6 +90,13 @@ const routes: Route[] = [
         permissionResource: "repair_part_vendor", // Ensure backend has this permission or relies on role
       },
       {
+        href: "/repairing/part-purchase-pending",
+        label: "Part Purchase Pending",
+        icon: "ShoppingCart",
+        showFor: ["admin", "user"] as const,
+        permissionResource: "repair_part_vendor",
+      },
+      {
         href: "/repairing/history",
         label: "History",
         icon: "Clock",

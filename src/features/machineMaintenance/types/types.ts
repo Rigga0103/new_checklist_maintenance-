@@ -103,10 +103,10 @@ export interface Vendor {
   id: number;
   Timestamp: string | null;
   "VENDOR CODE": string | null;
-  "Vendro Name": string | null;
+  "Vendor Name": string | null;
   "Contact No": string | null;
   Location: string | null;
-  "Venodr Type": string | null;
+  "Vendor Type": string | null;
   "Parts Name": string | null;
   "Work Type": string | null;
   "Visiting Card": string | null;
@@ -116,10 +116,10 @@ export interface Vendor {
 
 export interface CreateVendorDTO {
   "VENDOR CODE"?: string;
-  "Vendro Name": string;
+  "Vendor Name": string;
   "Contact No"?: string;
   Location?: string;
-  "Venodr Type"?: string;
+  "Vendor Type"?: string;
   "Parts Name"?: string;
   "Work Type"?: string;
   "Visiting Card"?: string;

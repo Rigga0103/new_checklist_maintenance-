@@ -25,7 +25,8 @@ import {
   Users,
   Wrench,
   Zap,
-  ShieldCheck
+  ShieldCheck,
+  ShoppingCart,
 } from "lucide-react";
 import Link from "next/link";
 import { useDashboardLayout } from "./useDashboardLayout";
@@ -44,7 +45,8 @@ const iconMap: Record<string, LucideIcon> = {
   Calendar,
   Users,
   Package,
-  ShieldCheck
+  ShieldCheck,
+  ShoppingCart,
 };
 
 interface DashboardLayoutProps {

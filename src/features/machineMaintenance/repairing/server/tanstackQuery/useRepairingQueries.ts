@@ -13,6 +13,7 @@ import {
   getUniqueParts,
   fetchRepairLast7Days,
   fetchAMCRepairs,
+  fetchPartPurchasePending,
 } from "../api/repairingApi";
 import type {
   RepairProcessFormData,
@@ -93,6 +94,8 @@ export const repairingKeys = {
     ] as const,
   partsAndVendorsFilters: () =>
     [...repairingKeys.all, "partsAndVendorsFilters"] as const,
+  partPurchasePending: (page: number, limit: number, searchTerm: string) =>
+    [...repairingKeys.all, "partPurchasePending", { page, limit, searchTerm }] as const,
 };
 
 // --- Queries ---
@@ -272,6 +275,18 @@ export const usePartsAndVendorsFiltersQuery = () => {
       return { vendors, parts };
     },
     staleTime: 1000 * 60 * 5,
+  });
+};
+
+export const usePartPurchasePendingQuery = (
+  page: number,
+  limit: number,
+  searchTerm: string,
+) => {
+  return useQuery({
+    queryKey: repairingKeys.partPurchasePending(page, limit, searchTerm),
+    queryFn: () => fetchPartPurchasePending(page, limit, searchTerm),
+    placeholderData: (previousData) => previousData,
   });
 };
 

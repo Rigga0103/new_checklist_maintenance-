@@ -9,15 +9,12 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
-  Search,
-  Users,
-  Phone,
   MapPin,
   Wrench,
-  Briefcase,
-  Package,
-  Hash,
+  FileDown,
 } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { useRBAC } from "@/hooks/useRBAC";
 import {
   useVendorsQuery,
@@ -48,6 +45,7 @@ export default function MainVendorMaster() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   const { data: vendors = [], isLoading } = useVendorsQuery();
   const createMutation = useCreateVendorMutation();
@@ -55,11 +53,10 @@ export default function MainVendorMaster() {
   const deleteMutation = useDeleteVendorMutation();
 
   const [formData, setFormData] = useState<CreateVendorDTO>({
-
-    "Vendro Name": "",
+    "Vendor Name": "",
     "Contact No": "",
     Location: "",
-    "Venodr Type": "",
+    "Vendor Type": "Parts",
     "Parts Name": "",
     "Work Type": "",
     "Visiting Card": "",
@@ -69,25 +66,21 @@ export default function MainVendorMaster() {
 
   const { canWrite, canEdit, canDelete } = useRBAC("machines");
 
-  // Derive unique suggestions from all vendors
   const getUniqueValues = (key: keyof Vendor) => {
     return Array.from(new Set(vendors.map(v => v[key]).filter(Boolean))).sort();
   };
 
   const suggestions = {
-
-    vendorNames: getUniqueValues("Vendro Name"),
-    vendorTypes: getUniqueValues("Venodr Type"),
+    vendorNames: getUniqueValues("Vendor Name"),
+    vendorTypes: getUniqueValues("Vendor Type"),
     partsNames: getUniqueValues("Parts Name"),
     workTypes: getUniqueValues("Work Type"),
   };
 
-  // Filter & Search
   const filteredVendors = vendors.filter((vendor) =>
-
-    (vendor["Vendro Name"] || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (vendor["Vendor Name"] || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     (vendor.Location || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (vendor["Venodr Type"] || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (vendor["Vendor Type"] || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     (vendor["Parts Name"] || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     (vendor["Work Type"] || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -98,15 +91,78 @@ export default function MainVendorMaster() {
     currentPage * ITEMS_PER_PAGE,
   );
 
+  const allFilteredIds = filteredVendors.map(v => v.id);
+  const isAllSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => selectedIds.has(id));
+  const isIndeterminate = !isAllSelected && allFilteredIds.some(id => selectedIds.has(id));
+
+  const handleToggleSelect = (id: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const handleToggleAll = () => {
+    if (isAllSelected) {
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        allFilteredIds.forEach(id => next.delete(id));
+        return next;
+      });
+    } else {
+      setSelectedIds(prev => new Set([...prev, ...allFilteredIds]));
+    }
+  };
+
+  const handleExportPDF = () => {
+    const exportData = selectedIds.size > 0
+      ? filteredVendors.filter(v => selectedIds.has(v.id))
+      : filteredVendors;
+
+    const doc = new jsPDF({ orientation: "landscape" });
+
+    doc.setFontSize(14);
+    doc.text("Vendor Master List", 14, 15);
+    doc.setFontSize(9);
+    doc.setTextColor(120);
+    doc.text(
+      `Exported: ${new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}  |  Total: ${exportData.length} vendor(s)`,
+      14,
+      21
+    );
+
+    autoTable(doc, {
+      startY: 26,
+      head: [["#", "Vendor Name", "Location", "Vendor Category", "Parts Name", "Work Type", "Contact No"]],
+      body: exportData.map((v, i) => [
+        i + 1,
+        v["Vendor Name"] || "-",
+        v.Location || "-",
+        v["Vendor Type"] || "-",
+        v["Parts Name"] || "-",
+        v["Work Type"] || "-",
+        v["Contact No"] || "-",
+      ]),
+      headStyles: { fillColor: [22, 163, 74], textColor: 255, fontSize: 8, fontStyle: "bold" },
+      bodyStyles: { fontSize: 8 },
+      alternateRowStyles: { fillColor: [240, 253, 244] },
+      columnStyles: { 0: { cellWidth: 8 }, 2: { cellWidth: 55 } },
+      margin: { left: 14, right: 14 },
+    });
+
+    const label = selectedIds.size > 0 ? `vendors_selected_${selectedIds.size}` : "vendors_all";
+    doc.save(`${label}_${new Date().toISOString().slice(0, 10)}.pdf`);
+  };
+
   const handleOpenModal = (vendor?: Vendor) => {
     if (vendor) {
       setEditingId(vendor.id);
       setFormData({
-
-        "Vendro Name": vendor["Vendro Name"] || "",
+        "Vendor Name": vendor["Vendor Name"] || "",
         "Contact No": vendor["Contact No"] || "",
         Location: vendor.Location || "",
-        "Venodr Type": vendor["Venodr Type"] || "",
+        "Vendor Type": vendor["Vendor Type"] || "",
         "Parts Name": vendor["Parts Name"] || "",
         "Work Type": vendor["Work Type"] || "",
         "Visiting Card": vendor["Visiting Card"] || "",
@@ -116,11 +172,10 @@ export default function MainVendorMaster() {
     } else {
       setEditingId(null);
       setFormData({
-
-        "Vendro Name": "",
+        "Vendor Name": "",
         "Contact No": "",
         Location: "",
-        "Venodr Type": "",
+        "Vendor Type": "Parts",
         "Parts Name": "",
         "Work Type": "",
         "Visiting Card": "",
@@ -171,6 +226,18 @@ export default function MainVendorMaster() {
           <p className="text-sm text-muted-foreground mt-1">Maintenance service providers & suppliers</p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={handleExportPDF}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-sm active:scale-95 text-sm"
+          >
+            <FileDown className="w-4 h-4" />
+            Export PDF
+            {selectedIds.size > 0 && (
+              <span className="ml-1 bg-white/20 text-white text-xs px-1.5 py-0.5 rounded-full">
+                {selectedIds.size}
+              </span>
+            )}
+          </button>
           {canWrite && (
             <button
               onClick={() => handleOpenModal()}
@@ -183,19 +250,25 @@ export default function MainVendorMaster() {
         </div>
       </div>
 
-
       {/* Main Table */}
       <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-700 overflow-hidden">
-
-
         <div className="max-h-[63vh] overflow-y-auto relative">
           <table className="w-full text-left">
             <thead className="sticky top-0 z-10 bg-black-50/90 backdrop-blur">
               <tr className="bg-neutral-50/50 dark:bg-neutral-900/50 border-b border-neutral-200 dark:border-neutral-700">
-
+                <th className="px-4 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    checked={isAllSelected}
+                    ref={el => { if (el) el.indeterminate = isIndeterminate; }}
+                    onChange={handleToggleAll}
+                    className="w-4 h-4 rounded border-neutral-300 dark:border-neutral-600 text-blue-600 cursor-pointer accent-blue-600"
+                    title={isAllSelected ? "Deselect all" : "Select all"}
+                  />
+                </th>
                 <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Vendor Name</th>
                 <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Location</th>
-                <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Vendor Type</th>
+                <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Vendor Category</th>
                 <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Parts Name</th>
                 <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Work Type</th>
                 {userRole === "admin" && <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>}
@@ -210,11 +283,21 @@ export default function MainVendorMaster() {
                 </tr>
               ) : (
                 paginatedVendors.map((vendor) => (
-                  <tr key={vendor.id} className="hover:bg-neutral-50/40 dark:hover:bg-neutral-800/20 transition-colors group">
-
+                  <tr
+                    key={vendor.id}
+                    className={`hover:bg-neutral-50/40 dark:hover:bg-neutral-800/20 transition-colors group ${selectedIds.has(vendor.id) ? "bg-blue-50/40 dark:bg-blue-900/10" : ""}`}
+                  >
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(vendor.id)}
+                        onChange={() => handleToggleSelect(vendor.id)}
+                        className="w-4 h-4 rounded border-neutral-300 dark:border-neutral-600 text-blue-600 cursor-pointer accent-blue-600"
+                      />
+                    </td>
                     <td className="px-4 py-3">
                       <span className="text-sm text-foreground">
-                        {vendor["Vendro Name"] || "-"}
+                        {vendor["Vendor Name"] || "-"}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -227,7 +310,7 @@ export default function MainVendorMaster() {
                     </td>
                     <td className="px-4 py-3">
                       <span className="inline-flex px-2 py-0.5 text-xs bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-white rounded border border-indigo-100 dark:border-indigo-900/30">
-                        {vendor["Venodr Type"] || "-"}
+                        {vendor["Vendor Type"] || "-"}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -279,6 +362,7 @@ export default function MainVendorMaster() {
           <div className="flex flex-col sm:flex-row items-center justify-between px-4 py-3 border-t border-neutral-200 dark:border-neutral-700 gap-3 bg-neutral-50/50 dark:bg-neutral-900/50">
             <p className="text-xs text-muted-foreground">
               Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, filteredVendors.length)} of {filteredVendors.length} entries
+              {selectedIds.size > 0 && <span className="ml-2 text-blue-600 font-medium">· {selectedIds.size} selected</span>}
             </p>
             <div className="flex items-center gap-1">
               <button
@@ -350,15 +434,14 @@ export default function MainVendorMaster() {
             <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-
                 <div>
                   <label className="block text-xs text-muted-foreground mb-1">Vendor Name *</label>
                   <input
                     type="text"
                     required
                     list="vendor-names"
-                    value={formData["Vendro Name"]}
-                    onChange={(e) => setFormData({ ...formData, "Vendro Name": e.target.value })}
+                    value={formData["Vendor Name"]}
+                    onChange={(e) => setFormData({ ...formData, "Vendor Name": e.target.value })}
                     className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none transition-all text-sm"
                     placeholder="Enter company or vendor name"
                   />
@@ -381,20 +464,14 @@ export default function MainVendorMaster() {
                 </div>
 
                 <div>
-                  <label className="block text-xs text-muted-foreground mb-1">Vendor Type</label>
+                  <label className="block text-xs text-muted-foreground mb-1">Vendor Category</label>
                   <input
                     type="text"
-                    list="vendor-types"
-                    value={formData["Venodr Type"]}
-                    onChange={(e) => setFormData({ ...formData, "Venodr Type": e.target.value })}
+                    value={formData["Vendor Type"]}
+                    onChange={(e) => setFormData({ ...formData, "Vendor Type": e.target.value })}
                     className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none transition-all text-sm"
-                    placeholder="e.g., Electrical, Mechanical, Hardware"
+                    placeholder="Parts"
                   />
-                  <datalist id="vendor-types">
-                    {suggestions.vendorTypes.map((type, idx) => (
-                      <option key={idx} value={type as string} />
-                    ))}
-                  </datalist>
                 </div>
 
                 <div>

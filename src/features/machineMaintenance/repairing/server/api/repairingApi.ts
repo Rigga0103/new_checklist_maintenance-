@@ -803,6 +803,52 @@ export const getUniqueVendors = async (): Promise<string[]> => {
 };
 
 /**
+ * Fetch Part Purchase Pending (records with part_replaced set, status pending or in_progress)
+ */
+export const fetchPartPurchasePending = async (
+  page = 1,
+  limit = 50,
+  searchTerm = "",
+): Promise<RepairFetchResponse> => {
+  try {
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    let query = supabase
+      .from("machine_repair")
+      .select("*", { count: "exact" })
+      .not("part_replaced", "is", null)
+      .in("status", ["pending", "in_progress"])
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    if (searchTerm && searchTerm.trim() !== "") {
+      const searchValue = searchTerm.trim();
+      const isNumeric = /^\d+$/.test(searchValue);
+      const orConditions = [
+        `part_replaced.ilike.%${searchValue}%`,
+        `machine_name.ilike.%${searchValue}%`,
+        `vendor_name.ilike.%${searchValue}%`,
+      ];
+      if (isNumeric) orConditions.push(`task_id.eq.${searchValue}`);
+      query = query.or(orConditions.join(","));
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error("Error fetching part purchase pending:", error);
+      return { data: [], totalCount: 0 };
+    }
+
+    return { data: data as MachineRepair[], totalCount: count || 0 };
+  } catch (error) {
+    console.error("Error from Supabase:", error);
+    return { data: [], totalCount: 0 };
+  }
+};
+
+/**
  * Get unique parts replaced for filter dropdown
  */
 export const getUniqueParts = async (): Promise<string[]> => {
