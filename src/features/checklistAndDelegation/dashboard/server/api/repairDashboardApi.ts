@@ -441,11 +441,14 @@ export const fetchUniqueMaintenanceTasksForEdit = async (
   total: number;
 }> => {
   try {
-    // Fetch all tasks (no pagination at DB level since we deduplicate client-side)
+    const from = page * pageSize;
+    const to = from + pageSize - 1;
+
     let query = supabase
-      .from("machine_maintenance")
-      .select("*")
-      .order("task_start_date", { ascending: false });
+      .from("unique_maintanence")
+      .select("*", { count: "exact" })
+      .order("task_start_date", { ascending: false })
+      .range(from, to);
 
     if (searchTerm && searchTerm.trim() !== "") {
       const sv = searchTerm.trim();
@@ -453,7 +456,7 @@ export const fetchUniqueMaintenanceTasksForEdit = async (
       let orConds = [
         `machine_name.ilike.%${sv}%`,
         `task_description.ilike.%${sv}%`,
-        `doer_name.ilike.%${sv}%`,
+        `name.ilike.%${sv}%`,
         `frequency.ilike.%${sv}%`,
       ];
       if (isNumeric) {
@@ -467,44 +470,39 @@ export const fetchUniqueMaintenanceTasksForEdit = async (
     }
 
     if (assignedTo && assignedTo.trim() !== "") {
-      query = query.eq("doer_name", assignedTo.trim());
+      query = query.eq("name", assignedTo.trim());
     }
 
-    const { data, error } = await query;
+    const [queryResult, machinesResult] = await Promise.all([
+      query,
+      supabase.from("machines").select("machine_name, type"),
+    ]);
+
+    const { data, error, count } = queryResult;
 
     if (error) {
-      console.error("Error fetching maintenance for edit:", error);
+      console.error("Error fetching unique maintenance for edit:", error);
       return { data: [], total: 0 };
     }
 
-    // Deduplicate client-side by (machine_name, task_description, doer_name)
-    const groupMap = new Map<
-      string,
-      { task: MachineMaintenanceTask; count: number }
-    >();
-
-    for (const task of data || []) {
-      const key = `${task.machine_name}|||${task.task_description || ""}|||${task.doer_name || ""}`;
-      if (!groupMap.has(key)) {
-        groupMap.set(key, { task, count: 1 });
-      } else {
-        groupMap.get(key)!.count += 1;
-      }
+    const machineTypeMap = new Map<string, string>();
+    if (machinesResult.data) {
+      machinesResult.data.forEach((m: any) => {
+        if (m.machine_name && m.type) {
+          machineTypeMap.set(m.machine_name.toLowerCase(), m.type);
+        }
+      });
     }
 
-    const uniqueTasks = Array.from(groupMap.values()).map(
-      ({ task, count }) => ({
-        ...task,
-        task_count: count,
-      }),
-    );
+    const mappedTasks = (data || []).map((task: any) => ({
+      ...task,
+      doer_name: task.name || null,
+      assigned_to: task.name || null,
+      machine_type: task.machine_type || (task.machine_name ? machineTypeMap.get(task.machine_name.toLowerCase()) : null) || null,
+      task_count: 1,
+    }));
 
-    // Client-side pagination
-    const total = uniqueTasks.length;
-    const from = page * pageSize;
-    const paginated = uniqueTasks.slice(from, from + pageSize);
-
-    return { data: paginated, total };
+    return { data: mappedTasks, total: count || 0 };
   } catch (error) {
     console.error(
       "Unexpected error in fetchUniqueMaintenanceTasksForEdit:",
