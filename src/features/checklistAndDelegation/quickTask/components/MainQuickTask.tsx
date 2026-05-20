@@ -34,6 +34,226 @@ import {
 import { QuickTaskSkeleton } from "./QuickTaskSkeleton";
 import type { ChecklistTask, DelegationTask, MaintenanceTask, MaintenanceUpdatePayload, MaintenanceOriginalMatch } from "../types/types";
 import { uploadChecklistImage } from "../../checklist/server/api/checklistUploadApi";
+import supabase from "@/utils/supabaseClient";
+import { fetchWorkingDaysApi } from "../../assignTask/server/api/assignTaskApi";
+
+// Date and recurrence helpers for checklist generation
+const formatDateToDDMMYYYY = (date: Date) => {
+  const day = date.getDate().toString().padStart(2, "0");
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
+const addDays = (date: Date, days: number) => {
+  const newDate = new Date(date);
+  newDate.setDate(newDate.getDate() + days);
+  return newDate;
+};
+
+const addMonths = (date: Date, months: number) => {
+  const newDate = new Date(date);
+  newDate.setMonth(newDate.getMonth() + months);
+  return newDate;
+};
+
+const addYears = (date: Date, years: number) => {
+  const newDate = new Date(date);
+  newDate.setFullYear(newDate.getFullYear() + years);
+  return newDate;
+};
+
+const formatDateTimeForStorage = (date: Date, time: string) => {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const day = date.getDate().toString().padStart(2, "0");
+  const timeWithSeconds = time + ":00";
+  return `${year}-${month}-${day}T${timeWithSeconds}`;
+};
+
+const findNextWorkingDay = (targetDate: Date, workingDays: string[]): string | null => {
+  const targetDateStr = formatDateToDDMMYYYY(targetDate);
+  if (workingDays.includes(targetDateStr)) {
+    return targetDateStr;
+  }
+  if (workingDays.length === 0) return null;
+  const targetDateObj = new Date(targetDateStr.split("/").reverse().join("-"));
+  const nextWorkingDay = workingDays.find((day) => {
+    const dayObj = new Date(day.split("/").reverse().join("-"));
+    return dayObj > targetDateObj;
+  });
+  return nextWorkingDay || null;
+};
+
+const findEndOfWeekDate = (date: Date, weekNumber: number, workingDays: string[]): string | null => {
+  const [targetDay, targetMonth, targetYear] = formatDateToDDMMYYYY(date)
+    .split("/")
+    .map(Number);
+  const monthDays = workingDays.filter((day) => {
+    const [dayDay, dayMonth, dayYear] = day.split("/").map(Number);
+    return dayYear === targetYear && dayMonth === targetMonth;
+  });
+  if (monthDays.length === 0) return null;
+  if (weekNumber === -1) {
+    return monthDays[monthDays.length - 1];
+  }
+  const weeks: Record<number, string[]> = {};
+  monthDays.forEach((day) => {
+    const [dayDay, dayMonth, dayYear] = day.split("/").map(Number);
+    const weekNum = Math.ceil(dayDay / 7);
+    if (!weeks[weekNum]) weeks[weekNum] = [];
+    weeks[weekNum].push(day);
+  });
+  const weekDays = weeks[weekNumber];
+  return weekDays ? weekDays[weekDays.length - 1] : monthDays[monthDays.length - 1];
+};
+
+const generateTasksForDb = (
+  originalTask: ChecklistTask,
+  editFormData: Partial<ChecklistTask>,
+  startDate: Date,
+  endDate: Date,
+  taskTime: string,
+  workingDays: string[],
+  assigneeUserId: number | null,
+  createdByUserId: number | null
+) => {
+  const frequency = originalTask.frequency || "one-time";
+  const tasksToInsert: any[] = [];
+
+  const department = editFormData.department !== undefined ? editFormData.department : originalTask.department;
+  const given_by = editFormData.given_by !== undefined ? editFormData.given_by : originalTask.given_by;
+  const name = editFormData.name !== undefined ? editFormData.name : originalTask.name;
+  const task_description = editFormData.task_description !== undefined ? editFormData.task_description : originalTask.task_description;
+  const enable_reminder = editFormData.enable_reminder !== undefined ? editFormData.enable_reminder : originalTask.enable_reminder;
+  const require_attachment = editFormData.require_attachment !== undefined ? editFormData.require_attachment : originalTask.require_attachment;
+  const remark = editFormData.remark !== undefined ? editFormData.remark : originalTask.remark;
+  const sample_image = editFormData.image !== undefined ? editFormData.image : (originalTask.sample_image || originalTask.image || null);
+
+  const baseTaskData = {
+    source_unique_id: originalTask.task_id,
+    department,
+    given_by,
+    name,
+    task_description,
+    enable_reminder,
+    require_attachment,
+    remark,
+    sample_image,
+    frequency,
+    assignee_user_id: assigneeUserId,
+    created_by_user_id: createdByUserId,
+    created_at: new Date().toISOString(),
+  };
+
+  if (frequency === "one-time") {
+    const taskDateStr = findNextWorkingDay(startDate, workingDays);
+    if (taskDateStr) {
+      const taskDateObj = new Date(taskDateStr.split("/").reverse().join("-"));
+      const taskDateTimeStr = formatDateTimeForStorage(taskDateObj, taskTime);
+      tasksToInsert.push({
+        ...baseTaskData,
+        task_start_date: taskDateTimeStr,
+      });
+    }
+  } else {
+    let currentDate = new Date(startDate);
+    let taskCount = 0;
+    const maxTasks = 365;
+
+    while (currentDate <= endDate && taskCount < maxTasks) {
+      let taskDate: string | null = null;
+
+      switch (frequency) {
+        case "daily":
+          taskDate = findNextWorkingDay(currentDate, workingDays);
+          if (taskDate) {
+            currentDate = addDays(new Date(taskDate.split("/").reverse().join("-")), 1);
+          }
+          break;
+
+        case "weekly":
+          taskDate = findNextWorkingDay(currentDate, workingDays);
+          if (taskDate) {
+            currentDate = addDays(new Date(taskDate.split("/").reverse().join("-")), 7);
+          }
+          break;
+
+        case "fortnightly":
+          taskDate = findNextWorkingDay(currentDate, workingDays);
+          if (taskDate) {
+            currentDate = addDays(new Date(taskDate.split("/").reverse().join("-")), 14);
+          }
+          break;
+
+        case "monthly":
+          taskDate = findNextWorkingDay(currentDate, workingDays);
+          if (taskDate) {
+            currentDate = addMonths(new Date(taskDate.split("/").reverse().join("-")), 1);
+          }
+          break;
+
+        case "quarterly":
+          taskDate = findNextWorkingDay(currentDate, workingDays);
+          if (taskDate) {
+            currentDate = addMonths(new Date(taskDate.split("/").reverse().join("-")), 3);
+          }
+          break;
+
+        case "half-yearly":
+          taskDate = findNextWorkingDay(currentDate, workingDays);
+          if (taskDate) {
+            currentDate = addMonths(new Date(taskDate.split("/").reverse().join("-")), 6);
+          }
+          break;
+
+        case "yearly":
+          taskDate = findNextWorkingDay(currentDate, workingDays);
+          if (taskDate) {
+            currentDate = addYears(new Date(taskDate.split("/").reverse().join("-")), 1);
+          }
+          break;
+
+        case "end-of-1st-week":
+        case "end-of-2nd-week":
+        case "end-of-3rd-week":
+        case "end-of-4th-week":
+          const weekNum = parseInt(frequency.split("-")[2]);
+          taskDate = findEndOfWeekDate(currentDate, weekNum, workingDays);
+          if (taskDate) {
+            currentDate = addMonths(new Date(taskDate.split("/").reverse().join("-")), 1);
+          }
+          break;
+
+        case "end-of-last-week":
+          taskDate = findEndOfWeekDate(currentDate, -1, workingDays);
+          if (taskDate) {
+            currentDate = addMonths(new Date(taskDate.split("/").reverse().join("-")), 1);
+          }
+          break;
+
+        default:
+          currentDate = endDate;
+          break;
+      }
+
+      if (!taskDate) {
+        break;
+      }
+
+      const taskDateObj = new Date(taskDate.split("/").reverse().join("-"));
+      const taskDateTimeStr = formatDateTimeForStorage(taskDateObj, taskTime);
+      tasksToInsert.push({
+        ...baseTaskData,
+        task_start_date: taskDateTimeStr,
+      });
+
+      taskCount++;
+    }
+  }
+
+  return tasksToInsert;
+};
 
 export default function MainQuickTask() {
   const [activeTab, setActiveTab] = useState<"checklist" | "delegation" | "maintenance">(
@@ -357,6 +577,99 @@ export default function MainQuickTask() {
           task_description: originalTask.task_description || "",
         },
       });
+
+      // Check if the task already exists in the "checklist" table
+      const { data: existingChecklist, error: checkError } = await supabase
+        .from("checklist")
+        .select("task_id")
+        .eq("source_unique_id", originalTask.task_id)
+        .limit(1);
+
+      if (checkError) {
+        console.error("Error checking checklist:", checkError);
+      }
+
+      if (existingChecklist && existingChecklist.length > 0) {
+        alert("The task is there. Task present.");
+        toast.info("The task is there, task present");
+      } else {
+        // Fetch working days calendar
+        const workingDays = await fetchWorkingDaysApi();
+
+        // Resolve user ids for assignee and creator
+        let assigneeUserId = null;
+        let createdByUserId = null;
+
+        const nameToSearch = editFormData.name || originalTask.name;
+        const givenByToSearch = editFormData.given_by || originalTask.given_by;
+
+        const usersToSearch = [nameToSearch, givenByToSearch].filter((n): n is string => !!n && n.trim() !== "");
+        if (usersToSearch.length > 0) {
+          const { data: usersList } = await supabase
+            .from("users")
+            .select("id, user_name")
+            .in("user_name", usersToSearch);
+          
+          if (usersList) {
+            usersList.forEach((u) => {
+              if (u.user_name?.toLowerCase() === nameToSearch?.toLowerCase()) {
+                assigneeUserId = u.id;
+              }
+              if (u.user_name?.toLowerCase() === givenByToSearch?.toLowerCase()) {
+                createdByUserId = u.id;
+              }
+            });
+          }
+        }
+
+        // Get start and end dates for task generation
+        const startDateTimeStr = editFormData.task_start_date || originalTask.task_start_date || new Date().toISOString();
+        const startDate = new Date(startDateTimeStr);
+        let taskTime = "09:00";
+        if (startDateTimeStr.includes("T")) {
+          const parts = startDateTimeStr.split("T");
+          if (parts[1]) {
+            taskTime = parts[1].substring(0, 5); // "09:00"
+          }
+        }
+
+        // Fetch task_end_date from unique_checklist if available
+        const { data: templateData } = await supabase
+          .from("unique_checklist")
+          .select("task_end_date")
+          .eq("task_id", originalTask.task_id)
+          .single();
+
+        const endDate = templateData?.task_end_date ? new Date(templateData.task_end_date) : addYears(startDate, 2);
+
+        // Generate frequency-wise tasks
+        const tasksToInsert = generateTasksForDb(
+          originalTask,
+          editFormData,
+          startDate,
+          endDate,
+          taskTime,
+          workingDays,
+          assigneeUserId,
+          createdByUserId
+        );
+
+        if (tasksToInsert.length > 0) {
+          const { error: insertError } = await supabase
+            .from("checklist")
+            .insert(tasksToInsert);
+
+          if (insertError) {
+            console.error("Error inserting into checklist:", insertError);
+            toast.error("Failed to add tasks to checklist table");
+          } else {
+            toast.success(`Successfully added ${tasksToInsert.length} recurring tasks to checklist table`);
+          }
+        } else {
+          toast.warning("No working days found in calendar to generate tasks.");
+        }
+      }
+
       setEditingTaskId(null);
       setEditFormData({});
       toast.success("Task updated");
