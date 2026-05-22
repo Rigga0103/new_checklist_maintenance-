@@ -487,13 +487,24 @@ export const fetchActiveUserNames = async (): Promise<string[]> => {
 /**
  * Submit a new repair request
  */
+// Update your createRepairRequest function with detailed logging
 export const createRepairRequest = async (
   formData: RepairRequestFormData,
 ): Promise<MachineRepair | MachineRepair[] | null> => {
   try {
+    console.log("=== Starting createRepairRequest ===");
+    console.log("Form data received:", {
+      part_replaced: formData.part_replaced,
+      vendorName: formData.vendorName,
+      bill_amount: formData.bill_amount,
+      task_start_date: formData.task_start_date
+    });
+
     const partsArray = formData.part_replaced && formData.part_replaced.length > 0
       ? formData.part_replaced
       : [null];
+
+    console.log("Parts array:", partsArray);
 
     const recordsToInsert = partsArray.map((part) => ({
       form_filled_by: formData.formFilledBy,
@@ -511,6 +522,8 @@ export const createRepairRequest = async (
       purchase_date: formData.purchaseDate || null,
     }));
 
+    console.log("Records to insert into machine_repair:", recordsToInsert);
+
     const { data, error } = await supabase
       .from("machine_repair")
       .insert(recordsToInsert)
@@ -521,7 +534,68 @@ export const createRepairRequest = async (
       return null;
     }
 
-    // Supabase returns an array of inserted rows
+    console.log("Successfully inserted into machine_repair:", data);
+
+    // After successful insertion, also insert into repairing_pending_indent table
+    if (data && data.length > 0) {
+      const pendingIndentRecords = [];
+
+      for (const repairRecord of data) {
+        console.log(`Processing record with task_id: ${repairRecord.task_id}`, {
+          part_replaced: repairRecord.part_replaced,
+          vendor_name: repairRecord.vendor_name,
+          bill_amount: repairRecord.bill_amount
+        });
+
+        // Check if part_replaced exists and is not null/empty
+        if (repairRecord.part_replaced && repairRecord.part_replaced.trim() !== "") {
+          // Check if this part needs to be indented
+          // Always create pending indent record when part_replaced exists
+          const needsIndent = repairRecord.part_replaced && repairRecord.part_replaced.trim() !== "";
+
+          console.log(`Part: "${repairRecord.part_replaced}", Needs indent: ${needsIndent}`);
+
+          if (needsIndent) {
+            const pendingRecord = {
+              task_id: repairRecord.task_id,
+              part_replaced: repairRecord.part_replaced,
+              vendor_name: repairRecord.vendor_name || null,
+              rate: repairRecord.bill_amount || null,
+              date: new Date().toISOString().split("T")[0],
+            };
+            console.log("Adding to pending indent:", pendingRecord);
+            pendingIndentRecords.push(pendingRecord);
+          }
+        } else {
+          console.log(`Skipping - No part_replaced for task_id ${repairRecord.task_id}`);
+        }
+      }
+
+      console.log(`Total pending indent records to insert: ${pendingIndentRecords.length}`);
+
+      // Insert into repairing_pending_indent table if there are records
+      if (pendingIndentRecords.length > 0) {
+        console.log("Attempting to insert into repairing_pending_indent...");
+        const { data: indentData, error: indentError } = await supabase
+          .from("repairing_pending_indent")
+          .insert(pendingIndentRecords)
+          .select(); // Add .select() to see what was inserted
+
+        if (indentError) {
+          console.error("Error inserting into pending indent:", {
+            message: indentError.message,
+            details: indentError.details,
+            hint: indentError.hint,
+            code: indentError.code
+          });
+        } else {
+          console.log("Successfully inserted into pending indent:", indentData);
+        }
+      } else {
+        console.log("No pending indent records to insert");
+      }
+    }
+
     return data && data.length === 1 ? (data[0] as MachineRepair) : (data as MachineRepair[]);
   } catch (error) {
     console.error("Error from Supabase:", error);
@@ -572,9 +646,7 @@ export const fetchAMCRepairs = async (
     let query = supabase
       .from("machine_repair")
       .select("*", { count: "exact" })
-      .eq("amc", "yes")
-      .not("next_repairing_date", "is", null)
-      .order("next_repairing_date", { ascending: true })
+      .order("created_at", { ascending: false })
       .range(from, to);
 
     if (searchTerm && searchTerm.trim() !== "") {
@@ -592,7 +664,7 @@ export const fetchAMCRepairs = async (
     const { data, error, count } = await query;
 
     if (error) {
-      console.error("Error fetching AMC repairs:", error);
+      console.error("Error fetching AMC repairs:", error?.message, "| code:", error?.code, "| hint:", error?.hint);
       return { data: [], totalCount: 0 };
     }
 
@@ -608,6 +680,9 @@ export const fetchAMCRepairs = async (
 /**
  * Update repair with processing details (admin action)
  */
+/**
+ * Update repair with processing details (admin action)
+ */
 export const processRepair = async (
   taskId: number,
   processData: RepairProcessFormData,
@@ -615,11 +690,20 @@ export const processRepair = async (
   billFile?: File,
 ): Promise<MachineRepair | null> => {
   try {
+    console.log("========== PROCESS REPAIR STARTED ==========");
+    console.log("1. Function called with parameters:", {
+      taskId,
+      processData,
+      hasPhotoFile: !!photoFile,
+      hasBillFile: !!billFile,
+    });
+
     let photoUrl: string | null = null;
     let billCopyUrl: string | null = null;
 
     // Handle photo upload
     if (photoFile) {
+      console.log("2. Processing photo upload...");
       let uploadData: File = photoFile;
       if (photoFile.type.startsWith("image/")) {
         try {
@@ -648,10 +732,12 @@ export const processRepair = async (
       } = supabase.storage.from("repairing").getPublicUrl(filePath);
 
       photoUrl = publicUrl;
+      console.log("   - Photo uploaded successfully");
     }
 
     // Handle bill copy upload
     if (billFile) {
+      console.log("3. Processing bill upload...");
       let uploadData: File = billFile;
       if (billFile.type.startsWith("image/")) {
         try {
@@ -680,9 +766,11 @@ export const processRepair = async (
       } = supabase.storage.from("repairing").getPublicUrl(filePath);
 
       billCopyUrl = publicUrl;
+      console.log("   - Bill uploaded successfully");
     }
 
-    const updateData: Partial<MachineRepair> = {
+    // Prepare update data - ONLY include columns that exist in your database
+    const updateData: any = {
       part_replaced: processData.partReplaced || null,
       work_done: processData.workDone || null,
       status: processData.status,
@@ -693,8 +781,6 @@ export const processRepair = async (
       warranty_end_date: processData.warrantyToDate || null,
       Work_Done_By: processData.workDoneBy || null,
       Type_of_Work: processData.typeOfWork || null,
-      amc: processData.amc || null,
-      next_repairing_date: processData.nextRepairingDate || null,
       task_start_date: new Date().toISOString(),
     };
 
@@ -702,10 +788,30 @@ export const processRepair = async (
     if (billCopyUrl) updateData.bill_copy_url = billCopyUrl;
 
     // If completed, set actual_date
-    if (processData.status === "completed") {
+    const isCompleted = processData.status === "completed";
+    if (isCompleted) {
       updateData.actual_date = new Date().toISOString();
+      console.log("   - Status is 'completed', adding actual_date:", updateData.actual_date);
     }
 
+    console.log("4. Update data prepared:", updateData);
+
+    // Check if task exists
+    console.log(`5. Checking if task ${taskId} exists...`);
+    const { data: existingTask, error: checkError } = await supabase
+      .from("machine_repair")
+      .select("task_id, status")
+      .eq("task_id", taskId)
+      .single();
+
+    if (checkError) {
+      console.error("   - Task not found:", checkError);
+      return null;
+    }
+    console.log("   - Task found, current status:", existingTask.status);
+
+    // Perform the update
+    console.log(`6. Updating task ${taskId}...`);
     const { data, error } = await supabase
       .from("machine_repair")
       .update(updateData)
@@ -714,13 +820,55 @@ export const processRepair = async (
       .single();
 
     if (error) {
-      console.error("Error processing repair:", error);
+      console.error("7. ❌ ERROR UPDATING DATABASE:");
+      console.error("   - Error message:", error.message);
+      console.error("   - Error code:", error.code);
+      console.error("   - Full error:", error);
       return null;
     }
 
+    console.log("8. ✅ Database update successful!");
+    console.log("   - Updated record:", data);
+
+    // 🔥 NEW: If status is completed, remove from repairing_pending_indent
+    if (isCompleted) {
+      console.log(`9. Checking for pending indent records for task ${taskId}...`);
+
+      // First, check if there are any pending indent records for this task
+      const { data: pendingIndentRecords, error: fetchIndentError } = await supabase
+        .from("repairing_pending_indent")
+        .select("*")
+        .eq("task_id", taskId);
+
+      if (fetchIndentError) {
+        console.error("   - Error checking pending indent:", fetchIndentError);
+      } else if (pendingIndentRecords && pendingIndentRecords.length > 0) {
+        console.log(`   - Found ${pendingIndentRecords.length} pending indent record(s) for task ${taskId}`);
+        console.log("   - Pending indent records:", pendingIndentRecords);
+
+        // Delete the pending indent records
+        const { error: deleteIndentError } = await supabase
+          .from("repairing_pending_indent")
+          .delete()
+          .eq("task_id", taskId);
+
+        if (deleteIndentError) {
+          console.error("   - ❌ Error deleting pending indent records:", deleteIndentError);
+          console.error("     - Error message:", deleteIndentError.message);
+          console.error("     - Error code:", deleteIndentError.code);
+        } else {
+          console.log(`   - ✅ Successfully deleted ${pendingIndentRecords.length} pending indent record(s) for task ${taskId}`);
+        }
+      } else {
+        console.log(`   - No pending indent records found for task ${taskId}`);
+      }
+    }
+
+    console.log("========== PROCESS REPAIR COMPLETED ==========");
     return data as MachineRepair;
   } catch (error) {
-    console.error("Error from Supabase:", error);
+    console.error("========== PROCESS REPAIR FAILED ==========");
+    console.error("Exception:", error);
     return null;
   }
 };
@@ -842,6 +990,66 @@ export const fetchPartPurchasePending = async (
     }
 
     return { data: data as MachineRepair[], totalCount: count || 0 };
+  } catch (error) {
+    console.error("Error from Supabase:", error);
+    return { data: [], totalCount: 0 };
+  }
+};
+
+export interface PendingIndentRow {
+  id: number;
+  task_id: number;
+  part_replaced: string | null;
+  vendor_name: string | null;
+  rate: number | null;
+  date: string | null;
+}
+
+export interface PendingIndentFetchResponse {
+  data: PendingIndentRow[];
+  totalCount: number;
+}
+
+/**
+ * Fetch rows from repairing_pending_indent table
+ */
+export const fetchPendingIndent = async (
+  page = 1,
+  limit = 50,
+  searchTerm = "",
+): Promise<PendingIndentFetchResponse> => {
+  try {
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    let query = supabase
+      .from("repairing_pending_indent")
+      .select("*", { count: "exact" })
+      .order("date", { ascending: false })
+      .range(from, to);
+
+    if (searchTerm && searchTerm.trim() !== "") {
+      const searchValue = searchTerm.trim();
+      const isNumeric = /^\d+$/.test(searchValue);
+      const orConditions = [
+        `part_replaced.ilike.%${searchValue}%`,
+        `vendor_name.ilike.%${searchValue}%`,
+      ];
+      if (isNumeric) {
+        orConditions.push(`id.eq.${searchValue}`);
+        orConditions.push(`task_id.eq.${searchValue}`);
+      }
+      query = query.or(orConditions.join(","));
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error("Error fetching pending indent:", error);
+      return { data: [], totalCount: 0 };
+    }
+
+    return { data: data as PendingIndentRow[], totalCount: count || 0 };
   } catch (error) {
     console.error("Error from Supabase:", error);
     return { data: [], totalCount: 0 };

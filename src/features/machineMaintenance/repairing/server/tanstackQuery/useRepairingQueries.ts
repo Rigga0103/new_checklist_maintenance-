@@ -14,7 +14,9 @@ import {
   fetchRepairLast7Days,
   fetchAMCRepairs,
   fetchPartPurchasePending,
+  fetchPendingIndent,
 } from "../api/repairingApi";
+import type { PendingIndentFetchResponse } from "../api/repairingApi";
 import type {
   RepairProcessFormData,
   RepairRequestFormData,
@@ -96,6 +98,8 @@ export const repairingKeys = {
     [...repairingKeys.all, "partsAndVendorsFilters"] as const,
   partPurchasePending: (page: number, limit: number, searchTerm: string) =>
     [...repairingKeys.all, "partPurchasePending", { page, limit, searchTerm }] as const,
+  pendingIndent: (page: number, limit: number, searchTerm: string) =>
+    [...repairingKeys.all, "pendingIndent", { page, limit, searchTerm }] as const,
 };
 
 // --- Queries ---
@@ -286,6 +290,18 @@ export const usePartPurchasePendingQuery = (
   return useQuery({
     queryKey: repairingKeys.partPurchasePending(page, limit, searchTerm),
     queryFn: () => fetchPartPurchasePending(page, limit, searchTerm),
+    placeholderData: (previousData) => previousData,
+  });
+};
+
+export const usePendingIndentQuery = (
+  page: number,
+  limit: number,
+  searchTerm: string,
+) => {
+  return useQuery({
+    queryKey: repairingKeys.pendingIndent(page, limit, searchTerm),
+    queryFn: () => fetchPendingIndent(page, limit, searchTerm),
     placeholderData: (previousData) => previousData,
   });
 };

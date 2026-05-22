@@ -82,6 +82,16 @@ const routes: Route[] = [
         showFor: ["admin", "user"] as const,
         permissionResource: "repairing",
       },
+
+      {
+        href: "/repairing/pending-indent",
+        label: "Pending Indent",
+        icon: "ClipboardList",
+        showFor: ["admin", "user"] as const,
+        permissionResource: "repairing",
+      },
+
+
       {
         href: "/repairing/part-and-vendor",
         label: "Part And Vendor",
