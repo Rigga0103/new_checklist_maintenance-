@@ -33,6 +33,7 @@ const RESOURCE_GROUPS: { label: string; resources: PermissionResource[] }[] = [
       "repairing",
       "repair_history",
       "repair_part_vendor",
+      "repair_general_item",
     ],
   },
   {
@@ -76,6 +77,7 @@ const RESOURCE_LABELS: Record<PermissionResource, string> = {
   repairing: "Repairing - Pending",
   repair_history: "Repairing - History",
   repair_part_vendor: "Repairing - Part And Vendor",
+  repair_general_item: "Repairing - General Item Purchase",
   // Maintenance
   maintenance_dashboard: "Maintenance - Dashboard",
   maintenance: "Maintenance - Pending",
