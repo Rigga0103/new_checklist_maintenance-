@@ -418,18 +418,24 @@ export default function MainChecklist({ initialNameFilter }: { initialNameFilter
       return;
     }
 
-    // Check if tasks requiring attachment have an image uploaded
-    const missingImage = Array.from(selectedTasks).some((taskId) => {
-      const task = tasks.find((t) => t.task_id === taskId);
-      if (task?.require_attachment?.toLowerCase() === "yes") {
-        // Check if image was uploaded in this session OR already exists in DB
-        return !taskImages[taskId]?.uploadedUrl && !task.image;
-      }
-      return false;
-    });
+    // Check if tasks requiring attachment have an image uploaded (only when status is "yes"/Done)
+    const missingImageTask = Array.from(selectedTasks)
+      .map((taskId) => {
+        const task = tasks.find((t) => t.task_id === taskId);
+        const isDone = (taskStatuses[taskId] || "yes") === "yes";
+        if (isDone && task?.require_attachment?.toLowerCase() === "yes") {
+          const hasImage = taskImages[taskId]?.uploadedUrl || task.image;
+          if (!hasImage) return task;
+        }
+        return null;
+      })
+      .find((t) => t !== null);
 
-    if (missingImage) {
-      toast.error("image required");
+    if (missingImageTask) {
+      toast.error(
+        `Attachment image is required for task: "${missingImageTask.task_description || missingImageTask.name || missingImageTask.task_id
+        }"`
+      );
       return;
     }
 

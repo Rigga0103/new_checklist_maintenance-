@@ -94,6 +94,7 @@ export type PermissionResource =
   | "repairing"
   | "repair_history"
   | "repair_part_vendor"
+  | "repair_general_item"  // Added new permission
   // Maintenance
   | "maintenance"
   | "maintenance_dashboard"

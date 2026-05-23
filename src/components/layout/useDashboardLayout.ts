@@ -74,7 +74,6 @@ const routes: Route[] = [
         showFor: ["admin", "user"] as const,
         permissionResource: "repair_request",
       },
-
       {
         href: "/repairing/pending",
         label: "Pending",
@@ -82,7 +81,6 @@ const routes: Route[] = [
         showFor: ["admin", "user"] as const,
         permissionResource: "repairing",
       },
-
       {
         href: "/repairing/pending-indent",
         label: "Pending Indent",
@@ -90,14 +88,12 @@ const routes: Route[] = [
         showFor: ["admin", "user"] as const,
         permissionResource: "repairing",
       },
-
-
       {
         href: "/repairing/part-and-vendor",
         label: "Part And Vendor",
         icon: "Package",
         showFor: ["admin", "user"] as const,
-        permissionResource: "repair_part_vendor", // Ensure backend has this permission or relies on role
+        permissionResource: "repair_part_vendor",
       },
       {
         href: "/repairing/part-purchase-pending",
@@ -106,6 +102,7 @@ const routes: Route[] = [
         showFor: ["admin", "user"] as const,
         permissionResource: "repair_part_vendor",
       },
+
       {
         href: "/repairing/history",
         label: "History",
@@ -126,7 +123,48 @@ const routes: Route[] = [
         icon: "FileTask",
         showFor: ["admin"] as const,
       },
+
+      {
+        href: "/repairing/general-item-purchase",
+        label: "General Item Purchase",
+        icon: "ShoppingCart",
+        showFor: ["admin", "user"] as const,
+        permissionResource: "repair_general_item",
+        submenu: true,
+        children: [
+          {
+            href: "/repairing/general-item-purchase/item-request-form",
+            label: "Item Request Form",
+            icon: "FileText",
+            showFor: ["admin", "user"] as const,
+            permissionResource: "repair_general_item",
+          },
+          {
+            href: "/repairing/general-item-purchase/approval",
+            label: "Approval",
+            icon: "ShieldCheck",
+            showFor: ["admin", "user"] as const,
+            permissionResource: "repair_general_item",
+          },
+          {
+            href: "/repairing/general-item-purchase/pending-purchase",
+            label: "Pending Purchase",
+            icon: "Clock",
+            showFor: ["admin", "user"] as const,
+            permissionResource: "repair_general_item",
+          },
+          {
+            href: "/repairing/general-item-purchase/completed-list",
+            label: "Completed List",
+            icon: "CheckSquare",
+            showFor: ["admin", "user"] as const,
+            permissionResource: "repair_general_item",
+          },
+        ],
+      },
+
     ],
+
   },
   {
     href: "/maintenance",
@@ -258,6 +296,7 @@ const routes: Route[] = [
     showFor: ["admin"] as const,
     permissionResource: "training_video",
   },
+
 ];
 
 export function useDashboardLayout() {
@@ -265,6 +304,7 @@ export function useDashboardLayout() {
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
+  const [openNestedSubmenu, setOpenNestedSubmenu] = useState<string | null>(null);
   const [isUserPopupOpen, setIsUserPopupOpen] = useState(false);
 
   // Use next-themes hook for proper theme management
@@ -404,24 +444,33 @@ export function useDashboardLayout() {
     const activeRoute = accessibleRoutes.find(
       (r: any) => r.submenu && r.active,
     );
-    if (activeRoute && openSubmenu !== activeRoute.label) {
-      // Small timeout to push to next tick and avoid sync setState warning
-      const timer = setTimeout(() => {
+    if (activeRoute) {
+      if (openSubmenu !== activeRoute.label) {
         setOpenSubmenu(activeRoute.label);
-      }, 0);
-      return () => clearTimeout(timer);
+      }
+      const activeChild = activeRoute.children?.find(
+        (child: any) => child.submenu && pathname.startsWith(child.href + "/")
+      );
+      if (activeChild && openNestedSubmenu !== activeChild.label) {
+        setOpenNestedSubmenu(activeChild.label);
+      }
     }
-  }, [accessibleRoutes]);
+  }, [accessibleRoutes, pathname]);
 
   const toggleSubmenu = (label: string) => {
     setOpenSubmenu((prev) => (prev === label ? null : label));
   };
+
+  const toggleNestedSubmenu = useCallback((label: string) => {
+    setOpenNestedSubmenu((prev) => (prev === label ? null : label));
+  }, []);
 
   return {
     // State
     pathname,
     isMobileMenuOpen,
     openSubmenu,
+    openNestedSubmenu,
     isUserPopupOpen,
     theme,
     userInfo,
@@ -432,6 +481,7 @@ export function useDashboardLayout() {
     // Actions
     setIsMobileMenuOpen,
     toggleSubmenu,
+    toggleNestedSubmenu,
     setIsUserPopupOpen,
     cycleTheme,
     handleLogout,

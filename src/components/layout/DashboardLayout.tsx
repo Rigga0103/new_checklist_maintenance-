@@ -58,6 +58,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     pathname,
     isMobileMenuOpen,
     openSubmenu,
+    openNestedSubmenu,
     isUserPopupOpen,
     theme,
     userInfo,
@@ -65,6 +66,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     accessibleDepartments,
     setIsMobileMenuOpen,
     toggleSubmenu,
+    toggleNestedSubmenu,
     setIsUserPopupOpen,
     cycleTheme,
     handleLogout,
@@ -136,11 +138,67 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                       </button>
                       {isSubmenuOpen && (
                         <ul className="pl-2 mt-1 ml-6 space-y-1 border-l border-muted dark:border-zinc-700">
-                          {route.children
+                           {route.children
                             ? route.children.map((child) => {
                               const ChildIcon =
                                 iconMap[child.icon] || CheckSquare;
-                              const isChildActive = pathname === child.href;
+                              const isChildActive =
+                                pathname === child.href ||
+                                pathname.startsWith(child.href + "/");
+                              const hasGrandchildren = child.submenu && child.children && child.children.length > 0;
+                              const isNestedOpen = openNestedSubmenu === child.label;
+
+                              if (hasGrandchildren) {
+                                return (
+                                  <li key={`${child.label}-${child.href}`}>
+                                    <div className="mb-1">
+                                      <button
+                                        onClick={() => toggleNestedSubmenu(child.label)}
+                                        className={`flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${isChildActive
+                                          ? "bg-secondary dark:bg-zinc-800 text-foreground font-semibold"
+                                          : "text-foreground-secondary dark:text-zinc-400 hover:bg-secondary dark:hover:bg-zinc-800 hover:text-primary dark:hover:text-foreground"
+                                          }`}
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <ChildIcon className="w-3.5 h-3.5 text-muted-foreground dark:text-zinc-500" />
+                                          <span className="font-medium text-foreground dark:text-zinc-200">{child.label}</span>
+                                        </div>
+                                        <div className="flex items-center text-muted-foreground dark:text-zinc-400">
+                                          {isNestedOpen ? (
+                                            <ChevronDown className="w-3.5 h-3.5" />
+                                          ) : (
+                                            <ChevronRight className="w-3.5 h-3.5" />
+                                          )}
+                                        </div>
+                                      </button>
+                                      {isNestedOpen && (
+                                        <ul className="pl-2 mt-1 ml-4 space-y-1 border-l border-muted dark:border-zinc-700">
+                                          {child.children!.map((grandchild) => {
+                                            const GrandchildIcon = iconMap[grandchild.icon] || CheckSquare;
+                                            const isGrandchildActive = pathname === grandchild.href;
+                                            return (
+                                              <li key={`${grandchild.label}-${grandchild.href}`}>
+                                                <Link
+                                                  href={grandchild.href}
+                                                  className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-xs transition-colors ${isGrandchildActive
+                                                    ? "bg-neutral-100 dark:bg-zinc-800 text-foreground font-semibold border-l-2 border-green-600 dark:border-green-400 pl-2"
+                                                    : "text-foreground-secondary dark:text-zinc-400 hover:bg-neutral-100 dark:hover:bg-zinc-800 hover:text-primary dark:hover:text-foreground"
+                                                    }`}
+                                                  onClick={() => setIsMobileMenuOpen(false)}
+                                                >
+                                                  <GrandchildIcon className="w-3 h-3 text-muted-foreground dark:text-zinc-500" />
+                                                  {grandchild.label}
+                                                </Link>
+                                              </li>
+                                            );
+                                          })}
+                                        </ul>
+                                      )}
+                                    </div>
+                                  </li>
+                                );
+                              }
+
                               return (
                                 <li key={`${child.label}-${child.href}`}>
                                   <Link
@@ -304,12 +362,67 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                           </button>
                           {isSubmenuOpen && (
                             <ul className="pl-2 mt-1 ml-6 space-y-1 border-l border-muted dark:border-zinc-700">
-                              {route.children
+                               {route.children
                                 ? route.children.map((child) => {
                                   const ChildIcon =
                                     iconMap[child.icon] || CheckSquare;
                                   const isChildActive =
-                                    pathname === child.href;
+                                    pathname === child.href ||
+                                    pathname.startsWith(child.href + "/");
+                                  const hasGrandchildren = child.submenu && child.children && child.children.length > 0;
+                                  const isNestedOpen = openNestedSubmenu === child.label;
+
+                                  if (hasGrandchildren) {
+                                    return (
+                                      <li key={`mobile-${child.label}-${child.href}`}>
+                                        <div className="mb-1">
+                                          <button
+                                            onClick={() => toggleNestedSubmenu(child.label)}
+                                            className={`flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${isChildActive
+                                              ? "bg-secondary dark:bg-zinc-800 text-foreground font-semibold"
+                                              : "text-foreground-secondary dark:text-zinc-400 hover:bg-secondary dark:hover:bg-zinc-800 hover:text-primary dark:hover:text-foreground"
+                                              }`}
+                                          >
+                                            <div className="flex items-center gap-2">
+                                              <ChildIcon className="w-3.5 h-3.5 text-muted-foreground dark:text-zinc-500" />
+                                              <span className="font-medium text-foreground dark:text-zinc-200">{child.label}</span>
+                                            </div>
+                                            <div className="flex items-center text-muted-foreground dark:text-zinc-400">
+                                              {isNestedOpen ? (
+                                                <ChevronDown className="w-3.5 h-3.5" />
+                                              ) : (
+                                                <ChevronRight className="w-3.5 h-3.5" />
+                                              )}
+                                            </div>
+                                          </button>
+                                          {isNestedOpen && (
+                                            <ul className="pl-2 mt-1 ml-4 space-y-1 border-l border-muted dark:border-zinc-700">
+                                              {child.children!.map((grandchild) => {
+                                                const GrandchildIcon = iconMap[grandchild.icon] || CheckSquare;
+                                                const isGrandchildActive = pathname === grandchild.href;
+                                                return (
+                                                  <li key={`mobile-${grandchild.label}-${grandchild.href}`}>
+                                                    <Link
+                                                      href={grandchild.href}
+                                                      className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-xs transition-colors ${isGrandchildActive
+                                                        ? "bg-neutral-100 dark:bg-zinc-800 text-foreground font-semibold border-l-2 border-green-600 dark:border-green-400 pl-2"
+                                                        : "text-foreground-secondary dark:text-zinc-400 hover:bg-neutral-100 dark:hover:bg-zinc-800 hover:text-primary dark:hover:text-foreground"
+                                                        }`}
+                                                      onClick={() => setIsMobileMenuOpen(false)}
+                                                    >
+                                                      <GrandchildIcon className="w-3 h-3 text-muted-foreground dark:text-zinc-500" />
+                                                      {grandchild.label}
+                                                    </Link>
+                                                  </li>
+                                                );
+                                              })}
+                                            </ul>
+                                          )}
+                                        </div>
+                                      </li>
+                                    );
+                                  }
+
                                   return (
                                     <li
                                       key={`mobile-${child.label}-${child.href}`}
