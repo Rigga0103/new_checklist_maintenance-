@@ -390,17 +390,17 @@ export default function MainQuickTask() {
   const isLoading =
     activeTab === "checklist" ? checklistLoading
       : activeTab === "delegation" ? delegationLoading
-      : maintenanceLoading;
+        : maintenanceLoading;
 
   // Pagination helpers
   const currentPage =
     activeTab === "checklist" ? checklistPage
       : activeTab === "delegation" ? delegationPage
-      : maintenancePage;
+        : maintenancePage;
   const totalCount =
     activeTab === "checklist" ? checklistTotal
       : activeTab === "delegation" ? delegationTotal
-      : maintenanceTotal;
+        : maintenanceTotal;
   const totalPages = Math.ceil(totalCount / pageSize);
 
   const handleNextPage = () => {
@@ -554,6 +554,35 @@ export default function MainQuickTask() {
     if (!originalTask) return;
 
     try {
+      const oldDateStr = originalTask.task_start_date ? new Date(originalTask.task_start_date).toISOString().split("T")[0] : null;
+      const newDateStr = editFormData.task_start_date ? new Date(editFormData.task_start_date).toISOString().split("T")[0] : null;
+
+      if (oldDateStr && newDateStr && oldDateStr !== newDateStr) {
+        const oldD = new Date(oldDateStr);
+        const newD = new Date(newDateStr);
+        const diffTime = newD.getTime() - oldD.getTime();
+
+        const { data: pendingTasks } = await supabase
+          .from("checklist")
+          .select("task_id, task_start_date")
+          .eq("source_unique_id", originalTask.task_id)
+          .is("submission_date", null);
+
+        if (pendingTasks && pendingTasks.length > 0) {
+          for (const pt of pendingTasks) {
+            if (pt.task_start_date) {
+              const ptDate = new Date(pt.task_start_date);
+              const shiftedDate = new Date(ptDate.getTime() + diffTime);
+
+              await supabase
+                .from("checklist")
+                .update({ task_start_date: shiftedDate.toISOString() })
+                .eq("task_id", pt.task_id);
+            }
+          }
+        }
+      }
+
       await updateChecklistMutation.mutateAsync({
         updatedTask: {
           department: editFormData.department || undefined,
@@ -609,7 +638,7 @@ export default function MainQuickTask() {
             .from("users")
             .select("id, user_name")
             .in("user_name", usersToSearch);
-          
+
           if (usersList) {
             usersList.forEach((u) => {
               if (u.user_name?.toLowerCase() === nameToSearch?.toLowerCase()) {
@@ -763,6 +792,35 @@ export default function MainQuickTask() {
     if (!originalTask) return;
 
     try {
+      const oldDateStr = originalTask.task_start_date ? new Date(originalTask.task_start_date).toISOString().split("T")[0] : null;
+      const newDateStr = maintenanceEditFormData.task_start_date ? new Date(maintenanceEditFormData.task_start_date).toISOString().split("T")[0] : null;
+
+      if (oldDateStr && newDateStr && oldDateStr !== newDateStr) {
+        const oldD = new Date(oldDateStr);
+        const newD = new Date(newDateStr);
+        const diffTime = newD.getTime() - oldD.getTime();
+
+        const { data: pendingTasks } = await supabase
+          .from("machine_maintenance")
+          .select("task_id, task_start_date")
+          .eq("source_unique_id", originalTask.task_id)
+          .is("submission_date", null);
+
+        if (pendingTasks && pendingTasks.length > 0) {
+          for (const pt of pendingTasks) {
+            if (pt.task_start_date) {
+              const ptDate = new Date(pt.task_start_date);
+              const shiftedDate = new Date(ptDate.getTime() + diffTime);
+
+              await supabase
+                .from("machine_maintenance")
+                .update({ task_start_date: shiftedDate.toISOString() })
+                .eq("task_id", pt.task_id);
+            }
+          }
+        }
+      }
+
       await updateMaintenanceMutation.mutateAsync({
         updatedTask: {
           machine_name: maintenanceEditFormData.machine_name || undefined,
@@ -1086,11 +1144,10 @@ export default function MainQuickTask() {
           >
             Checklist
             {checklistTotal > 0 && (
-              <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${
-                activeTab === "checklist"
-                  ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400"
-                  : "bg-gray-200 dark:bg-neutral-600 text-gray-600 dark:text-gray-300"
-              }`}>
+              <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${activeTab === "checklist"
+                ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400"
+                : "bg-gray-200 dark:bg-neutral-600 text-gray-600 dark:text-gray-300"
+                }`}>
                 {checklistTotal}
               </span>
             )}
@@ -1108,11 +1165,10 @@ export default function MainQuickTask() {
           >
             Delegation
             {delegationTotal > 0 && (
-              <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${
-                activeTab === "delegation"
-                  ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400"
-                  : "bg-gray-200 dark:bg-neutral-600 text-gray-600 dark:text-gray-300"
-              }`}>
+              <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${activeTab === "delegation"
+                ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400"
+                : "bg-gray-200 dark:bg-neutral-600 text-gray-600 dark:text-gray-300"
+                }`}>
                 {delegationTotal}
               </span>
             )}
@@ -1130,11 +1186,10 @@ export default function MainQuickTask() {
           >
             Maintenance
             {maintenanceTotal > 0 && (
-              <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${
-                activeTab === "maintenance"
-                  ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400"
-                  : "bg-gray-200 dark:bg-neutral-600 text-gray-600 dark:text-gray-300"
-              }`}>
+              <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${activeTab === "maintenance"
+                ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400"
+                : "bg-gray-200 dark:bg-neutral-600 text-gray-600 dark:text-gray-300"
+                }`}>
                 {maintenanceTotal}
               </span>
             )}
@@ -1712,13 +1767,13 @@ export default function MainQuickTask() {
                               )}
                             </div>
                           ) : (() => {
-                              const ct = task as ChecklistTask;
-                              return (ct.sample_image || ct.image) ? (
-                                <a href={ct.sample_image || ct.image || undefined} target="_blank" rel="noreferrer" className="block w-10 h-10 overflow-hidden rounded border border-gray-200 dark:border-neutral-700 hover:opacity-80 transition-opacity">
-                                  <img src={ct.sample_image || ct.image || undefined} alt="Preview" className="w-full h-full object-cover" />
-                                </a>
-                              ) : "—";
-                            })()}
+                            const ct = task as ChecklistTask;
+                            return (ct.sample_image || ct.image) ? (
+                              <a href={ct.sample_image || ct.image || undefined} target="_blank" rel="noreferrer" className="block w-10 h-10 overflow-hidden rounded border border-gray-200 dark:border-neutral-700 hover:opacity-80 transition-opacity">
+                                <img src={ct.sample_image || ct.image || undefined} alt="Preview" className="w-full h-full object-cover" />
+                              </a>
+                            ) : "—";
+                          })()}
                         </td>
                       )}
                       {/* IMAGE (Maintenance) */}
@@ -1896,8 +1951,8 @@ export default function MainQuickTask() {
                   : activeTab === "delegation"
                     ? deleteDelegationMutation.isPending
                     : deleteMaintenanceMutation.isPending) && (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                )}
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  )}
                 Delete
               </button>
             </div>
