@@ -1247,7 +1247,7 @@ export default function MainChecklist({ initialNameFilter }: { initialNameFilter
                                   : task.status === "Extend date"
                                     ? "Extended"
                                     : task.status === "no"
-                                      ? "Not Done"
+                                      ? "Overdue"
                                       : task.task_start_date &&
                                         new Date(task.task_start_date) <
                                         new Date(
