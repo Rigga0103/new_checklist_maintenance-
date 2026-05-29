@@ -21,8 +21,20 @@ export const dashboardKeys = {
     dept?: string,
     start?: string | null,
     end?: string | null,
+    role?: string | null,
+    username?: string | null,
   ) =>
-    [...dashboardKeys.all, "summary", type, staff, dept, start, end] as const,
+    [
+      ...dashboardKeys.all,
+      "summary",
+      type,
+      staff,
+      dept,
+      start,
+      end,
+      role,
+      username,
+    ] as const,
   data: (
     type: DashboardType,
     view: TaskView,
@@ -30,6 +42,8 @@ export const dashboardKeys = {
     dept?: string,
     start?: string | null,
     end?: string | null,
+    role?: string | null,
+    username?: string | null,
   ) =>
     [
       ...dashboardKeys.all,
@@ -40,6 +54,8 @@ export const dashboardKeys = {
       dept,
       start,
       end,
+      role,
+      username,
     ] as const,
   departments: () => [...dashboardKeys.all, "departments"] as const,
   staff: (dept?: string) => [...dashboardKeys.all, "staff", dept] as const,
@@ -69,6 +85,8 @@ export function useDashboardSummary(
       departmentFilter,
       startDate,
       endDate,
+      role,
+      username,
     ),
     queryFn: () =>
       getDashboardSummaryApi(
@@ -110,6 +128,8 @@ export function useDashboardData(
       departmentFilter,
       startDate,
       endDate,
+      role,
+      username,
     ),
     queryFn: () =>
       fetchDashboardDataApi({

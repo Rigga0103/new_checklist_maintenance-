@@ -139,7 +139,7 @@ export const fetchMaintenancePending = async (
     }
 
     // Role filter - regular users only see their own tasks
-    if (role === "user" && username) {
+    if (role !== "admin" && username) {
       query = query.eq("doer_name", username);
     }
 
@@ -197,7 +197,7 @@ export const fetchMaintenanceHistory = async (
     }
 
     // Role filter
-    if (role === "user" && username) {
+    if (role !== "admin" && username) {
       query = query.eq("doer_name", username);
     }
 
@@ -268,7 +268,7 @@ export const fetchMaintenanceLast7Days = async (
       query = query.or(orConds.join(","));
     }
 
-    if (role === "user" && username) {
+    if (role !== "admin" && username) {
       query = query.eq("doer_name", username);
     }
 
@@ -317,7 +317,7 @@ export const fetchMaintenanceOverdue = async (
       query = query.or(orConds.join(","));
     }
 
-    if (role === "user" && username) {
+    if (role !== "admin" && username) {
       query = query.eq("doer_name", username);
     }
 
@@ -374,7 +374,7 @@ export const fetchMaintenanceUpcoming = async (
       query = query.or(orConds.join(","));
     }
 
-    if (role === "user" && username) {
+    if (role !== "admin" && username) {
       query = query.eq("doer_name", username);
     }
 

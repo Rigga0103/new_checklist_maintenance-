@@ -73,7 +73,7 @@ export const fetchDashboardDataApi = async ({
       .range(from, to);
 
     // Role-based filtering
-    if (role === "user" && username) {
+    if (role !== "admin" && username) {
       query = applyNameFilter(query, username);
     }
 
@@ -206,7 +206,7 @@ export const countTotalTasksApi = async (
     .gte("task_start_date", `${today}T00:00:00`)
     .lte("task_start_date", `${today}T23:59:59`);
 
-  if (role === "user" && username) {
+  if (role !== "admin" && username) {
     query = applyNameFilter(query, username);
   } else if (staffFilter && staffFilter !== "all") {
     query = applyNameFilter(query, staffFilter);
@@ -252,7 +252,7 @@ export const countCompletedTasksApi = async (
           .gte("task_start_date", `${today}T00:00:00`)
           .lte("task_start_date", `${today}T23:59:59`);
 
-  if (role === "user" && username) {
+  if (role !== "admin" && username) {
     query = applyNameFilter(query, username);
   } else if (staffFilter && staffFilter !== "all") {
     query = applyNameFilter(query, staffFilter);
@@ -298,7 +298,7 @@ export const countPendingTasksApi = async (
           .gte("task_start_date", `${today}T00:00:00`)
           .lte("task_start_date", `${today}T23:59:59`);
 
-  if (role === "user" && username) {
+  if (role !== "admin" && username) {
     query = applyNameFilter(query, username);
   } else if (staffFilter && staffFilter !== "all") {
     query = applyNameFilter(query, staffFilter);
@@ -346,7 +346,7 @@ export const countOverdueTasksApi = async (
           .is("submission_date", null)
           .lt("task_start_date", `${today}T00:00:00`);
 
-  if (role === "user" && username) {
+  if (role !== "admin" && username) {
     query = applyNameFilter(query, username);
   } else if (staffFilter && staffFilter !== "all") {
     query = applyNameFilter(query, staffFilter);
@@ -382,7 +382,7 @@ export const getDashboardSummaryApi = async (
   const today = new Date().toISOString().split("T")[0];
 
   const filterName =
-    role === "user" && username
+    role !== "admin" && username
       ? username
       : staffFilter && staffFilter !== "all"
         ? staffFilter
