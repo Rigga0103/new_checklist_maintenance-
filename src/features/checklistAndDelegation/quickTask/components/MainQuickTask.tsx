@@ -118,7 +118,8 @@ const generateTasksForDb = (
   assigneeUserId: number | null,
   createdByUserId: number | null
 ) => {
-  const frequency = originalTask.frequency || "one-time";
+  // Prefer editFormData.frequency so frequency changes are reflected in new tasks
+  const frequency = editFormData.frequency ?? originalTask.frequency ?? "one-time";
   const tasksToInsert: any[] = [];
 
   const department = editFormData.department !== undefined ? editFormData.department : originalTask.department;
@@ -553,11 +554,17 @@ export default function MainQuickTask() {
     );
     if (!originalTask) return;
 
+    // Detect if frequency changed — if so we always wipe and regenerate
+    const frequencyChanged =
+      editFormData.frequency !== undefined &&
+      editFormData.frequency !== originalTask.frequency;
+
     try {
       const oldDateStr = originalTask.task_start_date ? new Date(originalTask.task_start_date).toISOString().split("T")[0] : null;
       const newDateStr = editFormData.task_start_date ? new Date(editFormData.task_start_date).toISOString().split("T")[0] : null;
 
-      if (oldDateStr && newDateStr && oldDateStr !== newDateStr) {
+      // Only shift dates when frequency has NOT changed (frequency change wipes & regenerates anyway)
+      if (!frequencyChanged && oldDateStr && newDateStr && oldDateStr !== newDateStr) {
         const oldD = new Date(oldDateStr);
         const newD = new Date(newDateStr);
         const diffTime = newD.getTime() - oldD.getTime();
@@ -583,6 +590,7 @@ export default function MainQuickTask() {
         }
       }
 
+      // Pass frequency to the mutation — API will update the template and wipe pending instances
       await updateChecklistMutation.mutateAsync({
         updatedTask: {
           department: editFormData.department || undefined,
@@ -598,6 +606,8 @@ export default function MainQuickTask() {
           remark: editFormData.remark || undefined,
           image: editFormData.image || undefined,
           task_start_date: editFormData.task_start_date || undefined,
+          // Always pass frequency so the template is kept in sync
+          frequency: editFormData.frequency || undefined,
         },
         originalTask: {
           task_id: originalTask.task_id,
@@ -607,21 +617,32 @@ export default function MainQuickTask() {
         },
       });
 
-      // Check if the task already exists in the "checklist" table
-      const { data: existingChecklist, error: checkError } = await supabase
-        .from("checklist")
-        .select("task_id")
-        .eq("source_unique_id", originalTask.task_id)
-        .limit(1);
+      // When frequency changed the API already wiped pending instances above.
+      // We always regenerate tasks from scratch in that case.
+      // When frequency did NOT change, only generate if no instances exist yet.
+      let shouldGenerate = frequencyChanged;
 
-      if (checkError) {
-        console.error("Error checking checklist:", checkError);
+      if (!shouldGenerate) {
+        // Check if any pending instances already exist
+        const { data: existingChecklist, error: checkError } = await supabase
+          .from("checklist")
+          .select("task_id")
+          .eq("source_unique_id", originalTask.task_id)
+          .limit(1);
+
+        if (checkError) {
+          console.error("Error checking checklist:", checkError);
+        }
+
+        if (existingChecklist && existingChecklist.length > 0) {
+          // Tasks already exist and frequency hasn't changed — nothing to regenerate
+          toast.info("Task updated. Existing scheduled instances kept.");
+        } else {
+          shouldGenerate = true;
+        }
       }
 
-      if (existingChecklist && existingChecklist.length > 0) {
-        alert("The task is there. Task present.");
-        toast.info("The task is there, task present");
-      } else {
+      if (shouldGenerate) {
         // Fetch working days calendar
         const workingDays = await fetchWorkingDaysApi();
 
@@ -671,9 +692,12 @@ export default function MainQuickTask() {
 
         const endDate = templateData?.task_end_date ? new Date(templateData.task_end_date) : addYears(startDate, 2);
 
-        // Generate frequency-wise tasks
+        // Build a merged task object so generateTasksForDb picks up the new frequency
+        const mergedTask: ChecklistTask = { ...originalTask, ...editFormData } as ChecklistTask;
+
+        // Generate frequency-wise tasks using the updated frequency
         const tasksToInsert = generateTasksForDb(
-          originalTask,
+          mergedTask,
           editFormData,
           startDate,
           endDate,
@@ -692,7 +716,10 @@ export default function MainQuickTask() {
             console.error("Error inserting into checklist:", insertError);
             toast.error("Failed to add tasks to checklist table");
           } else {
-            toast.success(`Successfully added ${tasksToInsert.length} recurring tasks to checklist table`);
+            const newFreq = editFormData.frequency || originalTask.frequency || "";
+            toast.success(
+              `Frequency set to "${newFreq}". Generated ${tasksToInsert.length} new recurring tasks.`
+            );
           }
         } else {
           toast.warning("No working days found in calendar to generate tasks.");
@@ -1638,7 +1665,27 @@ export default function MainQuickTask() {
                       </td>
                       {/* FREQUENCY */}
                       <td className="px-3 py-3 whitespace-nowrap">
-                        {isDelegationEditing ? (
+                        {isChecklistEditing ? (
+                          <select
+                            value={editFormData.frequency || (task as ChecklistTask).frequency || ""}
+                            onChange={(e) => handleInputChange("frequency", e.target.value)}
+                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
+                          >
+                            <option value="daily">daily</option>
+                            <option value="weekly">weekly</option>
+                            <option value="fortnightly">fortnightly</option>
+                            <option value="monthly">monthly</option>
+                            <option value="quarterly">quarterly</option>
+                            <option value="half-yearly">half-yearly</option>
+                            <option value="yearly">yearly</option>
+                            <option value="one-time">one-time</option>
+                            <option value="end-of-1st-week">end-of-1st-week</option>
+                            <option value="end-of-2nd-week">end-of-2nd-week</option>
+                            <option value="end-of-3rd-week">end-of-3rd-week</option>
+                            <option value="end-of-4th-week">end-of-4th-week</option>
+                            <option value="end-of-last-week">end-of-last-week</option>
+                          </select>
+                        ) : isDelegationEditing ? (
                           <select
                             value={delegationEditFormData.frequency || ""}
                             onChange={(e) => handleDelegationFieldChange("frequency", e.target.value)}
@@ -1646,7 +1693,11 @@ export default function MainQuickTask() {
                           >
                             <option value="daily">daily</option>
                             <option value="weekly">weekly</option>
+                            <option value="fortnightly">fortnightly</option>
                             <option value="monthly">monthly</option>
+                            <option value="quarterly">quarterly</option>
+                            <option value="half-yearly">half-yearly</option>
+                            <option value="yearly">yearly</option>
                             <option value="one-time">one-time</option>
                           </select>
                         ) : isMaintenanceEditing ? (
@@ -1657,7 +1708,11 @@ export default function MainQuickTask() {
                           >
                             <option value="daily">daily</option>
                             <option value="weekly">weekly</option>
+                            <option value="fortnightly">fortnightly</option>
                             <option value="monthly">monthly</option>
+                            <option value="quarterly">quarterly</option>
+                            <option value="half-yearly">half-yearly</option>
+                            <option value="yearly">yearly</option>
                             <option value="one-time">one-time</option>
                           </select>
                         ) : (

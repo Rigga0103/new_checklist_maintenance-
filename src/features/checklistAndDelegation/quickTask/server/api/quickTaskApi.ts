@@ -243,6 +243,9 @@ export const updateChecklistTaskApi = async (
       ? new Date(updatedTask.task_start_date).toISOString()
       : null;
   }
+  // Allow frequency to be updated on the template
+  if (updatedTask.frequency !== undefined)
+    updatePayload.frequency = updatedTask.frequency;
 
   // Update the template in unique_checklist.
   const { data, error } = await supabase
@@ -262,6 +265,16 @@ export const updateChecklistTaskApi = async (
       .eq("source_unique_id", originalTask.task_id)
       .is("submission_date", null)
       .lt("task_start_date", `${newDate}T00:00:00`);
+  }
+
+  // If frequency changed, wipe ALL pending checklist instances so they can be
+  // regenerated with the correct new recurrence pattern.
+  if (updatedTask.frequency !== undefined) {
+    await supabase
+      .from("checklist")
+      .delete()
+      .eq("source_unique_id", originalTask.task_id)
+      .is("submission_date", null);
   }
 
   if (error) {

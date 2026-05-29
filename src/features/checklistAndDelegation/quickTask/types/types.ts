@@ -33,6 +33,7 @@ export interface ChecklistUpdatePayload {
   remark?: string;
   image?: string;
   task_start_date?: string;
+  frequency?: string;
 }
 
 export interface ChecklistOriginalMatch {
