@@ -9,8 +9,12 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
-  ChevronLeft,
-  ChevronRight
+  Package,
+  DollarSign,
+  Building2,
+  FileText,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import supabase from "@/utils/supabaseClient";
 import { toast } from "sonner";
@@ -22,12 +26,19 @@ interface PurchaseRequest {
   required_for: string;
   status: string;
   created_at: string;
+  quantity: string;
+  rate: number;
+  vendor_name: string;
+  purchase_date: string;
+  amount: number;
+  attachment: string;
 }
 
 export default function ApprovalPage() {
   const [requests, setRequests] = useState<PurchaseRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [actioningId, setActioningId] = useState<number | null>(null);
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
   // Fetch pending requests
   const fetchPendingRequests = async () => {
@@ -74,6 +85,18 @@ export default function ApprovalPage() {
     }
   };
 
+  const toggleRowExpansion = (id: number) => {
+    setExpandedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { bg: string; text: string; border: string }> = {
       Pending: { bg: "bg-amber-50 dark:bg-amber-950/30", text: "text-amber-600 dark:text-amber-400", border: "border-amber-100 dark:border-amber-900/30" },
@@ -112,7 +135,7 @@ export default function ApprovalPage() {
               <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Approval Management</h2>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Review, approve, or reject pending item purchase requests.
+              Review, approve, or reject pending item purchase requests with complete details.
             </p>
           </div>
           <div className="text-xs font-semibold px-2.5 py-1 bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 rounded-full border border-blue-100 dark:border-blue-900/50">
@@ -144,9 +167,12 @@ export default function ApprovalPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 dark:bg-zinc-950/50">
                 <tr className="border-b border-gray-200 dark:border-zinc-800">
+                  <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 w-8"></th>
                   <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Item Name</th>
                   <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Requested By</th>
-                  <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 hidden md:table-cell">Required For</th>
+                  <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 hidden md:table-cell">Quantity</th>
+                  <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 hidden lg:table-cell">Rate</th>
+                  <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 hidden xl:table-cell">Total Amount</th>
                   <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Status</th>
                   <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 hidden lg:table-cell">Requested Date</th>
                   <th className="text-right p-3 font-semibold text-gray-700 dark:text-gray-300">Actions</th>
@@ -154,54 +180,201 @@ export default function ApprovalPage() {
               </thead>
               <tbody>
                 {requests.map((request) => (
-                  <tr
-                    key={request.id}
-                    className="border-b border-gray-200 dark:border-zinc-800 hover:bg-gray-50/50 dark:hover:bg-zinc-950/30 transition-colors"
-                  >
-                    <td className="p-3 font-medium">
-                      <div className="max-w-[200px] truncate text-gray-900 dark:text-gray-100" title={request.item_name}>
-                        {request.item_name}
-                      </div>
-                    </td>
-                    <td className="p-3">
-                      <div className="flex items-center gap-1">
-                        <User className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
-                        <span className="text-sm text-gray-700 dark:text-gray-300">{request.requested_by}</span>
-                      </div>
-                    </td>
-                    <td className="p-3 hidden md:table-cell">
-                      <div className="max-w-[200px] truncate text-sm text-gray-500 dark:text-gray-400" title={request.required_for}>
-                        {request.required_for}
-                      </div>
-                    </td>
-                    <td className="p-3">{getStatusBadge(request.status)}</td>
-                    <td className="p-3 hidden lg:table-cell">
-                      <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
-                        <Calendar className="w-3.5 h-3.5" />
-                        {new Date(request.created_at).toLocaleDateString()}
-                      </div>
-                    </td>
-                    <td className="p-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          disabled={actioningId !== null}
-                          onClick={() => handleAction(request.id, "Rejected")}
-                          className="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 hover:text-red-700 dark:hover:text-red-300 h-8 px-2 rounded-md transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <XCircle className="w-4 h-4" />
-                          <span className="hidden sm:inline text-sm">Reject</span>
+                  <React.Fragment key={request.id}>
+                    <tr
+                      className="border-b border-gray-200 dark:border-zinc-800 hover:bg-gray-50/50 dark:hover:bg-zinc-950/30 transition-colors cursor-pointer"
+                      onClick={() => toggleRowExpansion(request.id)}
+                    >
+                      <td className="p-3">
+                        <button className="text-gray-500 hover:text-gray-700 dark:text-gray-400">
+                          {expandedRows.has(request.id) ?
+                            <ChevronUp className="w-4 h-4" /> :
+                            <ChevronDown className="w-4 h-4" />
+                          }
                         </button>
-                        <button
-                          disabled={actioningId !== null}
-                          onClick={() => handleAction(request.id, "Approved")}
-                          className="bg-green-600 hover:bg-green-700 text-white h-8 px-3 rounded-md transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <CheckCircle2 className="w-4 h-4" />
-                          <span className="hidden sm:inline text-sm">Approve</span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                      </td>
+                      <td className="p-3 font-medium">
+                        <div className="max-w-[200px] truncate text-gray-900 dark:text-gray-100" title={request.item_name}>
+                          {request.item_name}
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-1">
+                          <User className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{request.requested_by}</span>
+                        </div>
+                      </td>
+                      <td className="p-3 hidden md:table-cell">
+                        <div className="flex items-center gap-1">
+                          <Package className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">
+                            {request.quantity || '-'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="p-3 hidden lg:table-cell">
+                        <div className="flex items-center gap-1">
+
+                          <span className="text-sm text-gray-700 dark:text-gray-300">
+                            {request.rate ? `₹${request.rate.toFixed(2)}` : '-'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="p-3 hidden xl:table-cell">
+                        <div className="flex items-center gap-1">
+
+                          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                            {request.amount ? `₹${request.amount.toFixed(2)}` : '-'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="p-3">{getStatusBadge(request.status)}</td>
+                      <td className="p-3 hidden lg:table-cell">
+                        <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+                          <Calendar className="w-3.5 h-3.5" />
+                          {new Date(request.created_at).toLocaleDateString()}
+                        </div>
+                      </td>
+                      <td className="p-3 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            disabled={actioningId !== null}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAction(request.id, "Rejected");
+                            }}
+                            className="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 hover:text-red-700 dark:hover:text-red-300 h-8 px-2 rounded-md transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <XCircle className="w-4 h-4" />
+                            <span className="hidden sm:inline text-sm">Reject</span>
+                          </button>
+                          <button
+                            disabled={actioningId !== null}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAction(request.id, "Approved");
+                            }}
+                            className="bg-green-600 hover:bg-green-700 text-white h-8 px-3 rounded-md transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                            <span className="hidden sm:inline text-sm">Approve</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+
+                    {/* Expanded Row with Additional Details */}
+                    {expandedRows.has(request.id) && (
+                      <tr className="bg-gray-50/50 dark:bg-zinc-950/20">
+                        <td colSpan={9} className="p-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {/* Required For */}
+                            <div className="space-y-1">
+                              <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Required For
+                              </label>
+                              <p className="text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-zinc-900 p-2 rounded border border-gray-200 dark:border-zinc-800">
+                                {request.required_for}
+                              </p>
+                            </div>
+
+                            {/* Vendor Name */}
+                            <div className="space-y-1">
+                              <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                                <Building2 className="w-3 h-3" />
+                                Vendor Name
+                              </label>
+                              <p className="text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-zinc-900 p-2 rounded border border-gray-200 dark:border-zinc-800">
+                                {request.vendor_name || '-'}
+                              </p>
+                            </div>
+
+                            {/* Purchase Date */}
+                            <div className="space-y-1">
+                              <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                Purchase Date
+                              </label>
+                              <p className="text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-zinc-900 p-2 rounded border border-gray-200 dark:border-zinc-800">
+                                {request.purchase_date ? new Date(request.purchase_date).toLocaleDateString() : '-'}
+                              </p>
+                            </div>
+
+                            {/* Quantity Details */}
+                            <div className="space-y-1">
+                              <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                                <Package className="w-3 h-3" />
+                                Quantity Details
+                              </label>
+                              <div className="bg-white dark:bg-zinc-900 p-2 rounded border border-gray-200 dark:border-zinc-800 space-y-1">
+                                <p className="text-sm">
+                                  <span className="font-medium">Quantity:</span> {request.quantity || '-'}
+                                </p>
+                                <p className="text-sm">
+                                  <span className="font-medium">Rate/Unit:</span> {request.rate ? `₹${request.rate.toFixed(2)}` : '-'}
+                                </p>
+                                <p className="text-sm font-semibold">
+                                  <span className="font-medium">Total Amount:</span> {request.amount ? `₹${request.amount.toFixed(2)}` : '-'}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Attachment */}
+                            <div className="space-y-1 md:col-span-2 lg:col-span-1">
+                              <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                                <FileText className="w-3 h-3" />
+                                Attachment
+                              </label>
+                              <div className="bg-white dark:bg-zinc-900 p-2 rounded border border-gray-200 dark:border-zinc-800">
+                                {request.attachment ? (
+                                  <div className="space-y-2">
+                                    <a
+                                      href={request.attachment}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <FileText className="w-4 h-4" />
+                                      View Attachment
+                                    </a>
+                                    {request.attachment.match(/\.(jpg|jpeg|png|gif)$/i) && (
+                                      <div className="mt-2">
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img
+                                          src={request.attachment}
+                                          alt="Attachment preview"
+                                          className="max-h-32 rounded border"
+                                          onClick={(e) => e.stopPropagation()}
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <p className="text-sm text-gray-500 dark:text-gray-400">No attachment</p>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Metadata */}
+                            <div className="space-y-1">
+                              <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Request Metadata
+                              </label>
+                              <div className="bg-white dark:bg-zinc-900 p-2 rounded border border-gray-200 dark:border-zinc-800 space-y-1">
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  <span className="font-medium">Request ID:</span> #{request.id}
+                                </p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  <span className="font-medium">Created:</span> {new Date(request.created_at).toLocaleString()}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>

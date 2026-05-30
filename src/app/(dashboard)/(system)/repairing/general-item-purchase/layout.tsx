@@ -71,11 +71,10 @@ export default function GeneralItemPurchaseLayout({
               <Link
                 key={tab.href}
                 href={tab.href}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-all duration-200 rounded-t-lg ${
-                  isActive
-                    ? "border-green-600 text-green-600 dark:border-green-400 dark:text-green-400 bg-green-50/30 dark:bg-green-950/10 font-semibold"
-                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-neutral-300 dark:hover:border-zinc-700 hover:bg-neutral-50 dark:hover:bg-zinc-900/50"
-                }`}
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-all duration-200 rounded-t-lg ${isActive
+                  ? "border-green-600 text-green-600 dark:border-green-400 dark:text-green-400 bg-green-50/30 dark:bg-green-950/10 font-semibold"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-neutral-300 dark:hover:border-zinc-700 hover:bg-neutral-50 dark:hover:bg-zinc-900/50"
+                  }`}
               >
                 <Icon className={`w-4 h-4 transition-colors duration-200 ${isActive ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}`} />
                 {tab.label}
