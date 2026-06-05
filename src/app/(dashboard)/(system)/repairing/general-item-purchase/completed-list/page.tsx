@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import supabase from "@/utils/supabaseClient";
 import { toast } from "sonner";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 interface PurchaseRequest {
   id: number;
@@ -105,11 +107,10 @@ export default function CompletedListPage() {
     }
   };
 
-  const exportToCSV = () => {
+  const exportToPDF = () => {
     try {
       setIsExporting(true);
 
-      // Determine which rows to export
       const rowsToExport = selectedRows.size > 0
         ? requests.filter(r => selectedRows.has(r.id))
         : requests;
@@ -119,63 +120,97 @@ export default function CompletedListPage() {
         return;
       }
 
-      // Prepare CSV headers
-      const headers = [
-        "ID",
-        "Item Name",
-        "Requested By",
-        "Required For",
-        "Quantity",
-        "Rate (₹)",
-        "Total Amount (₹)",
-        "Vendor Name",
-        "Purchase Date",
-        "Status",
-        "Requested Date",
-        "Completed Date",
-        "Attachment URL"
-      ];
+      const doc = new jsPDF({ orientation: "landscape" });
 
-      // Prepare CSV rows
-      const csvRows = rowsToExport.map(request => [
-        request.id,
-        `"${request.item_name.replace(/"/g, '""')}"`, // Escape quotes
-        `"${request.requested_by.replace(/"/g, '""')}"`,
-        `"${request.required_for.replace(/"/g, '""')}"`,
-        request.quantity || "",
-        request.rate ? request.rate.toFixed(2) : "",
-        request.amount ? request.amount.toFixed(2) : "",
-        `"${(request.vendor_name || "").replace(/"/g, '""')}"`,
-        request.purchase_date ? new Date(request.purchase_date).toLocaleDateString() : "",
+      // Add title
+      doc.setFontSize(16);
+      doc.setTextColor(0, 0, 0);
+      doc.text("Purchase History Report", 14, 15);
+
+      // Add subtitle with date range and counts
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      const completedCount = rowsToExport.filter(r => r.status === "Completed").length;
+      const approvedCount = rowsToExport.filter(r => r.status === "Approved").length;
+      doc.text(
+        `Exported: ${new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })} | Total: ${rowsToExport.length} (Completed: ${completedCount}, Approved: ${approvedCount})`,
+        14,
+        22
+      );
+
+      // Prepare table data
+      const tableData = rowsToExport.map((request, index) => [
+        index + 1,
+        request.item_name || "-",
+        request.requested_by || "-",
+        request.required_for || "-",
+        request.quantity || "-",
+        request.rate ? `₹${request.rate.toFixed(2)}` : "-",
+        request.amount ? `₹${request.amount.toFixed(2)}` : "-",
+        request.vendor_name || "-",
+        request.purchase_date ? new Date(request.purchase_date).toLocaleDateString() : "-",
         request.status,
-        new Date(request.created_at).toLocaleString(),
-        request.status === "Completed" ? new Date().toLocaleString() : "Not Completed",
-        request.attachment || ""
+        new Date(request.created_at).toLocaleDateString(),
       ]);
 
-      // Combine headers and rows
-      const csvContent = [
-        headers.join(","),
-        ...csvRows.map(row => row.join(","))
-      ].join("\n");
+      // Generate table
+      autoTable(doc, {
+        startY: 28,
+        head: [[
+          "#", "Item Name", "Requested By", "Required For", "Qty",
+          "Rate", "Amount", "Vendor", "Purchase Date", "Status", "Requested Date"
+        ]],
+        body: tableData,
+        headStyles: {
+          fillColor: [16, 185, 129],
+          textColor: 255,
+          fontSize: 8,
+          fontStyle: "bold",
+          halign: "center"
+        },
+        bodyStyles: { fontSize: 7 },
+        alternateRowStyles: { fillColor: [240, 240, 240] },
+        margin: { left: 14, right: 14 },
+        columnStyles: {
+          0: { cellWidth: 10, halign: "center" },
+          1: { cellWidth: 35 },
+          2: { cellWidth: 25 },
+          3: { cellWidth: 35 },
+          4: { cellWidth: 15, halign: "center" },
+          5: { cellWidth: 20, halign: "right" },
+          6: { cellWidth: 25, halign: "right" },
+          7: { cellWidth: 25 },
+          8: { cellWidth: 20, halign: "center" },
+          9: { cellWidth: 20, halign: "center" },
+          10: { cellWidth: 20, halign: "center" },
+        },
+        styles: {
+          overflow: "ellipsize",
+          cellPadding: 2,
+        },
+      });
 
-      // Add BOM for UTF-8 encoding to handle special characters
-      const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+      // Add footer
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text(
+          `Generated by Purchase Management System - Page ${i} of ${pageCount}`,
+          doc.internal.pageSize.getWidth() / 2,
+          doc.internal.pageSize.getHeight() - 10,
+          { align: "center" }
+        );
+      }
 
-      // Create download link
-      const link = document.createElement("a");
-      const url = URL.createObjectURL(blob);
-      link.setAttribute("href", url);
-      link.setAttribute("download", `purchase_history_${new Date().toISOString().split('T')[0]}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      const label = selectedRows.size > 0 ? `purchase_history_selected_${selectedRows.size}` : "purchase_history_all";
+      doc.save(`${label}_${new Date().toISOString().slice(0, 10)}.pdf`);
 
-      toast.success(`Exported ${rowsToExport.length} item(s) to CSV successfully!`);
+      toast.success(`Exported ${rowsToExport.length} item(s) to PDF successfully!`);
     } catch (err: any) {
-      console.error("Error exporting to CSV:", err);
-      toast.error("Failed to export data. Please try again.");
+      console.error("Error exporting to PDF:", err);
+      toast.error("Failed to export PDF. Please try again.");
     } finally {
       setIsExporting(false);
     }
@@ -235,8 +270,9 @@ export default function CompletedListPage() {
                 {selectedCount} Selected
               </div>
             )}
+
             <button
-              onClick={exportToCSV}
+              onClick={exportToPDF}
               disabled={isExporting || requests.length === 0}
               className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900/50 rounded-md hover:bg-green-100 dark:hover:bg-green-950/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -245,8 +281,9 @@ export default function CompletedListPage() {
               ) : (
                 <Download className="w-3.5 h-3.5" />
               )}
-              {isExporting ? "Exporting..." : selectedCount > 0 ? `Export ${selectedCount} Selected` : "Export All"}
+              {isExporting ? "Exporting..." : selectedCount > 0 ? `Export PDF (${selectedCount} Selected)` : "Export PDF (All)"}
             </button>
+
             <button
               onClick={() => fetchCompletedAndApprovedRequests(true)}
               disabled={isRefreshing}
@@ -496,8 +533,6 @@ export default function CompletedListPage() {
                                 )}
                               </div>
                             </div>
-
-
 
                             {/* Status Timeline */}
                             <div className="space-y-1 md:col-span-2 lg:col-span-1">

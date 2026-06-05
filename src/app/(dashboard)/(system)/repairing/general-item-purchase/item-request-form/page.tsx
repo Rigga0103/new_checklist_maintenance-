@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { FileText, PlusCircle, Info, Trash2, Plus, Sparkles, Loader2, Upload, DollarSign, Calendar, Package, Building2 } from "lucide-react";
+import { FileText, PlusCircle, Info, Trash2, Plus, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import supabase from "@/utils/supabaseClient";
 import { toast } from "sonner";
@@ -19,20 +19,6 @@ interface RequestedItem {
   name: string;
   customName: string;
   quantity: string;
-  rate: string;
-  vendor_name: string;
-  purchase_date: string;
-  amount: string;
-  attachment: File | null;
-  attachmentPreview: string | null;
-}
-
-interface Vendor {
-  id: number;
-  vendor_name: string;
-  vendor_code: string;
-  location?: string;
-  vendor_type?: string;
 }
 
 export default function ItemRequestFormPage() {
@@ -44,12 +30,6 @@ export default function ItemRequestFormPage() {
       name: "",
       customName: "",
       quantity: "",
-      rate: "",
-      vendor_name: "",
-      purchase_date: "",
-      amount: "",
-      attachment: null,
-      attachmentPreview: null
     },
   ]);
 
@@ -57,7 +37,6 @@ export default function ItemRequestFormPage() {
   const [items, setItems] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [vendors, setVendors] = useState<Vendor[]>([]);
 
   // Load initial data
   useEffect(() => {
@@ -141,43 +120,7 @@ export default function ItemRequestFormPage() {
         ]);
       }
 
-      // 3. Fetch vendors from vendorlist table
-      try {
-        const { data: vendorsData, error: vendorsError } = await supabase
-          .from("vendorlist")
-          .select("id, \"Vendor Name\", \"VENDOR CODE\", \"Location\", \"Vendor Type\"")
-          .not("\"Vendor Name\"", "is", null)
-          .order("\"Vendor Name\"", { ascending: true });
-
-        if (vendorsError) throw vendorsError;
-
-        if (vendorsData && vendorsData.length > 0) {
-          const fetchedVendors = vendorsData.map((v: any, index: number) => ({
-            id: v.id || index + 1, // Fallback to index if id is missing
-            vendor_name: v["Vendor Name"] || "",
-            vendor_code: v["VENDOR CODE"] || "",
-            location: v["Location"] || "",
-            vendor_type: v["Vendor Type"] || ""
-          }));
-          setVendors(fetchedVendors);
-        } else {
-          // Fallback vendors if none found
-          setVendors([
-            { id: 1, vendor_name: "ABC Suppliers", vendor_code: "ABC001" },
-            { id: 2, vendor_name: "XYZ Traders", vendor_code: "XYZ002" },
-            { id: 3, vendor_name: "Industrial Solutions", vendor_code: "IND003" },
-          ] as Vendor[]);
-        }
-      } catch (err: any) {
-        console.warn("Could not fetch vendors from database, using defaults:", err);
-        setVendors([
-          { id: 1, vendor_name: "ABC Suppliers", vendor_code: "ABC001" },
-          { id: 2, vendor_name: "XYZ Traders", vendor_code: "XYZ002" },
-          { id: 3, vendor_name: "Industrial Solutions", vendor_code: "IND003" },
-        ] as Vendor[]);
-      }
-
-      // 4. Get logged in user name
+      // 3. Get logged in user name
       if (typeof window !== "undefined") {
         const storedUser = localStorage.getItem("user-name");
         if (storedUser) {
@@ -199,12 +142,6 @@ export default function ItemRequestFormPage() {
         name: "",
         customName: "",
         quantity: "",
-        rate: "",
-        vendor_name: "",
-        purchase_date: "",
-        amount: "",
-        attachment: null,
-        attachmentPreview: null
       },
     ]);
   };
@@ -218,58 +155,11 @@ export default function ItemRequestFormPage() {
     setRequestedItems((prev) =>
       prev.map((item) => {
         if (item.id === id) {
-          const updated = { ...item, [field]: value };
-
-          // Auto-calculate amount if quantity and rate are present
-          if ((field === 'quantity' || field === 'rate') && updated.quantity && updated.rate) {
-            const qty = parseFloat(updated.quantity);
-            const rte = parseFloat(updated.rate);
-            if (!isNaN(qty) && !isNaN(rte)) {
-              updated.amount = (qty * rte).toFixed(2);
-            }
-          }
-
-          return updated;
+          return { ...item, [field]: value };
         }
         return item;
       })
     );
-  };
-
-  const handleFileUpload = (id: string, file: File | null) => {
-    if (file) {
-      // Create preview URL
-      const previewUrl = URL.createObjectURL(file);
-      handleItemChange(id, "attachment", file);
-      handleItemChange(id, "attachmentPreview", previewUrl);
-    } else {
-      handleItemChange(id, "attachment", null);
-      handleItemChange(id, "attachmentPreview", null);
-    }
-  };
-
-  const uploadAttachment = async (file: File, itemName: string): Promise<string | null> => {
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}_${itemName.replace(/[^a-zA-Z0-9]/g, '_')}.${fileExt}`;
-      const filePath = `purchase_attachments/${fileName}`;
-
-      const { error: uploadError, data } = await supabase.storage
-        .from('purchase-documents')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('purchase-documents')
-        .getPublicUrl(filePath);
-
-      return publicUrl;
-    } catch (error) {
-      console.error("Error uploading file:", error);
-      return null;
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -297,27 +187,12 @@ export default function ItemRequestFormPage() {
       const recordsToInsert = [];
 
       for (const item of requestedItems) {
-        let attachmentUrl = null;
-
-        // Upload attachment if exists
-        if (item.attachment) {
-          attachmentUrl = await uploadAttachment(item.attachment, item.name);
-          if (!attachmentUrl) {
-            toast.warning(`Could not upload attachment for ${item.name}, but continuing...`);
-          }
-        }
-
         recordsToInsert.push({
           item_name: item.name === "other" ? item.customName.trim() : item.name,
           requested_by: requestedBy,
           required_for: requiredFor.trim(),
           status: "Pending",
           quantity: item.quantity || null,
-          rate: item.rate ? parseFloat(item.rate) : null,
-          vendor_name: item.vendor_name || null,
-          purchase_date: item.purchase_date || null,
-          amount: item.amount ? parseFloat(item.amount) : null,
-          attachment: attachmentUrl,
         });
       }
 
@@ -337,12 +212,6 @@ export default function ItemRequestFormPage() {
         name: "",
         customName: "",
         quantity: "",
-        rate: "",
-        vendor_name: "",
-        purchase_date: "",
-        amount: "",
-        attachment: null,
-        attachmentPreview: null
       }]);
     } catch (err: any) {
       console.error("Error inserting requests:", err);
@@ -352,17 +221,6 @@ export default function ItemRequestFormPage() {
       setIsSubmitting(false);
     }
   };
-
-  // Cleanup preview URLs on unmount
-  useEffect(() => {
-    return () => {
-      requestedItems.forEach(item => {
-        if (item.attachmentPreview) {
-          URL.revokeObjectURL(item.attachmentPreview);
-        }
-      });
-    };
-  }, [requestedItems]);
 
   if (isLoading) {
     return (
@@ -386,7 +244,7 @@ export default function ItemRequestFormPage() {
           <div>
             <CardTitle className="text-xl font-bold">New Purchase Request</CardTitle>
             <CardDescription className="mt-0.5">
-              Submit multiple purchase requests with quantities, rates, vendors, and attachments
+              Submit multiple purchase requests with items and quantities
             </CardDescription>
           </div>
         </div>
@@ -459,191 +317,50 @@ export default function ItemRequestFormPage() {
                   </div>
 
                   {/* Item Name Selection */}
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Item Name *</label>
-                      <select
-                        value={item.name}
-                        onChange={(e) => handleItemChange(item.id, "name", e.target.value)}
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Item Name *</label>
+                    <select
+                      value={item.name}
+                      onChange={(e) => handleItemChange(item.id, "name", e.target.value)}
+                      required
+                      className={selectClass}
+                    >
+                      <option value="">Select Item</option>
+                      {items.map((name, idx) => (
+                        <option key={`item-${name}-${idx}`} value={name}>
+                          {name}
+                        </option>
+                      ))}
+                      <option value="other">Other (Enter manually)</option>
+                    </select>
+                  </div>
+
+                  {/* Custom input if other selected */}
+                  {item.name === "other" && (
+                    <div className="animate-in fade-in slide-in-from-left-2">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Custom Item Name *</label>
+                      <input
+                        type="text"
+                        value={item.customName}
+                        onChange={(e) => handleItemChange(item.id, "customName", e.target.value)}
+                        placeholder="Type custom item name..."
                         required
-                        className={selectClass}
-                      >
-                        <option value="">Select Item</option>
-                        {items.map((name, idx) => (
-                          <option key={`item-${name}-${idx}`} value={name}>
-                            {name}
-                          </option>
-                        ))}
-                        <option value="other">Other (Enter manually)</option>
-                      </select>
-                    </div>
-
-                    {/* Custom input if other selected */}
-                    {item.name === "other" && (
-                      <div className="animate-in fade-in slide-in-from-left-2">
-                        <label className="text-xs font-medium text-muted-foreground mb-1 block">Custom Item Name *</label>
-                        <input
-                          type="text"
-                          value={item.customName}
-                          onChange={(e) => handleItemChange(item.id, "customName", e.target.value)}
-                          placeholder="Type custom item name..."
-                          required
-                          className={inputClass}
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Quantity and Rate */}
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block flex items-center gap-1">
-                        <Package className="w-3 h-3" />
-                        Quantity
-                      </label>
-                      <input
-                        type="number"
-                        step="any"
-                        value={item.quantity}
-                        onChange={(e) => handleItemChange(item.id, "quantity", e.target.value)}
-                        placeholder="e.g 10"
                         className={inputClass}
                       />
                     </div>
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block flex items-center gap-1">
-                        <DollarSign className="w-3 h-3" />
-                        Rate (per unit)
-                      </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={item.rate}
-                        onChange={(e) => handleItemChange(item.id, "rate", e.target.value)}
-                        placeholder="0.00"
-                        className={inputClass}
-                      />
-                    </div>
-                  </div>
+                  )}
 
-                  {/* Vendor Name and Purchase Date - In same row */}
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block flex items-center gap-1">
-                        <Building2 className="w-3 h-3" />
-                        Vendor Name
-                      </label>
-                      <select
-                        value={item.vendor_name}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          handleItemChange(item.id, "vendor_name", value);
-                        }}
-                        className={selectClass}
-                      >
-                        <option value="">Select Vendor (Optional)</option>
-                        {vendors.map((vendor) => (
-                          <option
-                            key={`vendor-${vendor.id}-${vendor.vendor_name.replace(/\s+/g, '-')}`}
-                            value={vendor.vendor_name}
-                          >
-                            {vendor.vendor_name}
-                            {vendor.vendor_code && ` (${vendor.vendor_code})`}
-                            {vendor.location && ` - ${vendor.location}`}
-                          </option>
-                        ))}
-                        <option value="other_vendor">+ Add New Vendor (Other)</option>
-                      </select>
-                      {item.vendor_name === "other_vendor" && (
-                        <input
-                          type="text"
-                          placeholder="Enter new vendor name"
-                          onChange={(e) => handleItemChange(item.id, "vendor_name", e.target.value)}
-                          className={`${inputClass} mt-2`}
-                        />
-                      )}
-                      {item.vendor_name && item.vendor_name !== "other_vendor" && item.vendor_name !== "" && (
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          {vendors.find(v => v.vendor_name === item.vendor_name)?.vendor_code && (
-                            <span className="block">Code: {vendors.find(v => v.vendor_name === item.vendor_name)?.vendor_code}</span>
-                          )}
-                          {vendors.find(v => v.vendor_name === item.vendor_name)?.location && (
-                            <span className="block">Location: {vendors.find(v => v.vendor_name === item.vendor_name)?.location}</span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        Purchase Date
-                      </label>
-                      <input
-                        type="date"
-                        value={item.purchase_date}
-                        onChange={(e) => handleItemChange(item.id, "purchase_date", e.target.value)}
-                        className={inputClass}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Total Amount and Attachment - In same row */}
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block flex items-center gap-1">
-                        <DollarSign className="w-3 h-3" />
-                        Total Amount
-                      </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={item.amount}
-                        onChange={(e) => handleItemChange(item.id, "amount", e.target.value)}
-                        placeholder="Auto-calculated from quantity × rate"
-                        className={inputClass}
-                        readOnly={!!(item.quantity && item.rate)}
-                      />
-                      {item.quantity && item.rate && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Auto-calculated: ₹{(parseFloat(item.quantity) * parseFloat(item.rate)).toFixed(2)}
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block flex items-center gap-1">
-                        <Upload className="w-3 h-3" />
-                        Attachment
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="file"
-                          accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                          onChange={(e) => handleFileUpload(item.id, e.target.files?.[0] || null)}
-                          className="text-sm text-muted-foreground file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 dark:file:bg-green-950/20 dark:file:text-green-400"
-                        />
-                        {item.attachmentPreview && (
-                          <button
-                            type="button"
-                            onClick={() => handleFileUpload(item.id, null)}
-                            className="text-xs text-red-500 hover:text-red-700"
-                          >
-                            Remove
-                          </button>
-                        )}
-                      </div>
-                      {item.attachmentPreview && (
-                        <div className="mt-2">
-                          {item.attachment?.type.startsWith('image/') ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={item.attachmentPreview} alt="Preview" className="max-h-32 rounded-md border" />
-                          ) : (
-                            <p className="text-xs text-muted-foreground">File: {item.attachment?.name}</p>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                  {/* Quantity */}
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Quantity</label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={item.quantity}
+                      onChange={(e) => handleItemChange(item.id, "quantity", e.target.value)}
+                      placeholder="Enter quantity"
+                      className={inputClass}
+                    />
                   </div>
                 </div>
               ))}
@@ -668,7 +385,7 @@ export default function ItemRequestFormPage() {
             <Info className="w-4.5 h-4.5 text-green-600 dark:text-green-400 shrink-0 mt-0.5" />
             <p>
               Adding multiple items will generate <strong>individual purchase requests</strong> for each item in the database with status <code>Pending</code>.
-              Quantity, rate, vendor, purchase date, amount, and attachments will be saved for each request.
+              Quantity will be saved for each request.
             </p>
           </div>
 
