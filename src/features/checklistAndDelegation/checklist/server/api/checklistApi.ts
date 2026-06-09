@@ -92,6 +92,7 @@ export const fetchChecklistDataForHistory = async (
   username: string | null = null,
   startDate = "",
   endDate = "",
+  nameFilter = "",
 ): Promise<ChecklistItem[]> => {
   const itemsPerPage = 50;
   const start = (page - 1) * itemsPerPage;
@@ -107,12 +108,12 @@ export const fetchChecklistDataForHistory = async (
 
     if (startDate) {
       const startOfDay = new Date(`${startDate}T00:00:00`);
-      query = query.gte("task_start_date", startOfDay.toISOString());
+      query = query.gte("submission_date", startOfDay.toISOString());
     }
 
     if (endDate) {
       const endOfDay = new Date(`${endDate}T23:59:59.999`);
-      query = query.lte("task_start_date", endOfDay.toISOString());
+      query = query.lte("submission_date", endOfDay.toISOString());
     }
 
     // Apply search filter
@@ -134,6 +135,11 @@ export const fetchChecklistDataForHistory = async (
     // Apply role filter
     if (role === "user" && username) {
       query = applyNameFilter(query, username);
+    }
+
+    // Apply name filter (admin filtering by a specific user)
+    if (nameFilter && nameFilter.trim() !== "") {
+      query = applyNameFilter(query, nameFilter);
     }
 
     const { data, error } = await query;

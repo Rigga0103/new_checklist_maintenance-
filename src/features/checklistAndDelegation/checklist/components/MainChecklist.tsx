@@ -102,6 +102,7 @@ export default function MainChecklist({ initialNameFilter }: { initialNameFilter
     username,
     activeTab === "history" ? startDate : "",
     activeTab === "history" ? endDate : "",
+    activeTab === "history" ? nameFilter : "",
   );
 
   const {

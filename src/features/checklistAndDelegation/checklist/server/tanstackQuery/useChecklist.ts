@@ -30,6 +30,7 @@ export const checklistKeys = {
     username: string | null,
     startDate = "",
     endDate = "",
+    nameFilter = "",
   ) =>
     [
       ...checklistKeys.all,
@@ -39,6 +40,7 @@ export const checklistKeys = {
       username,
       startDate,
       endDate,
+      nameFilter,
     ] as const,
   last7days: (
     searchTerm: string,
@@ -139,9 +141,10 @@ export function useChecklistHistory(
   username: string | null = null,
   startDate = "",
   endDate = "",
+  nameFilter = "",
 ) {
   return useInfiniteQuery({
-    queryKey: checklistKeys.history(searchTerm, role, username, startDate, endDate),
+    queryKey: checklistKeys.history(searchTerm, role, username, startDate, endDate, nameFilter),
     queryFn: async ({ pageParam = 1 }) => {
       const data = await fetchChecklistDataForHistory(
         pageParam,
@@ -150,6 +153,7 @@ export function useChecklistHistory(
         username,
         startDate,
         endDate,
+        nameFilter,
       );
       return { data, page: pageParam };
     },
