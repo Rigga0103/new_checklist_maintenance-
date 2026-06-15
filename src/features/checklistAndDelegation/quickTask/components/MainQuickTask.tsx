@@ -564,29 +564,21 @@ export default function MainQuickTask() {
       const newDateStr = editFormData.task_start_date ? new Date(editFormData.task_start_date).toISOString().split("T")[0] : null;
 
       // Only shift dates when frequency has NOT changed (frequency change wipes & regenerates anyway)
-      if (!frequencyChanged && oldDateStr && newDateStr && oldDateStr !== newDateStr) {
-        const oldD = new Date(oldDateStr);
-        const newD = new Date(newDateStr);
-        const diffTime = newD.getTime() - oldD.getTime();
+      // If start date changed → wipe pending tasks and regenerate using new date
+      const startDateChanged =
+        oldDateStr &&
+        newDateStr &&
+        oldDateStr !== newDateStr;
 
-        const { data: pendingTasks } = await supabase
+      if (startDateChanged) {
+        const { error: deleteError } = await supabase
           .from("checklist")
-          .select("task_id, task_start_date")
+          .delete()
           .eq("source_unique_id", originalTask.task_id)
           .is("submission_date", null);
 
-        if (pendingTasks && pendingTasks.length > 0) {
-          for (const pt of pendingTasks) {
-            if (pt.task_start_date) {
-              const ptDate = new Date(pt.task_start_date);
-              const shiftedDate = new Date(ptDate.getTime() + diffTime);
-
-              await supabase
-                .from("checklist")
-                .update({ task_start_date: shiftedDate.toISOString() })
-                .eq("task_id", pt.task_id);
-            }
-          }
+        if (deleteError) {
+          throw deleteError;
         }
       }
 
@@ -620,7 +612,8 @@ export default function MainQuickTask() {
       // When frequency changed the API already wiped pending instances above.
       // We always regenerate tasks from scratch in that case.
       // When frequency did NOT change, only generate if no instances exist yet.
-      let shouldGenerate = frequencyChanged;
+      let shouldGenerate =
+        frequencyChanged || startDateChanged;
 
       if (!shouldGenerate) {
         // Check if any pending instances already exist
@@ -634,11 +627,22 @@ export default function MainQuickTask() {
           console.error("Error checking checklist:", checkError);
         }
 
-        if (existingChecklist && existingChecklist.length > 0) {
-          // Tasks already exist and frequency hasn't changed — nothing to regenerate
-          toast.info("Task updated. Existing scheduled instances kept.");
-        } else {
-          shouldGenerate = true;
+        if (
+          !frequencyChanged &&
+          !startDateChanged
+        ) {
+          const { data: existingChecklist } =
+            await supabase
+              .from("checklist")
+              .select("task_id")
+              .eq(
+                "source_unique_id",
+                originalTask.task_id
+              )
+              .limit(1);
+
+          shouldGenerate =
+            !existingChecklist?.length;
         }
       }
 

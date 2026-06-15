@@ -350,18 +350,18 @@ export const updateDelegationTaskApi = async (
   }
 
   if (data && data.length > 0) {
-     const logParams = data.map(task => ({
-        checklistId: task.task_id?.toString() || "",
-        action: "update",
-        department: task.department || "",
-        givenBy: task.given_by || "",
-        doerName: task.name || "",
-        frequency: task.frequency || "",
-        fromDate: task.task_start_date || "",
-        endDate: task.planned_date || "", 
-        description: task.task_description || ""
-     }));
-     await logChecklistAction(logParams);
+    const logParams = data.map(task => ({
+      checklistId: task.task_id?.toString() || "",
+      action: "update",
+      department: task.department || "",
+      givenBy: task.given_by || "",
+      doerName: task.name || "",
+      frequency: task.frequency || "",
+      fromDate: task.task_start_date || "",
+      endDate: task.planned_date || "",
+      description: task.task_description || ""
+    }));
+    await logChecklistAction(logParams);
   }
 
   return data as DelegationTask[];
@@ -438,16 +438,16 @@ export const updateMaintenanceTaskApi = async (
 ): Promise<MaintenanceTask[]> => {
   const payload: Record<string, unknown> = {};
 
-  if (updatedTask.machine_name    !== undefined) payload.machine_name    = updatedTask.machine_name;
-  if (updatedTask.given_by        !== undefined) payload.given_by        = updatedTask.given_by;
-  if (updatedTask.name            !== undefined) payload.name            = updatedTask.name;
+  if (updatedTask.machine_name !== undefined) payload.machine_name = updatedTask.machine_name;
+  if (updatedTask.given_by !== undefined) payload.given_by = updatedTask.given_by;
+  if (updatedTask.name !== undefined) payload.name = updatedTask.name;
   if (updatedTask.task_description !== undefined) payload.task_description = updatedTask.task_description;
-  if (updatedTask.frequency       !== undefined) payload.frequency       = updatedTask.frequency;
+  if (updatedTask.frequency !== undefined) payload.frequency = updatedTask.frequency;
   if (updatedTask.enable_reminder !== undefined) payload.enable_reminder = updatedTask.enable_reminder;
   if (updatedTask.require_attachment !== undefined) payload.require_attachment = updatedTask.require_attachment;
   if (updatedTask.task_start_date !== undefined) payload.task_start_date = updatedTask.task_start_date || null;
-  if (updatedTask.task_end_date   !== undefined) payload.task_end_date   = updatedTask.task_end_date || null;
-  if (updatedTask.image           !== undefined) payload.image           = updatedTask.image;
+  if (updatedTask.task_end_date !== undefined) payload.task_end_date = updatedTask.task_end_date || null;
+  if (updatedTask.image !== undefined) payload.image = updatedTask.image;
 
   // Update the template; trg_sync_maintenance_from_template cascades to pending tasks
   const { data, error } = await supabase
