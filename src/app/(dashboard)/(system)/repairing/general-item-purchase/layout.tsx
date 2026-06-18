@@ -44,7 +44,7 @@ export default function GeneralItemPurchaseLayout({
   return (
     <div className="container mx-auto space-y-6">
       {/* Premium Header */}
-      <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between border-b border-neutral-100 dark:border-zinc-800 pb-5">
+      <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between border-b border-neutral-100 dark:border-zinc-800 pb-2">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-green-50 dark:bg-green-950/30 rounded-xl text-green-600 dark:text-green-400 shadow-sm transition-transform duration-300 hover:scale-105">
             <ShoppingCart className="w-7 h-7" />

@@ -17,7 +17,8 @@ import {
   CheckSquare,
   Square,
   X,
-  Upload
+  Upload,
+  Edit2 // Added this icon
 } from "lucide-react";
 import supabase from "@/utils/supabaseClient";
 import { toast } from "sonner";
@@ -67,6 +68,12 @@ export default function PendingPurchasePage() {
     attachmentPreview: null
   });
 
+  // Edit Quantity state
+  const [showEditQuantityPopup, setShowEditQuantityPopup] = useState(false);
+  const [editQuantityRequest, setEditQuantityRequest] = useState<PurchaseRequest | null>(null);
+  const [newQuantity, setNewQuantity] = useState<string>("");
+  const [isUpdatingQuantity, setIsUpdatingQuantity] = useState(false);
+
   // Fetch approved requests (ready for purchase)
   const fetchApprovedRequests = async () => {
     try {
@@ -102,6 +109,52 @@ export default function PendingPurchasePage() {
       attachmentPreview: request.attachment || null
     });
     setShowCompletionPopup(true);
+  };
+
+  const openEditQuantityPopup = (request: PurchaseRequest) => {
+    setEditQuantityRequest(request);
+    setNewQuantity(request.quantity || "");
+    setShowEditQuantityPopup(true);
+  };
+
+  const handleUpdateQuantity = async () => {
+    if (!editQuantityRequest) return;
+
+    // Validate quantity
+    const quantityNum = parseFloat(newQuantity);
+    if (isNaN(quantityNum) || quantityNum <= 0) {
+      toast.error("Please enter a valid quantity greater than 0.");
+      return;
+    }
+
+    try {
+      setIsUpdatingQuantity(true);
+      toast.loading("Updating quantity...");
+
+      const { error } = await supabase
+        .from("General_Item_Purchase")
+        .update({ quantity: newQuantity })
+        .eq("id", editQuantityRequest.id);
+
+      if (error) throw error;
+
+      toast.dismiss();
+      toast.success("Quantity updated successfully!");
+
+      // Close popup and refresh list
+      setShowEditQuantityPopup(false);
+      setEditQuantityRequest(null);
+      setNewQuantity("");
+
+      await fetchApprovedRequests();
+
+    } catch (err: any) {
+      console.error("Error updating quantity:", err);
+      toast.dismiss();
+      toast.error(err.message || "Failed to update quantity.");
+    } finally {
+      setIsUpdatingQuantity(false);
+    }
   };
 
   const handleCompletionFieldChange = (field: keyof CompletionFormData, value: any) => {
@@ -434,7 +487,7 @@ export default function PendingPurchasePage() {
                     <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 hidden md:table-cell">Quantity</th>
                     <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Status</th>
                     <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 hidden lg:table-cell">Requested Date</th>
-                    <th className="text-right p-3 font-semibold text-gray-700 dark:text-gray-300">Actions</th>
+                    <th className="text-center p-3 font-semibold text-gray-700 dark:text-gray-300">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -487,6 +540,18 @@ export default function PendingPurchasePage() {
                             disabled={actioningId !== null}
                             onClick={(e) => {
                               e.stopPropagation();
+                              openEditQuantityPopup(request);
+                            }}
+                            className="bg-blue-500 hover:bg-blue-600 text-white h-7 px-3 rounded-md transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Edit Quantity"
+                          >
+                            <Edit2 className="w-3 h-3" />
+                            <span className="hidden sm:inline text-sm">Edit Qty</span>
+                          </button>
+                          <button
+                            disabled={actioningId !== null}
+                            onClick={(e) => {
+                              e.stopPropagation();
                               openCompletionPopup(request);
                             }}
                             className="bg-amber-500 hover:bg-amber-600 text-white h-8 px-3 rounded-md transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -504,6 +569,91 @@ export default function PendingPurchasePage() {
           )}
         </div>
       </div>
+
+      {/* Edit Quantity Popup Modal */}
+      {showEditQuantityPopup && editQuantityRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div className="border-b border-gray-200 dark:border-zinc-800 px-6 py-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  Edit Quantity
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Item: {editQuantityRequest.item_name}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowEditQuantityPopup(false);
+                  setEditQuantityRequest(null);
+                  setNewQuantity("");
+                }}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wider">
+                  Current Quantity
+                </label>
+                <input
+                  type="text"
+                  value={editQuantityRequest.quantity || ''}
+                  disabled
+                  className="w-full px-3 py-2 text-sm bg-gray-100 dark:bg-zinc-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-zinc-700 rounded-md cursor-not-allowed"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wider">
+                  New Quantity *
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={newQuantity}
+                  onChange={(e) => setNewQuantity(e.target.value)}
+                  placeholder="Enter new quantity"
+                  className="w-full px-3 py-2 text-sm bg-white dark:bg-zinc-900 text-foreground border border-gray-200 dark:border-zinc-700 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                  autoFocus
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Enter a positive number greater than 0
+                </p>
+              </div>
+            </div>
+
+            <div className="border-t border-gray-200 dark:border-zinc-800 px-6 py-4 flex items-center justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowEditQuantityPopup(false);
+                  setEditQuantityRequest(null);
+                  setNewQuantity("");
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-zinc-800 rounded-md hover:bg-gray-200 dark:hover:bg-zinc-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateQuantity}
+                disabled={isUpdatingQuantity}
+                className="px-4 py-2 text-sm font-semibold text-white bg-blue-500 rounded-md hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isUpdatingQuantity ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Edit2 className="w-4 h-4" />
+                )}
+                Update Quantity
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Completion Popup Modal */}
       {showCompletionPopup && selectedRequest && (
