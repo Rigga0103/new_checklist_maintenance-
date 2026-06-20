@@ -1682,12 +1682,6 @@ export default function MainQuickTask() {
                             <option value="quarterly">quarterly</option>
                             <option value="half-yearly">half-yearly</option>
                             <option value="yearly">yearly</option>
-                            <option value="one-time">one-time</option>
-                            <option value="end-of-1st-week">end-of-1st-week</option>
-                            <option value="end-of-2nd-week">end-of-2nd-week</option>
-                            <option value="end-of-3rd-week">end-of-3rd-week</option>
-                            <option value="end-of-4th-week">end-of-4th-week</option>
-                            <option value="end-of-last-week">end-of-last-week</option>
                           </select>
                         ) : isDelegationEditing ? (
                           <select
