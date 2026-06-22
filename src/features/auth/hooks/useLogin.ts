@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import posthog from "posthog-js";
 import { loginCredentialsApi, signupUserApi } from "../server/api/authApi";
 import { LoginFormData, SignupFormData, UserData } from "../types/types";
 import supabase from "@/utils/supabaseClient";
@@ -118,6 +119,10 @@ export function useLogin() {
           });
 
           if (result.error) {
+            posthog.capture("user_login_failed", {
+              username: formData.username.trim(),
+              reason: result.error,
+            });
             toast.error(result.error);
             setIsLoginLoading(false);
             return;
@@ -134,10 +139,20 @@ export function useLogin() {
               "email_id",
               result.data.email_id || result.data.email || "",
             );
+            posthog.identify(String(result.data.id || result.data.user_name), {
+              username: result.data.user_name || result.data.username,
+              email: result.data.email_id || result.data.email,
+              role: result.data.role,
+            });
+            posthog.capture("user_logged_in", {
+              username: result.data.user_name || result.data.username,
+              role: result.data.role,
+            });
             toast.success("Login successful!");
             router.push("/dashboard");
           }
         } catch (err) {
+          posthog.captureException(err);
           toast.error("An error occurred during login");
           setIsLoginLoading(false);
         }
@@ -173,9 +188,19 @@ export function useLogin() {
             localStorage.setItem("user_id", String(result.data.id || ""));
             localStorage.setItem("role", result.data.role || "");
             localStorage.setItem("email_id", result.data.email_id || "");
+            posthog.identify(String(result.data.id || result.data.user_name), {
+              username: result.data.user_name,
+              email: result.data.email_id,
+              role: result.data.role,
+            });
+            posthog.capture("user_signed_up", {
+              username: result.data.user_name,
+              role: result.data.role,
+            });
             setTimeout(() => router.push("/dashboard"), 1000);
           }
         } catch (err) {
+          posthog.captureException(err);
           toast.error("An error occurred during signup");
           setIsSignupLoading(false);
         }

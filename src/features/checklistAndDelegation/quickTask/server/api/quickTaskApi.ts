@@ -1,3 +1,4 @@
+import posthog from "posthog-js";
 import supabase from "@/utils/supabaseClient";
 import type {
   ChecklistTask,
@@ -177,6 +178,11 @@ export const deleteChecklistTasksApi = async (
   }));
   await logChecklistAction(logParams);
 
+  posthog.capture("checklist_tasks_deleted", {
+    task_count: tasks.length,
+    task_ids: tasks.map((t) => t.task_id),
+  });
+
   return tasks;
 };
 
@@ -207,6 +213,11 @@ export const deleteDelegationTasksApi = async (
     description: task.task_description || "",
   }));
   await logChecklistAction(logParams);
+
+  posthog.capture("delegation_tasks_deleted", {
+    task_count: tasks.length,
+    task_ids: tasks.map((t) => t.task_id),
+  });
 
   return tasks;
 };
@@ -297,6 +308,11 @@ export const updateChecklistTaskApi = async (
     await logChecklistAction(logParams);
   }
 
+  posthog.capture("checklist_task_updated", {
+    task_id: originalTask.task_id,
+    changed_fields: Object.keys(updatedTask),
+  });
+
   return (data ?? []) as unknown as ChecklistTask[];
 };
 
@@ -363,6 +379,11 @@ export const updateDelegationTaskApi = async (
     }));
     await logChecklistAction(logParams);
   }
+
+  posthog.capture("delegation_task_updated", {
+    task_id: originalTask.task_id,
+    changed_fields: Object.keys(updatedTask),
+  });
 
   return data as DelegationTask[];
 };
