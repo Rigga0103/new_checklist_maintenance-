@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import posthog from "posthog-js";
 import {
   CheckCircle2,
   X,
@@ -382,14 +383,25 @@ export default function MainApproval() {
       (item) => item._sheetType === "delegation",
     );
 
-    await markMultipleDoneMutation.mutateAsync({
-      checklistTaskIds: checklistItems.map(
-        (item) => item._taskId || item.task_id,
-      ),
-      delegationTaskIds: delegationItems.map(
-        (item) => item._taskId || item.task_id,
-      ),
-    });
+    try {
+      await markMultipleDoneMutation.mutateAsync({
+        checklistTaskIds: checklistItems.map(
+          (item) => item._taskId || item.task_id,
+        ),
+        delegationTaskIds: delegationItems.map(
+          (item) => item._taskId || item.task_id,
+        ),
+      });
+      posthog.capture("approval_tasks_marked_done", {
+        checklist_count: checklistItems.length,
+        delegation_count: delegationItems.length,
+        total_count: selectedHistoryItems.length,
+        $session_id: posthog.get_session_id(),
+        session_replay_url: posthog.get_session_replay_url({ withTimestamp: true }),
+      });
+    } catch (err) {
+      posthog.captureException(err);
+    }
 
     setSelectedHistoryItems([]);
   };

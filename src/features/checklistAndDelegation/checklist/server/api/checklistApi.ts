@@ -1,3 +1,4 @@
+import posthog from "posthog-js";
 import supabase from "@/utils/supabaseClient";
 import type {
   ChecklistItem,
@@ -454,6 +455,15 @@ export const updateChecklistData = async (
     }),
   );
 
+  posthog.capture("checklist_tasks_submitted", {
+    task_count: results.length,
+    task_ids: submissionData.map((i) => i.taskId),
+    statuses: submissionData.map((i) => i.status),
+    has_attachments: submissionData.some((i) => !!i.image),
+    $session_id: posthog.get_session_id(),
+    session_replay_url: posthog.get_session_replay_url({ withTimestamp: true }),
+  });
+
   return results as ChecklistItem[];
 };
 
@@ -485,6 +495,12 @@ export const postChecklistAdminDone = async (
       return { error };
     }
 
+    posthog.capture("checklist_admin_marked_done", {
+      item_count: (data as ChecklistItem[]).length,
+      task_ids: (data as ChecklistItem[]).map((i) => i.task_id),
+      $session_id: posthog.get_session_id(),
+      session_replay_url: posthog.get_session_replay_url({ withTimestamp: true }),
+    });
     return { data: data as ChecklistItem[] };
   } catch (error) {
     console.error("Error in supabase operation:", error);
@@ -500,4 +516,5 @@ export const deleteChecklistRowApi = async (taskId: number): Promise<void> => {
     .delete()
     .eq("task_id", taskId);
   if (error) throw error;
+  posthog.capture("checklist_row_deleted", { task_id: taskId });
 };
