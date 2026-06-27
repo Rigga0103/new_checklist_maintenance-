@@ -536,10 +536,19 @@ export default function MainQuickTask() {
     }
   };
 
-  // Edit handlers
+  // Edit handlers - MODIFIED to only allow editing of specific fields
   const handleEditClick = (task: ChecklistTask) => {
     setEditingTaskId(task.task_id);
-    setEditFormData({ ...task, image: task.sample_image || task.image });
+    // Only allow editing of these fields: department, given_by, task_description, enable_reminder, require_attachment, image, remark
+    // task_start_date, frequency, name are NOT editable
+    setEditFormData({
+      ...task,
+      image: task.sample_image || task.image,
+      // Explicitly remove these fields from edit form data to prevent editing
+      task_start_date: undefined,
+      frequency: undefined,
+      name: undefined
+    });
   };
 
   const handleCancelEdit = () => {
@@ -554,40 +563,13 @@ export default function MainQuickTask() {
     );
     if (!originalTask) return;
 
-    // Detect if frequency changed — if so we always wipe and regenerate
-    const frequencyChanged =
-      editFormData.frequency !== undefined &&
-      editFormData.frequency !== originalTask.frequency;
-
     try {
-      const oldDateStr = originalTask.task_start_date ? new Date(originalTask.task_start_date).toISOString().split("T")[0] : null;
-      const newDateStr = editFormData.task_start_date ? new Date(editFormData.task_start_date).toISOString().split("T")[0] : null;
-
-      // Only shift dates when frequency has NOT changed (frequency change wipes & regenerates anyway)
-      // If start date changed → wipe pending tasks and regenerate using new date
-      const startDateChanged =
-        oldDateStr &&
-        newDateStr &&
-        oldDateStr !== newDateStr;
-
-      if (startDateChanged) {
-        const { error: deleteError } = await supabase
-          .from("checklist")
-          .delete()
-          .eq("source_unique_id", originalTask.task_id)
-          .is("submission_date", null);
-
-        if (deleteError) {
-          throw deleteError;
-        }
-      }
-
-      // Pass frequency to the mutation — API will update the template and wipe pending instances
+      // Update only editable fields - exclude task_start_date, frequency, name
       await updateChecklistMutation.mutateAsync({
         updatedTask: {
           department: editFormData.department || undefined,
           given_by: editFormData.given_by || undefined,
-          name: editFormData.name || undefined,
+          // name is NOT included - it's read-only
           task_description: editFormData.task_description || undefined,
           enable_reminder:
             (editFormData.enable_reminder as "yes" | "no" | undefined) ||
@@ -597,9 +579,8 @@ export default function MainQuickTask() {
             undefined,
           remark: editFormData.remark || undefined,
           image: editFormData.image || undefined,
-          task_start_date: editFormData.task_start_date || undefined,
-          // Always pass frequency so the template is kept in sync
-          frequency: editFormData.frequency || undefined,
+          // task_start_date is NOT included - it's read-only
+          // frequency is NOT included - it's read-only
         },
         originalTask: {
           task_id: originalTask.task_id,
@@ -608,127 +589,6 @@ export default function MainQuickTask() {
           task_description: originalTask.task_description || "",
         },
       });
-
-      // When frequency changed the API already wiped pending instances above.
-      // We always regenerate tasks from scratch in that case.
-      // When frequency did NOT change, only generate if no instances exist yet.
-      let shouldGenerate =
-        frequencyChanged || startDateChanged;
-
-      if (!shouldGenerate) {
-        // Check if any pending instances already exist
-        const { data: existingChecklist, error: checkError } = await supabase
-          .from("checklist")
-          .select("task_id")
-          .eq("source_unique_id", originalTask.task_id)
-          .limit(1);
-
-        if (checkError) {
-          console.error("Error checking checklist:", checkError);
-        }
-
-        if (
-          !frequencyChanged &&
-          !startDateChanged
-        ) {
-          const { data: existingChecklist } =
-            await supabase
-              .from("checklist")
-              .select("task_id")
-              .eq(
-                "source_unique_id",
-                originalTask.task_id
-              )
-              .limit(1);
-
-          shouldGenerate =
-            !existingChecklist?.length;
-        }
-      }
-
-      if (shouldGenerate) {
-        // Fetch working days calendar
-        const workingDays = await fetchWorkingDaysApi();
-
-        // Resolve user ids for assignee and creator
-        let assigneeUserId = null;
-        let createdByUserId = null;
-
-        const nameToSearch = editFormData.name || originalTask.name;
-        const givenByToSearch = editFormData.given_by || originalTask.given_by;
-
-        const usersToSearch = [nameToSearch, givenByToSearch].filter((n): n is string => !!n && n.trim() !== "");
-        if (usersToSearch.length > 0) {
-          const { data: usersList } = await supabase
-            .from("users")
-            .select("id, user_name")
-            .in("user_name", usersToSearch);
-
-          if (usersList) {
-            usersList.forEach((u) => {
-              if (u.user_name?.toLowerCase() === nameToSearch?.toLowerCase()) {
-                assigneeUserId = u.id;
-              }
-              if (u.user_name?.toLowerCase() === givenByToSearch?.toLowerCase()) {
-                createdByUserId = u.id;
-              }
-            });
-          }
-        }
-
-        // Get start and end dates for task generation
-        const startDateTimeStr = editFormData.task_start_date || originalTask.task_start_date || new Date().toISOString();
-        const startDate = new Date(startDateTimeStr);
-        let taskTime = "09:00";
-        if (startDateTimeStr.includes("T")) {
-          const parts = startDateTimeStr.split("T");
-          if (parts[1]) {
-            taskTime = parts[1].substring(0, 5); // "09:00"
-          }
-        }
-
-        // Fetch task_end_date from unique_checklist if available
-        const { data: templateData } = await supabase
-          .from("unique_checklist")
-          .select("task_end_date")
-          .eq("task_id", originalTask.task_id)
-          .single();
-
-        const endDate = templateData?.task_end_date ? new Date(templateData.task_end_date) : addYears(startDate, 2);
-
-        // Build a merged task object so generateTasksForDb picks up the new frequency
-        const mergedTask: ChecklistTask = { ...originalTask, ...editFormData } as ChecklistTask;
-
-        // Generate frequency-wise tasks using the updated frequency
-        const tasksToInsert = generateTasksForDb(
-          mergedTask,
-          editFormData,
-          startDate,
-          endDate,
-          taskTime,
-          workingDays,
-          assigneeUserId,
-          createdByUserId
-        );
-
-        if (tasksToInsert.length > 0) {
-          const { error: insertError } = await supabase
-            .from("checklist")
-            .insert(tasksToInsert);
-
-          if (insertError) {
-            console.error("Error inserting into checklist:", insertError);
-            toast.error("Failed to add tasks to checklist table");
-          } else {
-            const newFreq = editFormData.frequency || originalTask.frequency || "";
-            toast.success(
-              `Frequency set to "${newFreq}". Generated ${tasksToInsert.length} new recurring tasks.`
-            );
-          }
-        } else {
-          toast.warning("No working days found in calendar to generate tasks.");
-        }
-      }
 
       setEditingTaskId(null);
       setEditFormData({});
@@ -739,13 +599,25 @@ export default function MainQuickTask() {
   };
 
   const handleInputChange = (field: keyof ChecklistTask, value: string) => {
+    // Prevent editing of restricted fields
+    if (field === 'task_start_date' || field === 'frequency' || field === 'name') {
+      toast.warning(`${field} cannot be edited`);
+      return;
+    }
     setEditFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Delegation edit handlers
+  // Delegation edit handlers - MODIFIED
   const handleDelegationEditClick = (task: DelegationTask) => {
     setDelegationEditingId(task.task_id);
-    setDelegationEditFormData({ ...task });
+    // Only allow editing of specific fields
+    setDelegationEditFormData({
+      ...task,
+      // Explicitly remove restricted fields
+      task_start_date: undefined,
+      frequency: undefined,
+      name: undefined
+    });
   };
 
   const handleDelegationCancelEdit = () => {
@@ -757,6 +629,11 @@ export default function MainQuickTask() {
     field: keyof DelegationTask,
     value: string,
   ) => {
+    // Prevent editing of restricted fields
+    if (field === 'task_start_date' || field === 'frequency' || field === 'name') {
+      toast.warning(`${field} cannot be edited`);
+      return;
+    }
     setDelegationEditFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -773,10 +650,10 @@ export default function MainQuickTask() {
         updatedTask: {
           department: delegationEditFormData.department || undefined,
           given_by: delegationEditFormData.given_by || undefined,
-          name: delegationEditFormData.name || undefined,
+          // name is NOT included - read-only
           task_description:
             delegationEditFormData.task_description || undefined,
-          frequency: delegationEditFormData.frequency || undefined,
+          // frequency is NOT included - read-only
           enable_reminder:
             (delegationEditFormData.enable_reminder as
               | "yes"
@@ -784,7 +661,7 @@ export default function MainQuickTask() {
               | undefined) || undefined,
           require_attachment:
             delegationEditFormData.require_attachment || undefined,
-          task_start_date: delegationEditFormData.task_start_date || undefined,
+          // task_start_date is NOT included - read-only
           planned_date: delegationEditFormData.planned_date || undefined,
         },
         originalTask: {
@@ -802,10 +679,17 @@ export default function MainQuickTask() {
     }
   };
 
-  // Maintenance edit handlers
+  // Maintenance edit handlers - MODIFIED
   const handleMaintenanceEditClick = (task: MaintenanceTask) => {
     setMaintenanceEditingId(task.task_id);
-    setMaintenanceEditFormData({ ...task });
+    // Only allow editing of specific fields
+    setMaintenanceEditFormData({
+      ...task,
+      // Explicitly remove restricted fields
+      task_start_date: undefined,
+      frequency: undefined,
+      name: undefined
+    });
   };
 
   const handleMaintenanceCancelEdit = () => {
@@ -814,6 +698,11 @@ export default function MainQuickTask() {
   };
 
   const handleMaintenanceFieldChange = (field: keyof MaintenanceTask, value: string) => {
+    // Prevent editing of restricted fields
+    if (field === 'task_start_date' || field === 'frequency' || field === 'name') {
+      toast.warning(`${field} cannot be edited`);
+      return;
+    }
     setMaintenanceEditFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -823,45 +712,16 @@ export default function MainQuickTask() {
     if (!originalTask) return;
 
     try {
-      const oldDateStr = originalTask.task_start_date ? new Date(originalTask.task_start_date).toISOString().split("T")[0] : null;
-      const newDateStr = maintenanceEditFormData.task_start_date ? new Date(maintenanceEditFormData.task_start_date).toISOString().split("T")[0] : null;
-
-      if (oldDateStr && newDateStr && oldDateStr !== newDateStr) {
-        const oldD = new Date(oldDateStr);
-        const newD = new Date(newDateStr);
-        const diffTime = newD.getTime() - oldD.getTime();
-
-        const { data: pendingTasks } = await supabase
-          .from("machine_maintenance")
-          .select("task_id, task_start_date")
-          .eq("source_unique_id", originalTask.task_id)
-          .is("submission_date", null);
-
-        if (pendingTasks && pendingTasks.length > 0) {
-          for (const pt of pendingTasks) {
-            if (pt.task_start_date) {
-              const ptDate = new Date(pt.task_start_date);
-              const shiftedDate = new Date(ptDate.getTime() + diffTime);
-
-              await supabase
-                .from("machine_maintenance")
-                .update({ task_start_date: shiftedDate.toISOString() })
-                .eq("task_id", pt.task_id);
-            }
-          }
-        }
-      }
-
       await updateMaintenanceMutation.mutateAsync({
         updatedTask: {
           machine_name: maintenanceEditFormData.machine_name || undefined,
           given_by: maintenanceEditFormData.given_by || undefined,
-          name: maintenanceEditFormData.name || undefined,
+          // name is NOT included - read-only
           task_description: maintenanceEditFormData.task_description || undefined,
-          frequency: maintenanceEditFormData.frequency || undefined,
+          // frequency is NOT included - read-only
           enable_reminder: maintenanceEditFormData.enable_reminder || undefined,
           require_attachment: maintenanceEditFormData.require_attachment || undefined,
-          task_start_date: maintenanceEditFormData.task_start_date || undefined,
+          // task_start_date is NOT included - read-only
           task_end_date: maintenanceEditFormData.task_end_date || undefined,
           image: maintenanceEditFormData.image || undefined,
         },
@@ -1424,19 +1284,19 @@ export default function MainQuickTask() {
                     Given By
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
-                    Name
+                    Name (Read-Only)
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase min-w-48">
                     Task Description
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase bg-yellow-50 dark:bg-yellow-900/20">
-                    Start Date
+                    Start Date (Read-Only)
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase bg-yellow-50 dark:bg-yellow-900/20">
                     End Date
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
-                    Frequency
+                    Frequency (Read-Only)
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
                     Reminders
@@ -1552,32 +1412,9 @@ export default function MainQuickTask() {
                           task.given_by || "—"
                         )}
                       </td>
-                      {/* NAME (Assign To / Doer) */}
+                      {/* NAME (Assign To / Doer) - READ ONLY */}
                       <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
-                        {isChecklistEditing ? (
-                          <input
-                            type="text"
-                            value={editFormData.name || ""}
-                            onChange={(e) => handleInputChange("name", e.target.value)}
-                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
-                          />
-                        ) : isDelegationEditing ? (
-                          <input
-                            type="text"
-                            value={delegationEditFormData.name || ""}
-                            onChange={(e) => handleDelegationFieldChange("name", e.target.value)}
-                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
-                          />
-                        ) : isMaintenanceEditing ? (
-                          <input
-                            type="text"
-                            value={maintenanceEditFormData.name || ""}
-                            onChange={(e) => handleMaintenanceFieldChange("name", e.target.value)}
-                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
-                          />
-                        ) : (
-                          task.name || "—"
-                        )}
+                        {task.name || "—"}
                       </td>
                       {/* TASK DESCRIPTION */}
                       <td className="px-3 py-3 text-sm text-foreground dark:text-gray-300 min-w-50 max-w-75">
@@ -1608,38 +1445,9 @@ export default function MainQuickTask() {
                           </div>
                         )}
                       </td>
-                      {/* START DATE */}
+                      {/* START DATE - READ ONLY */}
                       <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap bg-yellow-50 dark:bg-yellow-900/10">
-                        {isChecklistEditing ? (
-                          <input
-                            type="date"
-                            value={editFormData.task_start_date
-                              ? new Date(editFormData.task_start_date).toISOString().split("T")[0]
-                              : ""}
-                            onChange={(e) => handleInputChange("task_start_date", e.target.value)}
-                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
-                          />
-                        ) : isDelegationEditing ? (
-                          <input
-                            type="date"
-                            value={delegationEditFormData.task_start_date
-                              ? new Date(delegationEditFormData.task_start_date).toISOString().split("T")[0]
-                              : ""}
-                            onChange={(e) => handleDelegationFieldChange("task_start_date", e.target.value)}
-                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
-                          />
-                        ) : isMaintenanceEditing ? (
-                          <input
-                            type="date"
-                            value={maintenanceEditFormData.task_start_date
-                              ? new Date(maintenanceEditFormData.task_start_date).toISOString().split("T")[0]
-                              : ""}
-                            onChange={(e) => handleMaintenanceFieldChange("task_start_date", e.target.value)}
-                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
-                          />
-                        ) : (
-                          formatDate(task.task_start_date)
-                        )}
+                        {formatDate(task.task_start_date)}
                       </td>
                       {/* END DATE (planned_date for delegation, task_end_date for maintenance, submission_date for checklist) */}
                       <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap bg-yellow-50 dark:bg-yellow-900/10">
@@ -1667,57 +1475,11 @@ export default function MainQuickTask() {
                           formatDate((task as ChecklistTask | DelegationTask).submission_date)
                         )}
                       </td>
-                      {/* FREQUENCY */}
+                      {/* FREQUENCY - READ ONLY */}
                       <td className="px-3 py-3 whitespace-nowrap">
-                        {isChecklistEditing ? (
-                          <select
-                            value={editFormData.frequency || (task as ChecklistTask).frequency || ""}
-                            onChange={(e) => handleInputChange("frequency", e.target.value)}
-                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
-                          >
-                            <option value="daily">daily</option>
-                            <option value="weekly">weekly</option>
-                            <option value="fortnightly">fortnightly</option>
-                            <option value="monthly">monthly</option>
-                            <option value="quarterly">quarterly</option>
-                            <option value="half-yearly">half-yearly</option>
-                            <option value="yearly">yearly</option>
-                          </select>
-                        ) : isDelegationEditing ? (
-                          <select
-                            value={delegationEditFormData.frequency || ""}
-                            onChange={(e) => handleDelegationFieldChange("frequency", e.target.value)}
-                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
-                          >
-                            <option value="daily">daily</option>
-                            <option value="weekly">weekly</option>
-                            <option value="fortnightly">fortnightly</option>
-                            <option value="monthly">monthly</option>
-                            <option value="quarterly">quarterly</option>
-                            <option value="half-yearly">half-yearly</option>
-                            <option value="yearly">yearly</option>
-                            <option value="one-time">one-time</option>
-                          </select>
-                        ) : isMaintenanceEditing ? (
-                          <select
-                            value={maintenanceEditFormData.frequency || ""}
-                            onChange={(e) => handleMaintenanceFieldChange("frequency", e.target.value)}
-                            className="w-full px-2 py-1 text-xs border rounded dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
-                          >
-                            <option value="daily">daily</option>
-                            <option value="weekly">weekly</option>
-                            <option value="fortnightly">fortnightly</option>
-                            <option value="monthly">monthly</option>
-                            <option value="quarterly">quarterly</option>
-                            <option value="half-yearly">half-yearly</option>
-                            <option value="yearly">yearly</option>
-                            <option value="one-time">one-time</option>
-                          </select>
-                        ) : (
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getFrequencyBadge(task.frequency || "")}`}>
-                            {task.frequency || "—"}
-                          </span>
-                        )}
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getFrequencyBadge(task.frequency || "")}`}>
+                          {task.frequency || "—"}
+                        </span>
                       </td>
                       {/* REMINDERS */}
                       <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
