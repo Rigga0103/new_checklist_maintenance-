@@ -409,6 +409,16 @@ export default function MainChecklist({ initialNameFilter }: { initialNameFilter
   const handleSubmit = async () => {
     if (selectedTasks.size === 0) return;
 
+    // Validate that all selected tasks have a status set (Done or Not Done)
+    const tasksWithoutStatus = Array.from(selectedTasks).filter(
+      (taskId) => !taskStatuses[taskId]
+    );
+
+    if (tasksWithoutStatus.length > 0) {
+      toast.error("Please set status (Done or Not Done) for all selected tasks first.");
+      return;
+    }
+
     // Check if any images are still uploading (only for tasks that have images)
     const uploadingTasks = Array.from(selectedTasks).filter(
       (taskId) => taskImages[taskId] && taskImages[taskId].uploading === true,
@@ -423,7 +433,7 @@ export default function MainChecklist({ initialNameFilter }: { initialNameFilter
     const missingImageTask = Array.from(selectedTasks)
       .map((taskId) => {
         const task = tasks.find((t) => t.task_id === taskId);
-        const isDone = (taskStatuses[taskId] || "yes") === "yes";
+        const isDone = taskStatuses[taskId] === "yes";
         if (isDone && task?.require_attachment?.toLowerCase() === "yes") {
           const hasImage = taskImages[taskId]?.uploadedUrl || task.image;
           if (!hasImage) return task;
@@ -444,7 +454,7 @@ export default function MainChecklist({ initialNameFilter }: { initialNameFilter
       selectedTasks,
     ).map((taskId) => ({
       taskId,
-      status: taskStatuses[taskId] || "yes", // Default to 'yes' if selected but not explicitly set
+      status: taskStatuses[taskId],
       remarks: taskRemarks[taskId] || "",
       nextExtendDate:
         taskStatuses[taskId] === "Extend date"

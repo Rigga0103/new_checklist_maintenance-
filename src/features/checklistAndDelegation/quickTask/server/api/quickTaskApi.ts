@@ -139,21 +139,30 @@ export const fetchUsersData = async (): Promise<User[]> => {
 export const deleteChecklistTasksApi = async (
   tasks: ChecklistTask[],
 ): Promise<ChecklistTask[]> => {
+  const localDate = new Date();
+  const year = localDate.getFullYear();
+  const month = (localDate.getMonth() + 1).toString().padStart(2, "0");
+  const day = localDate.getDate().toString().padStart(2, "0");
+  const todayStr = `${year}-${month}-${day}T00:00:00`;
+
   for (const task of tasks) {
-    // 1. Delete pending checklist instances linked via FK
+    // 1. Delete pending checklist instances linked via FK which are not done (status IS NULL) and not overdue
     await supabase
       .from("checklist")
       .delete()
-      .eq("source_unique_id", task.task_id);
+      .eq("source_unique_id", task.task_id)
+      .is("status", null)
+      .gte("task_start_date", todayStr);
 
     // 2. Also catch any instances inserted without source_unique_id (legacy rows)
     if (task.name && task.task_description) {
       await supabase
         .from("checklist")
         .delete()
-        .is("submission_date", null)
+        .is("status", null)
         .eq("name", task.name)
-        .eq("task_description", task.task_description);
+        .eq("task_description", task.task_description)
+        .gte("task_start_date", todayStr);
     }
 
     // 3. Delete the template row itself from unique_checklist
