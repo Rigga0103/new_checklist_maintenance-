@@ -487,7 +487,7 @@ export const updateMaintenanceTaskApi = async (
     .select();
 
   if (error) {
-    console.error("Supabase error (unique_maintanence update):", error);
+    console.error("Supabase error (unique_maintanence update) :", error);
     throw error;
   }
 
