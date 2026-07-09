@@ -363,11 +363,13 @@ export function useUpdateMaintenanceTaskCascade() {
       oldMachineName,
       oldTaskDescription,
       oldDoerName,
+      sourceUniqueId,
       updates,
     }: {
       oldMachineName: string;
       oldTaskDescription: string;
       oldDoerName: string;
+      sourceUniqueId?: number;
       updates: Partial<MachineMaintenanceTask>;
     }) =>
       updateMaintenanceTaskCascade(
@@ -375,6 +377,7 @@ export function useUpdateMaintenanceTaskCascade() {
         oldTaskDescription,
         oldDoerName,
         updates,
+        sourceUniqueId,
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({

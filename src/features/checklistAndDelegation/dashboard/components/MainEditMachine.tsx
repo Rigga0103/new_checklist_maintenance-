@@ -365,6 +365,7 @@ export default function MainEditMachine() {
         oldMachineName: originalTask.machine_name,
         oldTaskDescription: originalTask.task_description || "",
         oldDoerName: originalTask.doer_name || "",
+        sourceUniqueId: originalTask.task_id,
         updates: {
           machine_name: maintenanceEditForm.machine_name,
           machine_type: maintenanceEditForm.machine_type,
@@ -723,30 +724,11 @@ export default function MainEditMachine() {
                   )}
                 </td>
                 <td className="px-3 py-3 text-sm whitespace-nowrap">
-                  {isEditing ? (
-                    <select
-                      value={maintenanceEditForm.frequency || ""}
-                      onChange={(e) =>
-                        handleMaintenanceFieldChange(
-                          "frequency",
-                          e.target.value,
-                        )
-                      }
-                      className={inputClass}
-                    >
-                      <option value="">Select</option>
-                      <option value="daily">Daily</option>
-                      <option value="weekly">Weekly</option>
-                      <option value="monthly">Monthly</option>
-                      <option value="one-time">One-time</option>
-                    </select>
-                  ) : (
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-xs font-medium ${getFrequencyBadge(task.frequency || "")}`}
-                    >
-                      {task.frequency || "—"}
-                    </span>
-                  )}
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${getFrequencyBadge(task.frequency || "")}`}
+                  >
+                    {task.frequency || "—"}
+                  </span>
                 </td>
                 <td className="px-3 py-3 text-sm text-foreground-secondary dark:text-muted-foreground whitespace-nowrap">
                   {isEditing ? (

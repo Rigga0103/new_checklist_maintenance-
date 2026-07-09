@@ -10,6 +10,8 @@ export interface MaintenanceSchedule {
   frequency: string;
   assigned_to: string | null;
   department: string | null;
+  require_attachment?: string | null;
+  enable_reminder?: string | null;
 }
 
 export interface CreateScheduleDTO {
@@ -192,6 +194,8 @@ export const generateDailyTasks = async (): Promise<{
       department: schedule.department,
       task_start_date: new Date().toISOString(), // Today
       status: "pending",
+      require_attachment: schedule.require_attachment || "no",
+      enable_reminder: schedule.enable_reminder || "no",
       // maintenance_schedules_id: schedule.id // Ideally link back, but schema might not have it yet
     }));
 

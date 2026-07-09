@@ -573,42 +573,111 @@ export const updateMaintenanceTaskCascade = async (
   oldTaskDescription: string,
   oldDoerName: string,
   updates: Partial<MachineMaintenanceTask>,
+  sourceUniqueId?: number,
 ): Promise<MachineMaintenanceTask[] | null> => {
   try {
     // Remove fields that shouldn't be in the update payload
     const { task_id: _, created_at: __, ...cleanUpdates } = updates as any;
 
-    let query = supabase
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayISO = today.toISOString();
+
+    let dataToReturn: MachineMaintenanceTask[] = [];
+
+    // 1. Update by source_unique_id if available
+    if (sourceUniqueId) {
+      const { data: data1, error: error1 } = await supabase
+        .from("machine_maintenance")
+        .update(cleanUpdates)
+        .eq("source_unique_id", sourceUniqueId)
+        .neq("status", "Done")
+        .neq("status", "done")
+        .gte("task_start_date", todayISO)
+        .select();
+
+      if (error1) {
+        console.error("Error in update by source_unique_id:", error1);
+      } else if (data1) {
+        dataToReturn = [...dataToReturn, ...data1];
+      }
+    }
+
+    // 2. Update by text matching (machine_name + task_description + doer_name)
+    // This is important because existing generated tasks may not have source_unique_id set
+    let textQuery = supabase
       .from("machine_maintenance")
       .update(cleanUpdates)
       .eq("machine_name", oldMachineName)
-      .eq("task_description", oldTaskDescription || "");
+      .eq("task_description", oldTaskDescription || "")
+      .neq("status", "Done")
+      .neq("status", "done")
+      .gte("task_start_date", todayISO);
 
     if (oldDoerName) {
-      query = query.eq("doer_name", oldDoerName);
+      textQuery = textQuery.eq("doer_name", oldDoerName);
     } else {
-      query = query.is("doer_name", null);
+      textQuery = textQuery.is("doer_name", null);
     }
 
-    const { data, error } = await query.select();
+    const { data: data2, error: error2 } = await textQuery.select();
 
-    if (error) {
-      console.error("Error in updateMaintenanceTaskCascade:", error);
-      throw error;
+    if (error2) {
+      console.error("Error in update by text matching:", error2);
+      if (!sourceUniqueId) throw error2;
+    } else if (data2) {
+      dataToReturn = [...dataToReturn, ...data2];
+    }
+
+    // Deduplicate dataToReturn by task_id
+    const seenIds = new Set<number>();
+    const uniqueDataToReturn = dataToReturn.filter((t) => {
+      if (seenIds.has(t.task_id)) return false;
+      seenIds.add(t.task_id);
+      return true;
+    });
+
+    // Update the source of truth unique_maintanence table
+    if (sourceUniqueId) {
+      try {
+        const { doer_name, machine_type, ...restUpdates } = cleanUpdates;
+        const uniqueUpdates = {
+          ...restUpdates,
+          ...(doer_name !== undefined ? { name: doer_name } : {}),
+        };
+
+        const { error: uniqueErr } = await supabase
+          .from("unique_maintanence")
+          .update(uniqueUpdates)
+          .eq("task_id", sourceUniqueId);
+
+        if (uniqueErr) {
+          console.error("Failed to update unique_maintanence:", uniqueErr);
+        }
+      } catch (uniqueErr) {
+        console.warn("Could not update unique_maintanence:", uniqueErr);
+      }
     }
 
     // Attempt to also update maintenance_schedules if applicable
     try {
+      // Map doer_name to assigned_to for maintenance_schedules table
+      const { doer_name, ...restUpdates } = cleanUpdates;
+      const scheduleUpdates = {
+        ...restUpdates,
+        ...(doer_name !== undefined ? { assigned_to: doer_name } : {}),
+      };
+
       let scheduleQuery = supabase
         .from("maintenance_schedules")
-        .update(cleanUpdates)
+        .update(scheduleUpdates)
         .eq("machine_name", oldMachineName)
         .eq("task_description", oldTaskDescription || "");
 
       if (oldDoerName) {
-        scheduleQuery = scheduleQuery.eq("doer_name", oldDoerName);
+        scheduleQuery = scheduleQuery.eq("assigned_to", oldDoerName);
       } else {
-        scheduleQuery = scheduleQuery.is("doer_name", null);
+        scheduleQuery = scheduleQuery.is("assigned_to", null);
       }
 
       await scheduleQuery; // Fire and forget or await, depending on if we need strict consistency
@@ -616,8 +685,8 @@ export const updateMaintenanceTaskCascade = async (
       console.warn("Could not update maintenance_schedules cascade:", schedErr);
     }
 
-    if (data && data.length > 0) {
-      const logParams = data.map((d: any) => ({
+    if (uniqueDataToReturn.length > 0) {
+      const logParams = uniqueDataToReturn.map((d: any) => ({
         maintenanceId: d.task_id?.toString() || "",
         action: "update",
         machine: d.machine_name || "",
@@ -630,7 +699,7 @@ export const updateMaintenanceTaskCascade = async (
       await logMaintenanceAction(logParams);
     }
 
-    return data;
+    return uniqueDataToReturn;
   } catch (error) {
     console.error("Unexpected error in updateMaintenanceTaskCascade:", error);
     throw error;
