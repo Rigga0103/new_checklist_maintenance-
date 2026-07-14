@@ -90,11 +90,29 @@ export default function MainDelegation() {
   } = useDelegation(effectiveRole);
 
   const { data: usersData } = useUsers();
+  const toTitleCase = (str: string) => {
+    if (!str) return "";
+    return str
+      .trim()
+      .toLowerCase()
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  };
+
+  const getDbCasedName = (selectedName: string) => {
+    const matchingUser = usersData?.find(
+      (u) => u.user_name && u.user_name.toLowerCase() === selectedName.toLowerCase() && u.status === "active"
+    ) || usersData?.find(
+      (u) => u.user_name && u.user_name.toLowerCase() === selectedName.toLowerCase()
+    );
+    return matchingUser?.user_name || selectedName;
+  };
+
   const allNames = useMemo(() => {
     if (!usersData) return [];
     const validNames = usersData
       .filter((u) => u.user_name && u.status === "active")
-      .map((u) => u.user_name);
+      .map((u) => toTitleCase(u.user_name || ""))
+      .filter(Boolean);
 
     return Array.from(new Set(validNames)).sort();
   }, [usersData]);
@@ -386,7 +404,7 @@ export default function MainDelegation() {
               onClick={() => setDropdownOpen(!dropdownOpen)}
               className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800"
             >
-              {filters.name || "Filter by Name"}
+              {filters.name ? toTitleCase(filters.name) : "Filter by Name"}
               <ChevronDown
                 className={`w-4 h-4 transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
               />
@@ -398,7 +416,7 @@ export default function MainDelegation() {
                     handleNameFilter("");
                     setDropdownOpen(false);
                   }}
-                  className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700"
+                  className={`block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700 ${!filters.name ? "text-blue-600 dark:text-blue-400 font-medium bg-blue-50/50 dark:bg-blue-900/20" : "text-gray-700 dark:text-gray-200"}`}
                 >
                   All Names
                 </button>
@@ -406,10 +424,11 @@ export default function MainDelegation() {
                   <button
                     key={name}
                     onClick={() => {
-                      handleNameFilter(name);
+                      const dbName = getDbCasedName(name);
+                      handleNameFilter(dbName);
                       setDropdownOpen(false);
                     }}
-                    className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700"
+                    className={`block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700 ${filters.name && filters.name.toLowerCase() === name.toLowerCase() ? "text-blue-600 dark:text-blue-400 font-medium bg-blue-50/50 dark:bg-blue-900/20" : "text-gray-700 dark:text-gray-200"}`}
                   >
                     {name}
                   </button>

@@ -332,7 +332,30 @@ export default function MainQuickTask() {
   const maintenanceTasks = maintenanceResponse?.data || [];
   const maintenanceTotal = maintenanceResponse?.total || 0;
 
-  const allNames = usersData?.map((u) => u.user_name) || [];
+  const toTitleCase = (str: string) => {
+    if (!str) return "";
+    return str
+      .trim()
+      .toLowerCase()
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  };
+
+  const getDbCasedName = (selectedName: string) => {
+    const matchingUser = usersData?.find(
+      (u) => u.user_name && u.user_name.toLowerCase() === selectedName.toLowerCase() && u.status === "active"
+    ) || usersData?.find(
+      (u) => u.user_name && u.user_name.toLowerCase() === selectedName.toLowerCase()
+    );
+    return matchingUser?.user_name || selectedName;
+  };
+
+  const allNames = useMemo(() => {
+    if (!usersData) return [];
+    const formatted = usersData
+      .map((u) => toTitleCase(u.user_name || ""))
+      .filter(Boolean);
+    return Array.from(new Set(formatted)).sort();
+  }, [usersData]);
 
   // Re-sync if localStorage changes
   useEffect(() => {
@@ -742,7 +765,8 @@ export default function MainQuickTask() {
 
   // Filter handlers
   const handleNameFilterSelect = (name: string) => {
-    setNameFilter(name);
+    const dbName = getDbCasedName(name);
+    setNameFilter(dbName);
     setDropdownOpen({ ...dropdownOpen, name: false });
     // Reset page to 0 when filter changes
     setChecklistPage(0);
@@ -1112,7 +1136,7 @@ export default function MainQuickTask() {
             >
               <Filter className="w-4 h-4" />
               <span className="max-w-25 truncate">
-                {nameFilter || "All Users"}
+                {nameFilter ? toTitleCase(nameFilter) : "All Users"}
               </span>
               <ChevronDown className="w-4 h-4 opacity-50" />
             </button>
@@ -1149,7 +1173,7 @@ export default function MainQuickTask() {
                         <button
                           key={name}
                           onClick={() => handleNameFilterSelect(name)}
-                          className={`w-full text-left px-2 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700 rounded transition-colors ${nameFilter === name ? "text-blue-600 dark:text-blue-400 font-medium bg-blue-50/50 dark:bg-blue-900/20" : "text-gray-700 dark:text-gray-200"}`}
+                          className={`w-full text-left px-2 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700 rounded transition-colors ${nameFilter && nameFilter.toLowerCase() === name.toLowerCase() ? "text-blue-600 dark:text-blue-400 font-medium bg-blue-50/50 dark:bg-blue-900/20" : "text-gray-700 dark:text-gray-200"}`}
                         >
                           {name}
                         </button>
